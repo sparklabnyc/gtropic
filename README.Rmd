@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-The R package `gtropic` 
+The R package `gtropic` retrieves global tropical storm exposure data (wind, precipitation) for all storms from 1980 to the present at second-level administrative unit resolution.
 
 ## Installation
 
@@ -32,7 +32,7 @@ The development version of `gtropic` can be installed from GitHub with:
 pak::pak("sparklabnyc/gtropic")
 ```
 
-`gtropic` can then be loaded and attached in your current R session as usual with
+`gtropic` can then be loaded and attached in your current R session as usual with:
 
 ```r
 library(gtropic)

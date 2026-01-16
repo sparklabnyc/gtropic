@@ -11,7 +11,9 @@ v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/li
 
 ## Overview
 
-The R package `gtropic`
+The R package `gtropic` retrieves global tropical storm exposure data
+(wind, precipitation) for all storms from 1980 to the present at
+second-level administrative unit resolution.
 
 ## Installation
 
@@ -23,7 +25,7 @@ pak::pak("sparklabnyc/gtropic")
 ```
 
 `gtropic` can then be loaded and attached in your current R session as
-usual with
+usual with:
 
 ``` r
 library(gtropic)
