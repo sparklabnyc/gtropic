@@ -1,0 +1,39 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# gtropic <img src="man/figures/logo.png" align="right" height="188" alt="" />
+
+<!-- badges: start -->
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+<!-- badges: end -->
+
+## Overview
+
+The R package `gtropic` 
+
+## Installation
+
+The development version of `gtropic` can be installed from GitHub with:
+
+``` r
+# install.packages("pak")
+pak::pak("sparklabnyc/gtropic")
+```
+
+`gtropic` can then be loaded and attached in your current R session as usual with
+
+```r
+library(gtropic)
+```
