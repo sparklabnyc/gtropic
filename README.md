@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# gtropic <img src="man/figures/logo.png" align="right" height="188" alt="" />
+# gtropic <img src="man/figures/logo.png" align="right" height="145" alt="" />
 
 <!-- badges: start -->
 
