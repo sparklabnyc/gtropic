@@ -1,0 +1,75 @@
+url: https://sparklabnyc.github.io/gtropic/
+
+template:
+  bootstrap: 5
+  math-rendering: mathjax
+  light-switch: true
+
+authors:
+  Lawrence G. Chillrud:
+    href: https://lawrence-chillrud.github.io/
+  Lingke Jiang:
+    href: https://www.linkedin.com/in/lingke-jiang
+  Majd Abid:
+    href: https://www.linkedin.com/in/majdabid
+  G. Brooke Anderson:
+    href: https://scholar.google.com/citations?user=CWSlbfsAAAAJ&hl=en
+  Robbie M. Parks:
+    href: https://sparklabnyc.github.io/site/home.html
+  Columbia University:
+    href: https://www.publichealth.columbia.edu/
+    html: "<img src='https://www.publichealth.columbia.edu/sites/default/files/logo-mailman-blue-horizontal.svg?stefxf' width=240 alt=''>"
+
+home:
+  title: Retrieve, filter, and plot G-TROPIC global tropical cyclone exposure data at ADM2/daily resolution (1980-present)
+  description: >
+    A retrieval, filtering, and plotting client for the live
+    "G-TROPIC" dataset containing global tropical cyclone exposure
+    data at ADM2/daily resolution from 1980-present, published weekly on Harvard Dataverse.
+
+reference:
+- title: Retrieval
+  desc: >
+    The cornerstone data retrieval function and its associated helpers accessing query metadata.
+  contents:
+  - gtropic_data
+  - gtropic_manifest
+  - print.gtropic_data
+  - summary.gtropic_data
+  - print.gtropic_manifest
+
+- title: Discovery
+  desc: >
+    Functions to explore the available administrative units, storms, years and column
+    definitions.
+  contents:
+  - gtropic_adm2
+  - gtropic_storms
+  - gtropic_years
+  - gtropic_codebook
+
+- title: Cache
+  desc: >
+    Optional, opt-in storage of downloaded files between R sessions.
+  contents:
+  - gtropic_cache_dir
+  - gtropic_cache_enable
+  - gtropic_cache_list
+  - gtropic_cache_clear
+  - gtropic_cache_prune
+
+- title: Configuration
+  desc: >
+    Options controlling the server, dataset identifiers, timeouts and the
+    large query download guardrail.
+  contents:
+  - gtropic_options
+
+articles:
+- title: Using gtropic
+  navbar: ~
+  contents:
+  - getting-started
+  - filtering
+  - linkage
+  - versions-and-caching

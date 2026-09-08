@@ -1,0 +1,376 @@
+---
+title: "Versions, reproducibility and caching"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Versions, reproducibility and caching}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+
+``` r
+library(gtropic)
+```
+
+Published datasets get revised. A correction is applied, a year is added, a
+column gains a better definition -- and an analysis you ran last spring no longer
+reproduces. This vignette covers how `gtropic` lets you pin a retrieval exactly,
+and how to manage the downloads it makes.
+
+## Two datasets, two version numbers
+
+The G-TROPIC collection is published as two Dataverse datasets rather than one:
+
+- a **historical** dataset, covering 1980 up to the end of the last complete
+  year, which also holds the only copy of the shared metadata (the
+  administrative unit lookup, the codebook, the boundary geometries);
+- a **current-year** dataset, republished as the ongoing season progresses.
+
+
+``` r
+gtropic_years()
+#> $historical
+#>  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
+#> [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009
+#> [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024
+#> [46] 2025
+#> 
+#> $current
+#> [1] 2026
+#> 
+#> $all
+#>  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
+#> [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009
+#> [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024
+#> [46] 2025 2026
+```
+
+You do not normally need to think about this. The package works out which
+dataset holds which year by asking the server, so the annual changeover happens
+without any action from you -- and without a package update. Shared metadata is
+always read from the historical dataset, whatever years your query covers.
+
+The consequence that does matter: the two datasets have **independent version
+numbers**. A query spanning both is not described by any single version string,
+which is why a single `version` argument would not be enough to reproduce it.
+
+## The manifest
+
+A **manifest** is a record of exactly which published files went into a result:
+their paths, which dataset and version each came from, their sizes, and their
+MD5 checksums. Every result carries one.
+
+
+``` r
+phl <- gtropic_data(
+  WHO_ENTITY = "Philippines",
+  date_range = c(2015, 2016)
+)
+#> Downloading 'metadata/adm2.parquet'.
+#> Downloading '02_wind/storm_metadata/2015.parquet'.
+#> Downloading '02_wind/storm_metadata/2016.parquet'.
+#> Retrieving 14 files (256.5 MB) ; .
+#> Downloading '02_wind/exposures/2015.parquet'.
+#> Downloading '02_wind/exposures/2016.parquet'.
+#> Downloading '02_wind/zero_pairs/2015.parquet'.
+#> Downloading '02_wind/zero_pairs/2016.parquet'.
+#> Downloading '04_precip/2015.parquet'.
+#> Downloading '04_precip/2016.parquet'.
+#> Downloading '03_flood/2015.parquet'.
+#> Downloading '03_flood/2016.parquet'.
+#> Downloading '01_pop/2015.parquet'.
+#> Downloading '01_pop/2016.parquet'.
+#> Downloading 'metadata/codebook.json'.
+
+gtropic_manifest(phl)
+#> 
+#> ── gtropic version manifest ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> • Server: "demo.dataverse.org"
+#> • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")
+#> • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")
+#> • Files recorded: 14
+#> • Total size: 256.5 MB
+#> • Retrieved: 2026-09-08 16:41:03 EDT
+#> • Package version: "0.0.0.9000"
+#> 
+#> ℹ Pass this object as `manifest` to `gtropic_data()` to
+#> reproduce the same retrieval.
+```
+
+The file-level detail is a tibble:
+
+
+``` r
+head(gtropic_manifest(phl)$files)
+#> # A tibble: 6 × 7
+#>   dataset_doi     dataset_version directory_label label file_id md5   size_bytes
+#>   <chr>           <chr>           <chr>           <chr>   <int> <chr>      <dbl>
+#> 1 doi:10.70122/F… 3.0             metadata        adm2… 2702301 7b85…     869564
+#> 2 doi:10.70122/F… 3.0             02_wind/storm_… 2015… 2703906 9c44…       4776
+#> 3 doi:10.70122/F… 3.0             02_wind/storm_… 2016… 2703907 f1b7…       4647
+#> 4 doi:10.70122/F… 3.0             02_wind/exposu… 2015… 2706345 8c09…    6754848
+#> 5 doi:10.70122/F… 3.0             02_wind/exposu… 2016… 2706346 562b…    7613264
+#> 6 doi:10.70122/F… 3.0             02_wind/zero_p… 2015… 2706396 9aff…   49588960
+```
+
+You can see the dataset versions without digging, because `print()` on a result
+shows them:
+
+
+``` r
+phl
+#> 
+#> ── G-TROPIC data ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> • Historical dataset: version "3.0"
+#> • Current-year dataset: version "4.0"
+#> • Genesis dates: "2015-01-01" to "2016-12-31"
+#> • Storms: 129
+#> • ADM2 units: 86
+#> 
+#> ── Tables
+#> • wind: 3602 rows x 12 columns
+#> • precip: 3296 rows x 3 columns
+#> • flood: 789 rows x 7 columns
+#> • pop: 172 rows x 6 columns
+#> • storm_metadata: 129 rows x 4 columns
+#> • adm2: 86 rows x 5 columns
+#> • codebook: 7 entries (list)
+#> • links: 11094 rows x 11 columns
+#> 
+#> ℹ Use `summary()` for detail.
+```
+
+## The reproducibility round trip
+
+Save the manifest alongside your analysis:
+
+
+``` r
+mf <- gtropic_manifest(phl)
+saveRDS(mf, "phl-2015-2016-manifest.rds")
+```
+
+Months later, on another machine, pass it back:
+
+
+``` r
+phl2 <- gtropic_data(
+  WHO_ENTITY = "Philippines",
+  date_range = c(2015, 2016),
+  manifest = readRDS("phl-2015-2016-manifest.rds")
+)
+```
+
+Exactly the files recorded in the manifest are retrieved, and their checksums
+verified. `version` and the DOI options are ignored -- honouring them would
+defeat the purpose.
+
+Two failure modes are deliberate errors rather than silent substitutions:
+
+- **A recorded file is no longer available.** You are told which one. Silently
+  falling back to the current version would mean your "reproduction" quietly
+  used different data.
+- **A recorded file's checksum has changed.** The file at that path is not the
+  file you used, whatever it is now called.
+
+Keep the filters when you re-run. The manifest pins *which files* are read, not
+which rows are selected; the filters still do their work. Supplying a manifest
+alongside different filters will error if it does not contain the files those
+filters need.
+
+## Asking for a specific version
+
+If you want a particular published version without having a manifest to hand:
+
+
+``` r
+# The same version string for both datasets
+gtropic_data(WHO_ENTITY = "Cuba", date_range = 2019, version = "2.0")
+
+# Different versions per dataset
+gtropic_data(
+  WHO_ENTITY = "Cuba",
+  date_range = c(2019, 2026),
+  version = c(historical = "2.0", current = "1.3")
+)
+```
+
+A manifest is still the better tool for reproducibility, because it records
+checksums as well as version numbers.
+
+## Caching
+
+A **cache** is a folder of files you have already downloaded, kept so that
+repeating or extending a query does not fetch them again. It is switched off by
+default: a package should not write to your disk without being asked.
+
+
+``` r
+gtropic_cache_enable()
+```
+
+The cache lives in the standard per-user location R reserves for package data on
+your operating system:
+
+
+``` r
+gtropic_cache_dir()
+#> [1] "/Users/lgc2035/Library/Caches/org.R-project.R/R/gtropic"
+```
+
+You can put it somewhere with more room:
+
+
+``` r
+gtropic_cache_enable(dir = "~/data/gtropic-cache")
+```
+
+Or enable it for a single call without changing your settings:
+
+
+``` r
+gtropic_data(WHO_ENTITY = "Viet Nam", date_range = 2020, cache = TRUE)
+```
+
+### What gets cached, and why it helps
+
+The cache stores whole published year-files exactly as the repository serves
+them. It never stores filtered results.
+
+That single decision is what makes it useful. Because the unit is a year-file
+rather than a query, overlapping work reuses downloads without any cleverness:
+
+- Asking for 2001-2003, then later for 2002-2005, downloads only 2004 and 2005.
+- A worldwide query, then a query for one country in a year you already have,
+  downloads nothing at all -- the filtering happens locally, from files you have.
+
+Files are stored by checksum, which deduplicates across dataset versions
+automatically: a year-file that did not change between version 1.0 and version
+2.0 has one checksum and is kept once, even though two versions reference it.
+Checksums are verified when files are written and again when they are read, so a
+corrupted file is detected and re-downloaded rather than quietly analysed.
+
+### Managing the cache
+
+
+``` r
+gtropic_cache_list()    # one row per cached file
+gtropic_cache_size()    # total bytes on disk
+```
+
+
+``` r
+# Keep it under 20 GB, and drop anything older than six months
+gtropic_cache_prune(max_size_gb = 20, older_than_days = 180)
+
+# Start over
+gtropic_cache_clear()
+
+# Stop caching; keeps what is already stored
+gtropic_cache_disable()
+```
+
+Pruning removes least-recently-fetched files first.
+
+## The download guardrail
+
+`gtropic_data()` with no arguments means roughly 47 years of global daily
+rainfall. Before downloading, the package estimates the transfer -- subtracting
+anything already cached -- and compares it against a threshold, one gigabyte by
+default.
+
+Under the threshold, it proceeds. Over it, in an interactive session, it tells
+you the size and asks. Over it in a **non-interactive** session, such as a
+scheduled job or a rendered report, it raises an error instead, naming the size
+and how to proceed. Waiting forever on a prompt nobody will answer is a worse
+outcome than failing immediately.
+
+To proceed anyway:
+
+
+``` r
+gtropic_data(WHO_ENTITY = "India", date_range = c(1990, 2020), confirm = FALSE)
+```
+
+Or raise the threshold for the session:
+
+
+``` r
+options(gtropic.confirm_threshold_gb = 10)
+```
+
+Usually the better response is to narrow the query. Bear in mind that any query
+including rainfall or flooding also downloads the zero-pairs files, so a
+full-history rainfall query is legitimately large.
+
+## Working with data larger than memory
+
+By default results are ordinary data frames, held in memory. Setting
+`as = "arrow"` returns them in a form that stays on disk or in a compact
+in-memory representation until you ask for it.
+
+**Arrow** is a format for holding tabular data efficiently and reading only the
+columns and rows you need. In practice you use the same `dplyr` verbs, and add
+`collect()` when you want ordinary data frames back:
+
+
+``` r
+library(dplyr)
+
+res <- gtropic_data(
+  WHO_ENTITY = "India",
+  date_range = c(2000, 2010),
+  as = "arrow"
+)
+
+heavy_days <- res$precip |>
+  filter(PRECIP_MM > 100) |>
+  group_by(ADM2_ID) |>
+  summarise(days = n()) |>
+  collect()
+```
+
+To be honest about the limits: genuine out-of-memory processing needs caching
+switched on, because that is what puts the files on disk where they can be
+streamed. Without caching, `as = "arrow"` mainly saves conversion time rather
+than memory.
+
+## Pointing at a different repository
+
+The server and dataset identifiers are options, so moving to a different
+Dataverse installation requires no package update:
+
+
+``` r
+options(
+  gtropic.server = "dataverse.harvard.edu",
+  gtropic.doi_historical = "doi:10.7910/DVN/EXAMPLE"
+)
+```
+
+See `?gtropic_options` for the full list.
+
+## What to record in a paper
+
+At minimum: the package version, the dataset DOIs and their version numbers, and
+the window and radius settings if you changed them from the defaults. All of it
+is on the result:
+
+
+``` r
+mf <- gtropic_manifest(phl)
+
+mf$historical_doi
+mf$historical_version
+mf$current_doi
+mf$current_version
+mf$gtropic_version
+
+gtropic_filters(phl)[c("precip_days_before", "precip_days_after",
+                       "precip_radius_km", "flood_match")]
+```
+
+Depositing the manifest itself alongside your analysis code is better still: it
+lets a reader reproduce your exact inputs rather than approximate them.

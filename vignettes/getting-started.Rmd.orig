@@ -1,0 +1,243 @@
+---
+title: "Getting started with gtropic"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with gtropic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette walks through installing the `gtropic` package, retrieving your first
+G-TROPIC dataset, and understanding what comes back.
+
+## What is G-TROPIC?
+
+G-TROPIC is a multi-exposure, live (updated weekly) dataset spanning global
+tropical storms from 1980 onward, combining IBTrACS storm track data, GHSL
+population rasters, geoBoundaries ADM2 administrative units, Groundsource
+flood polygons, and ERA5-Land precipitation. G-TROPIC adheres to FAIR data
+principles and is publicly available via Harvard Dataverse, with versioned
+updates that incorporate recent storm and precipitation data once a week.
+At ADM2 resolution worldwide for compatibility with health outcome and other
+data, G-TROPIC provides population totals and population-weighted centroids,
+storm exposure metrics from both best-track and wind-radii methods, flood
+exposure metrics, and daily local precipitation totals, along with ADM2 metadata
+for region and WHO classifications. 
+
+For enhanced accessibility, we developed this open-source R package, `gtropic`,
+for easy retrieval, exploration, and mapping of G-TROPIC data directly in R. 
+
+## Installation
+
+The development version of `gtropic` can be installed from GitHub with:
+
+```{r, eval = FALSE}
+# install.packages("pak")
+pak::pak("sparklabnyc/gtropic")
+```
+
+`gtropic` can then be loaded and attached in your current R session as usual with:
+
+```{r}
+library(gtropic)
+```
+
+## Data availablity
+
+First, let's get oriented by running some of the `gtropic` helper functions that
+let us know what G-TROPIC data is available in the first place. Doing so will help
+us define the specific query we later send to the G-TROPIC database, so we can 
+retrieve only the data we need, and nothing more (to save on memory and disk space).
+
+We can examine the available years of data using:
+
+```{r}
+gtropic_years()
+```
+
+The available administrative units in the dataset with:
+
+```{r}
+adm2s <- gtropic_adm2()
+adm2s
+```
+
+Or, for example, the available administrative units in a specific country:
+
+```{r}
+adm2s_usa <- gtropic_adm2(WHO_ENTITY = "United States")
+adm2s_usa
+```
+
+Similarly, we can also get a list of all the available storms in the dataset.
+By default the function returns all storms from 1980 onward, but if we pass in a `year`, then
+we can get the list of storms for that given `year`:
+
+```{r}
+storms_25 <- gtropic_storms(year = 2025)
+storms_25
+```
+
+The `STORM_GENESIS_DATE_UTC` column in that last result is the date used by every
+temporal filter in the package -- see the "Selecting storms by date" section below,
+and the `filtering` vignette for the full treatment.
+
+One of the most important pieces of metadata is the G-TROPIC codebook, which can be
+obtained with:
+
+```{r}
+cb <- gtropic_codebook()
+names(cb)
+```
+
+The returned codebook object contains all the information needed to understand
+the retrieved datasets, including but not limited to their columns,
+what those columns measure, and the original provenance of the data,
+both in terms of the raw data sources, as well as the G-TROPIC backend
+pipeline scripts that generated that data. 
+
+## A first query
+
+The cornerstone function of the `gtropic` package is the `gtropic_data()` function.
+Let's start by using it to retrieve all available G-TROPIC data associated with
+storms that began in calendar year 2025, for only those ADM2s in the USA:
+
+```{r}
+usa_25 <- gtropic_data(
+  WHO_ENTITY = "United States",
+  date_range = c(2025, 2025)
+)
+
+usa_25
+```
+
+Printing the result gives a compact summary: which version of the data you
+retrieved, the span of storm genesis dates, how many storms and administrative
+units were selected, and the size of each table returned.
+
+But, for more detail, including resolved filter settings and any warnings raised,
+we can use:
+
+```{r}
+summary(usa_25)
+```
+
+## The `gtropic_data` object
+
+A `gtropic_data` object is just a named list of data frames, behaving like any other named list:
+
+```{r}
+names(usa_25)
+```
+
+```{r}
+usa_25$wind
+```
+
+By default, the `gtropic_data()` function returns:
+
+- **`wind`** -- one row per administrative unit per storm, for pairs where wind
+  exposure was non-zero. This is the core exposure table.
+- **`precip`** -- one row per administrative unit per local calendar date, for
+  dates falling near a storm's passage for that ADM2.
+- **`flood`** -- one row per observed flood event.
+- **`pop`** -- population and population-weighted centroid data, per ADM2 per year.
+- **`adm2`** -- the lookup table of administrative units.
+- **`codebook`** -- the dataset's own documentation, as a nested list.
+- **`links`** -- see below.
+
+Three further tables are available on request via the `tables` argument:
+`zero_pairs` (unit-storm pairs with no measurable wind), `tracks` (raw storm
+track observations, for plotting purposes), and `geometry` (administrative boundaries,
+again for plotting purposes, and requiring the `sf` package).
+
+## The links table
+
+`links` is returned whenever any storm-linked table is. It has one row per
+ADM2-storm pair:
+
+```{r}
+usa_25$links
+```
+
+A few important columns include:
+
+- `LOCAL_DATE_STORM_CLOSEST`: the local calendar date on which the storm passed
+  closest to that unit. This is used to anchor both precipitation and flooding windows (e.g.
+  if you request precipitation data for an ADM2 on the 2 days before and 2 days after a given storm,
+  then the temporal window is calculated with respect to this date).
+- `STORM_DIST_KM`: how close the corresponding storm came to the corresponding ADM2 (in kilometres).
+- `WIND_EXPOSURE`: whether the pair had measurable wind (`TRUE`) or not
+  (`FALSE`).
+- `PRECIP_IN_FIELD` and `FLOOD_IN_FIELD`: whether the ADM2 was close enough to
+  the storm track to be considered for precipitation and flooding respectively.
+
+The `links` table helps avoid duplicating precipitation/flooding rows for every storm returned in a query.
+For instance, a single rainy day in one ADM2 may land inside two storms' spatio-temporal windows;
+returning that day twice would cause problems if the `PRECIP_MM` exposure were to be summed later in an analysis. 
+Instead, tidy tables are returned along with the `links` table, and we leave the join operations necessary for your analysis
+to you, the user. The `linkage` vignette details this in full.
+
+## How to inspect your query's metadata
+
+Three functions provide access to the metadata pertaining to your `gtropic_data` object:
+
+```{r}
+# Exactly which files were retrieved, at which version
+gtropic_manifest(usa_25)
+```
+
+```{r}
+# The filters as the package resolved them
+str(gtropic_filters(usa_25), max.level = 1)
+```
+
+```{r}
+# Anything the query warned about
+gtropic_warnings(usa_25)
+```
+
+The **manifest** provides a record of which published files went into the result, including
+their paths, dataset versions, sizes and checksums. Saving it lets you reproduce the
+same retrieval months later, even if the dataset has since been revised. The
+`versions-and-caching` vignette illustrates this in more detail.
+
+## Larger queries, caching, and size guardrails
+
+Before scaling up your queries or relaxing your filters to download larger
+portions of the G-TROPIC dataset, it's worth getting to know how file caching and
+size guardrails work in `gtropic`:
+
+*The file cache*: To save repeated downloads of the same queried data,
+downloads can be kept between sessions using the file cache. By default,
+caching is disabled, but you can enable caching for the current R session using:
+
+```{r, eval = FALSE}
+gtropic_cache_enable()
+```
+
+Or simply by passing `cache = TRUE` when making queries.
+
+*The size guardrail*: Calling `gtropic_data()` with no arguments
+means (as of writing) retrieving roughly 47 years worth of global
+storm exposure data (~6GB). Before downloading anything estimated to be larger than 1GB,
+`gtropic_data()` will prompt you to confirm going ahead with the download.
+In a non-interactive session, for instance a scheduled/scripted job, it will raise an
+error instead, unless you pass the `confirm = FALSE` argument.
+
+Both topics are covered extensively in `vignette("versions-and-caching")`.
+
+## Where to go next
+
+- `vignette("filtering")` covers how all the spatio-temporal/storm filters in `gtropic_data()`
+combine, with a worked example.
+- `vignette("linkage")` documents how to link precipitation/flood data to storm data and
+  using the `links` table to perform joins without double-counting exposure rows.
+- `vignette("versions-and-caching")` walks through reproducibility and download management best practices in `gtropic`.

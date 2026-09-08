@@ -2,7 +2,8 @@
 output: github_document
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.Rmd. Please edit that file, then run
+     devtools::build_readme(). -->
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -21,19 +22,102 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-The R package `gtropic` retrieves global tropical storm exposure data (wind, precipitation) for all storms from 1980 to the present at second-level administrative unit resolution.
+The R package `gtropic` provides a retrieval, filtering, and plotting
+client for the live G-TROPIC collection of tropical
+cyclone exposure datasets, published and updated weekly on Harvard Dataverse.
+Exposure datasets include wind, precipitation, and flooding data at second-level
+administrative unit (ADM2) resolution for every ADM2 and International
+Best Track Archive for Climate Stewardship (IBTrACS) recorded storm
+globally, from 1980 to the present. Key features include:
+
+* A cornerstone query function: `gtropic_data()`
+* Discovery helpers for exploring the available vocabulary of
+administrative units and storms
+* Version manifests for reproducible re-retrieval
+* An optional opt-in on-disk cache
 
 ## Installation
 
 The development version of `gtropic` can be installed from GitHub with:
 
-``` r
+```{r, eval = FALSE}
 # install.packages("pak")
 pak::pak("sparklabnyc/gtropic")
 ```
 
 `gtropic` can then be loaded and attached in your current R session as usual with:
 
-```r
+```{r, eval = FALSE}
 library(gtropic)
+```
+
+## Usage
+
+```{r, eval = TRUE}
+library(gtropic)
+
+# Wind, precipitation, flooding and population for the USA, for storms that formed
+# during 2005.
+usa_05 <- gtropic_data(WHO_ENTITY = "United States", date_range = c(2005, 2005))
+
+usa_05
+```
+
+The `gtropic_data()` function returns a named list of tables that by default includes:
+
+- **`wind`** -- one row per administrative unit per storm, for pairs where wind
+  exposure was non-zero. This is the core exposure table.
+- **`precip`** -- one row per administrative unit per local calendar date, for
+  dates falling near a storm's passage for that ADM2.
+- **`flood`** -- one row per observed flood event.
+- **`pop`** -- population and population-weighted centroid data, per ADM2 per year.
+- **`adm2`** -- the lookup table of administrative units.
+- **`codebook`** -- the dataset's own documentation, as a nested list.
+- **`links`** -- see below.
+
+Three further tables are available on request via the `tables` argument:
+`zero_pairs` (unit-storm pairs with no measurable wind), `tracks` (raw storm
+track observations, for plotting purposes), and `geometry` (administrative boundaries,
+again for plotting purposes, and requiring the `sf` package).
+
+Every result also carries a **manifest** providing a record of which published files went
+into the result, including their paths, dataset versions, sizes and checksums.
+Saving it lets you reproduce the same retrieval months later, even if the dataset has since been revised.
+
+```{r, eval = FALSE}
+saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
+```
+
+## Getting help
+
+Extensive documentation is available on our pkgdown website as well as offline within R.
+You can see the `gtropic` reference manual in R with:
+
+```{r, eval = FALSE}
+help("gtropic")
+```
+
+A number of vignettes are available and can be browsed in R using:
+
+```{r, eval = FALSE}
+browseVignettes("gtropic")
+```
+
+We recommend reading the vignettes in the following order:
+
+- `vignette("getting-started")` introduces the cornerstone `gtropic_data()` function, running your first query, and how
+  to navigate the resulting data.
+- `vignette("filtering")` covers how all the spatio-temporal/storm filters in `gtropic_data()`
+combine, with a worked example.
+- `vignette("linkage")` documents how to link precipitation/flood data to storm data and
+  using the `links` table to perform joins without double-counting exposure rows.
+- `vignette("versions-and-caching")` walks through reproducibility and download management best practices in `gtropic`.
+
+## Citation
+
+Please cite both the package and the underlying datasets. The dataset DOIs and
+versions used by any given result are recorded in its manifest:
+
+```{r, eval = TRUE}
+gtropic_manifest(usa_05)
 ```

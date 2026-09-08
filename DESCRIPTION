@@ -1,24 +1,64 @@
 Package: gtropic
-Title: Global Tropical Storm Exposure Data (1980-Present)
+Title: Retrieve, Filter, and Plot G-TROPIC Global Tropical Cyclone
+    Exposure Data (1980-Present)
 Version: 0.0.0.9000
 Authors@R: c(
-    person("Lingke", "Jiang", role = "aut",
-           comment = c(ORCID = "")),
     person("Lawrence G.", "Chillrud", role = "aut",
            comment = c(ORCID = "0000-0003-0727-0161")),
-    person("G. Brooke", "Anderson", role = "aut",
-           comment = c(ORCID = "")),
+    person("Lingke", "Jiang", role = "aut"),
+    person("Majd", "Abid", role = "aut"),
+    person("G. Brooke", "Anderson", role = "aut"),
     person("Robbie M.", "Parks", , "robbie.parks@columbia.edu", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-7916-1717")),
     person("Columbia University", role = "fnd",
            comment = c(ROR = "00hj8s172"))
   )
-Description: Retrieves global tropical storm exposure data (wind, precipitation)
-    for all storms from 1980 to the present at second-level administrative unit
-    resolution.
+Description: A retrieval, filtering, and plotting client for the live
+    (updated weekly) G-TROPIC collection of tropical cyclone exposure
+    datasets published on Harvard Dataverse. Exposure datasets include
+    wind, precipitation, and flooding data at second-level administrative
+    unit (ADM2) resolution for every ADM2 and International Best Track
+    Archive for Climate Stewardship (IBTrACS) recorded storm globally,
+    from 1980 to the present. Provides a single cornerstone query
+    function, discovery helpers for exploring the available vocabulary of
+    administrative units and storms, version manifests for reproducible
+    re-retrieval, and an optional opt-in on-disk cache. The package
+    performs no scientific recomputation, published exposure columns are
+    authoritative.
 License: GPL (>= 3)
-URL: https://github.com/sparklabnyc/gtropic
+URL: https://sparklabnyc.github.io/gtropic,
+    https://github.com/sparklabnyc/gtropic
 BugReports: https://github.com/sparklabnyc/gtropic/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    arrow,
+    cli,
+    dataverse,
+    dplyr (>= 1.1.0),
+    glue,
+    jsonlite,
+    lubridate,
+    rlang,
+    stats,
+    stringr,
+    tibble,
+    tools,
+    utils
+Suggests:
+    curl,
+    httptest2,
+    httr2,
+    knitr,
+    rmarkdown,
+    sf,
+    sfarrow,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: 
+    knitr
+Config/roxygen2/version: 8.1.0
+Config/testthat/edition: 3
 Encoding: UTF-8
+LazyData: false
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
