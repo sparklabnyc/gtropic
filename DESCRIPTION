@@ -26,8 +26,7 @@ Description: A retrieval, filtering, and plotting client for the live
     performs no scientific recomputation, published exposure columns are
     authoritative.
 License: GPL (>= 3)
-URL: https://sparklabnyc.github.io/gtropic,
-    https://github.com/sparklabnyc/gtropic
+URL: https://github.com/sparklabnyc/gtropic, https://sparklabnyc.github.io/gtropic/
 BugReports: https://github.com/sparklabnyc/gtropic/issues
 Depends:
     R (>= 4.1.0)
