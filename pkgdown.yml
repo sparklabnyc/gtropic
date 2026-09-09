@@ -1,0 +1,12 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  filtering: filtering.html
+  getting-started: getting-started.html
+  linkage: linkage.html
+  versions-and-caching: versions-and-caching.html
+last_built: 2026-09-09T15:48Z
+urls:
+  reference: https://sparklabnyc.github.io/gtropic/reference
+  article: https://sparklabnyc.github.io/gtropic/articles
