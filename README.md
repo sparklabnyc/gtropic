@@ -25,6 +25,7 @@ globally, from 1980 to the present. Key features include:
   administrative units and storms
 - Version manifests for reproducible re-retrieval
 - An optional opt-in on-disk cache
+- Publication-ready static and interactive plots
 
 ## Installation
 
@@ -50,37 +51,8 @@ library(gtropic)
 # Wind, precipitation, flooding and population for the USA, for storms that formed
 # during 2005.
 usa_05 <- gtropic_data(WHO_ENTITY = "United States", date_range = c(2005, 2005))
-#> Discovering datasets in collection "gtropic".
-#> Downloading 'metadata/adm2.parquet'.
-#> Downloading '02_wind/storm_metadata/2005.parquet'.
-#> Retrieving 8 files (133.0 MB) ; .
-#> Downloading '02_wind/exposures/2005.parquet'.
-#> Downloading '02_wind/zero_pairs/2005.parquet'.
-#> Downloading '04_precip/2005.parquet'.
-#> Downloading '03_flood/2005.parquet'.
-#> Downloading '01_pop/2005.parquet'.
-#> Downloading 'metadata/codebook.json'.
 
 usa_05
-#> 
-#> ── G-TROPIC data ───────────────────────────────────────────────────────────────
-#> • Historical dataset: version "3.0"
-#> • Current-year dataset: version "4.0"
-#> • Genesis dates: "2005-01-01" to "2005-12-31"
-#> • Storms: 75
-#> • ADM2 units: 3231
-#> 
-#> ── Tables 
-#> • wind: 45899 rows x 12 columns
-#> • precip: 32739 rows x 3 columns
-#> • flood: 421 rows x 7 columns
-#> • pop: 3231 rows x 6 columns
-#> • storm_metadata: 75 rows x 4 columns
-#> • adm2: 3231 rows x 5 columns
-#> • codebook: 7 entries (list)
-#> • links: 239094 rows x 11 columns
-#> 
-#> ℹ Use `summary()` for detail.
 ```
 
 The `gtropic_data()` function returns a named list of tables that by
@@ -112,6 +84,31 @@ retrieval months later, even if the dataset has since been revised.
 saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
 ```
 
+## Plotting
+
+Request geometry and tracks with the original query, then plot the local
+result. Plotting never starts a new download or recomputes a published
+exposure value. `gtropic_exposures()` lists the available wind,
+precipitation, and flooding metrics and their default aggregations.
+
+``` r
+kat_05 <- gtropic_data(
+  STORM_NAME = "Katrina-2005", WHO_ENTITY = "United States",
+  date_range = c(2005, 2005),
+  tables = c("wind", "adm2", "geometry", "tracks")
+)
+
+gtropic_plot(kat_05, type = "exposure", metric = "VMAX_SUST_MS",
+  gridlines = TRUE)
+gtropic_plot(kat_05, type = "count", metric = "VMAX_SUST_MS",
+  gridlines = FALSE)
+gtropic_plot(kat_05, type = "track", track_map_key = saffir_simpson())
+```
+
+See `vignette("plotting")` for vectorized multi-metric maps,
+Saffir-Simpson track keys, gridlines, interactive maps, thresholds, and
+publication sizing.
+
 ## Getting help
 
 Extensive documentation is available on our pkgdown website as well as
@@ -137,6 +134,8 @@ We recommend reading the vignettes in the following order:
 - `vignette("linkage")` documents how to link precipitation/flood data
   to storm data and using the `links` table to perform joins without
   double-counting exposure rows.
+- `vignette("plotting")` covers static and interactive maps, vectorized
+  options, and publication-ready output.
 - `vignette("versions-and-caching")` walks through reproducibility and
   download management best practices in `gtropic`.
 
@@ -147,16 +146,4 @@ DOIs and versions used by any given result are recorded in its manifest:
 
 ``` r
 gtropic_manifest(usa_05)
-#> 
-#> ── gtropic version manifest ────────────────────────────────────────────────────
-#> • Server: "demo.dataverse.org"
-#> • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")
-#> • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")
-#> • Files recorded: 8
-#> • Total size: 133.0 MB
-#> • Retrieved: 2026-09-08 16:57:17 EDT
-#> • Package version: "0.0.0.9000"
-#> 
-#> ℹ Pass this object as `manifest` to `gtropic_data()` to
-#> reproduce the same retrieval.
 ```

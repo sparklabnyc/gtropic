@@ -103,7 +103,7 @@ read_geoparquet_raw <- function(raw, label = "file",
   on.exit(unlink(tf), add = TRUE)
   writeBin(raw, tf)
 
-  tryCatch(
+  geometry <- tryCatch(
     sfarrow::st_read_parquet(tf),
     error = function(e) {
       cli::cli_abort(
@@ -114,6 +114,17 @@ read_geoparquet_raw <- function(raw, label = "file",
       )
     }
   )
+
+  # The published ADM2 coordinates are WGS 84. Some sfarrow/Arrow version
+  # combinations do not restore the GeoParquet CRS metadata, so enforce the
+  # reader's EPSG:4326 contract at this single I/O boundary.
+  crs <- sf::st_crs(geometry)
+  if (is.na(crs)) {
+    geometry <- sf::st_set_crs(geometry, 4326)
+  } else if (!isTRUE(crs == sf::st_crs(4326))) {
+    geometry <- sf::st_transform(geometry, 4326)
+  }
+  geometry
 }
 
 #' Require the optional geospatial packages

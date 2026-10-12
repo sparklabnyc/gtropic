@@ -26,6 +26,7 @@ vignettes <- c(
   "getting-started",
   "filtering",
   "linkage",
+  "plotting",
   "versions-and-caching"
 )
 
@@ -35,8 +36,8 @@ old <- setwd("vignettes")
 on.exit(setwd(old), add = TRUE)
 
 for (v in vignettes) {
-  input <- paste0("vignettes/", v, ".Rmd.orig")
-  output <- paste0("vignettes/", v, ".Rmd")
+  input <- paste0(v, ".Rmd.orig")
+  output <- paste0(v, ".Rmd")
 
   if (!file.exists(input)) {
     warning("Skipping ", input, ": not found.")

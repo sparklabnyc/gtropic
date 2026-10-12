@@ -46,10 +46,18 @@ Imports:
     utils
 Suggests:
     curl,
+    ggnewscale,
+    ggplot2,
+    htmlwidgets,
     httptest2,
     httr2,
     knitr,
+    leaflet,
+    memoise,
     rmarkdown,
+    rnaturalearth,
+    rnaturalearthdata,
+    scales,
     sf,
     sfarrow,
     testthat (>= 3.0.0),
@@ -58,6 +66,8 @@ VignetteBuilder:
     knitr
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
+Config/Needs/website: ggplot2, sf, sfarrow, rnaturalearth, rnaturalearthdata,
+    leaflet, scales, memoise, ggnewscale
 Encoding: UTF-8
 LazyData: false
 Roxygen: list(markdown = TRUE)

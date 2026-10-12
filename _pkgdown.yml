@@ -50,6 +50,23 @@ reference:
   - gtropic_cache_list
   - gtropic_cache_clear
   - gtropic_cache_prune
+- title: Plotting
+  desc: |
+    Publication-ready static and interactive visualizations of locally available G-TROPIC tables.
+  contents:
+  - gtropic_plot
+  - plot.gtropic_data
+  - saffir_simpson
+  - theme_gtropic
+  - scale_fill_gtropic_c
+  - scale_fill_gtropic_d
+  - gtropic_basemap
+  - gtropic_save
+- title: Exposure metrics
+  desc: |
+    Available published exposure metrics and their default plot aggregations.
+  contents:
+  - gtropic_exposures
 - title: Configuration
   desc: |
     Options controlling the server, dataset identifiers, timeouts and the large query download guardrail.
@@ -61,5 +78,5 @@ articles:
   - getting-started
   - filtering
   - linkage
+  - plotting
   - versions-and-caching
-

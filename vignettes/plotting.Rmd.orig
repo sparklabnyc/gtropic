@@ -1,0 +1,148 @@
+---
+title: "Plotting G-TROPIC data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Plotting G-TROPIC data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5,
+  fig.path = "figs/"
+)
+```
+
+```{r imports, include=TRUE, message=FALSE}
+library(gtropic)
+library(dplyr)
+```
+
+`gtropic_plot()` turns tables already returned by `gtropic_data()` into static
+exposure maps, exposure-count maps, and storm-track maps. It also creates
+interactive exposure and count maps. Plotting never retrieves missing tables or
+recomputes published exposure values and storm distances.
+
+## Katrina, 2005
+
+This vignette uses the United States records for Hurricane Katrina. Request the
+geometry and track tables with the exposure data because plotting only uses
+tables already present in the retrieval result.
+
+```{r katrina-query}
+katrina <- gtropic_data(
+  STORM_NAME = "Katrina-2005",
+  WHO_ENTITY = "United States",
+  date_range = c(2005, 2005),
+  tables = c("wind", "precip", "flood", "adm2", "geometry", "tracks")
+)
+```
+
+```{r filtering-dist}
+katrina$wind <- katrina$wind |> filter(STORM_DIST_KM <= 500)
+```
+
+`gtropic_exposures()` lists published metrics, units, and default aggregations.
+Use it to select metrics appropriate to an analysis rather than inferring their
+meaning from column names alone.
+
+```{r exposures}
+gtropic_exposures()
+```
+
+## Static maps
+
+An exposure map summarizes selected published metrics for each ADM2.
+
+```{r exposure-map}
+gtropic_plot(
+  katrina,
+  type = "exposure",
+  metric = c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+)
+```
+
+Count maps apply metric thresholds before counting distinct storms or local
+exposure days. The automatic caption records the selected definitions.
+
+```{r count-map}
+gtropic_plot(
+  katrina,
+  type = "count",
+  metric = c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA"),
+  count_unit = "days"
+)
+```
+
+`metric`, `aggregate`, `palette`, and `direction` accept vectors aligned by
+position. This makes a panel for each selected metric while preserving a
+separate, hazard-appropriate scale for every panel.
+
+```{r multi-metric-map}
+gtropic_plot(
+  katrina,
+  type = "exposure",
+  metric = c("VMAX_SUST_MS", "PRECIP_MM"),
+  aggregate = c("max", "sum"),
+  palette = c("inferno", "mako"),
+  direction = c(1, 1),
+  storm = "Katrina-2005",
+  track = FALSE,
+  basemap = "none"
+)
+```
+
+## Storm tracks
+
+Track maps use the published `USA_WIND` observations. By default, their points
+are classified with `saffir_simpson()`, which returns the conventional
+Saffir-Simpson category key in metres per second. Supply a compatible data frame
+to `track_map_key` to use a different classification, and use `track_interval`
+to sample displayed points at three- or six-hour UTC intervals while retaining
+the complete path.
+
+```{r track-map}
+gtropic_plot(
+  katrina,
+  type = "track",
+  storm = "Katrina-2005",
+  track_map_key = saffir_simpson(),
+  track_interval = 6,
+  basemap = "none"
+)
+```
+
+## Interactive maps
+
+Set `interactive = TRUE` for a Leaflet exposure or count map. Interactive maps
+use vector layers and do not require a tile-server API key. Static gridlines do
+not apply to this output because Leaflet maps have no plot axes.
+
+```{r interactive-map, eval=FALSE}
+gtropic_plot(
+  katrina,
+  type = "exposure",
+  metric = "VMAX_SUST_MS",
+  storm = "Katrina-2005",
+  interactive = TRUE,
+  basemap = "none"
+)
+```
+
+## Saving plots
+
+Static calls return ggplot objects, which can be extended with ggplot2 layers
+and saved with `gtropic_save()` when the analysis is ready for publication.
+
+```{r save-plot, eval=FALSE}
+p <- gtropic_plot(
+  katrina,
+  type = "exposure",
+  metric = "VMAX_SUST_MS",
+  storm = "Katrina-2005",
+  basemap = "none"
+) + theme_gtropic(base_size = 11)
+
+gtropic_save(p, "katrina-wind-exposure.png", dpi = 300)
+```

@@ -35,6 +35,7 @@ globally, from 1980 to the present. Key features include:
 administrative units and storms
 * Version manifests for reproducible re-retrieval
 * An optional opt-in on-disk cache
+* Publication-ready static and interactive plots
 
 ## Installation
 
@@ -53,7 +54,7 @@ library(gtropic)
 
 ## Usage
 
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 library(gtropic)
 
 # Wind, precipitation, flooding and population for the USA, for storms that formed
@@ -88,6 +89,30 @@ Saving it lets you reproduce the same retrieval months later, even if the datase
 saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
 ```
 
+## Plotting
+
+Request geometry and tracks with the original query, then plot the local result.
+Plotting never starts a new download or recomputes a published exposure value.
+`gtropic_exposures()` lists the available wind, precipitation, and flooding
+metrics and their default aggregations.
+
+```{r, eval = FALSE}
+kat_05 <- gtropic_data(
+  STORM_NAME = "Katrina-2005", WHO_ENTITY = "United States",
+  date_range = c(2005, 2005),
+  tables = c("wind", "adm2", "geometry", "tracks")
+)
+
+gtropic_plot(kat_05, type = "exposure", metric = "VMAX_SUST_MS",
+  gridlines = TRUE)
+gtropic_plot(kat_05, type = "count", metric = "VMAX_SUST_MS",
+  gridlines = FALSE)
+gtropic_plot(kat_05, type = "track", track_map_key = saffir_simpson())
+```
+
+See `vignette("plotting")` for vectorized multi-metric maps, Saffir-Simpson
+track keys, gridlines, interactive maps, thresholds, and publication sizing.
+
 ## Getting help
 
 Extensive documentation is available on our pkgdown website as well as offline within R.
@@ -111,6 +136,8 @@ We recommend reading the vignettes in the following order:
 combine, with a worked example.
 - `vignette("linkage")` documents how to link precipitation/flood data to storm data and
   using the `links` table to perform joins without double-counting exposure rows.
+- `vignette("plotting")` covers static and interactive maps, vectorized options,
+  and publication-ready output.
 - `vignette("versions-and-caching")` walks through reproducibility and download management best practices in `gtropic`.
 
 ## Citation
@@ -118,6 +145,6 @@ combine, with a worked example.
 Please cite both the package and the underlying datasets. The dataset DOIs and
 versions used by any given result are recorded in its manifest:
 
-```{r, eval = TRUE}
+```{r, eval = FALSE}
 gtropic_manifest(usa_05)
 ```

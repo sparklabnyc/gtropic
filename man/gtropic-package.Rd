@@ -14,6 +14,7 @@ A retrieval, filtering, and plotting client for the live (updated weekly) G-TROP
 Useful links:
 \itemize{
   \item \url{https://github.com/sparklabnyc/gtropic}
+  \item \url{https://sparklabnyc.github.io/gtropic/}
   \item Report bugs at \url{https://github.com/sparklabnyc/gtropic/issues}
 }
 
