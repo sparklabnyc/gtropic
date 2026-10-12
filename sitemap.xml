@@ -5,11 +5,13 @@
 <url><loc>https://sparklabnyc.github.io/gtropic/articles/getting-started.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/articles/index.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/articles/linkage.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/articles/plotting.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/articles/versions-and-caching.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/authors.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/index.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic-package.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_adm2.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_basemap.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_clear.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_dir.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.html</loc></url>
@@ -17,13 +19,20 @@
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_prune.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_codebook.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_data.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_options.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_plot.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_save.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_years.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/index.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/plot.gtropic_data.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/print.gtropic_data.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/print.gtropic_manifest.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/scale_fill_gtropic_c.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/summary.gtropic_data.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/theme_gtropic.html</loc></url>
 </urlset>
 

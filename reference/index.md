@@ -49,6 +49,35 @@ Optional, opt-in storage of downloaded files between R sessions.
 - [`gtropic_cache_prune()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_prune.md)
   : Prune cached G-TROPIC files by size or age
 
+## Plotting
+
+Publication-ready static and interactive visualizations of locally
+available G-TROPIC tables.
+
+- [`gtropic_plot()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_plot.md)
+  : Plot locally available G-TROPIC data
+- [`plot(`*`<gtropic_data>`*`)`](https://sparklabnyc.github.io/gtropic/reference/plot.gtropic_data.md)
+  : Plot a G-TROPIC retrieval result
+- [`saffir_simpson()`](https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.md)
+  : Saffir-Simpson tropical-cyclone wind categories
+- [`theme_gtropic()`](https://sparklabnyc.github.io/gtropic/reference/theme_gtropic.md)
+  : Publication defaults for G-TROPIC plots
+- [`scale_fill_gtropic_c()`](https://sparklabnyc.github.io/gtropic/reference/scale_fill_gtropic_c.md)
+  [`scale_fill_gtropic_d()`](https://sparklabnyc.github.io/gtropic/reference/scale_fill_gtropic_c.md)
+  : Color-blind-safe fill scales for G-TROPIC plots
+- [`gtropic_basemap()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_basemap.md)
+  : Natural Earth basemaps cached for the current R session
+- [`gtropic_save()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_save.md)
+  : Save a static plot
+
+## Exposure metrics
+
+Available published exposure metrics and their default plot
+aggregations.
+
+- [`gtropic_exposures()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.md)
+  : List G-TROPIC exposure metrics
+
 ## Configuration
 
 Options controlling the server, dataset identifiers, timeouts and the

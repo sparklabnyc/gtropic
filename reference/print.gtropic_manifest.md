@@ -52,10 +52,10 @@ gtropic_manifest(result)
 #> ── gtropic version manifest ────────────────────────────────────────────────────
 #> • Server: "demo.dataverse.org"
 #> • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")
-#> • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")
+#> • Current-year: "doi:10.70122/FK2/DDSYYD" (version "11.0")
 #> • Files recorded: 8
 #> • Total size: 133.0 MB
-#> • Retrieved: 2026-09-09 15:50:13 UTC
+#> • Retrieved: 2026-10-12 15:46:29 UTC
 #> • Package version: "0.0.0.9000"
 #> 
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to

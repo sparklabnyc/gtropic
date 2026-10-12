@@ -49,9 +49,9 @@ summary(res)
 #> 
 #> • Server: "demo.dataverse.org"
 #> • Historical: "doi:10.70122/FK2/SWEYST" v3.0
-#> • Current-year: "doi:10.70122/FK2/DDSYYD" v4.0
+#> • Current-year: "doi:10.70122/FK2/DDSYYD" v11.0
 #> • Files retrieved: 8 (133.0 MB)
-#> • Retrieved at: 2026-09-09 15:50:20 UTC
+#> • Retrieved at: 2026-10-12 15:46:35 UTC
 #> 
 #> ── Tables ──
 #> 

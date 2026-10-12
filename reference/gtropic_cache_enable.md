@@ -46,7 +46,7 @@ to delete stored files.
 # \donttest{
 # Use a temporary cache location for this session
 gtropic_cache_enable(dir = file.path(tempdir(), "gtropic-cache"))
-#> ✔ Cache enabled at /tmp/RtmplEywYK/gtropic-cache.
+#> ✔ Cache enabled at /tmp/RtmplQ43r9/gtropic-cache.
 gtropic_cache_disable()
 #> ℹ Cache disabled. Existing files are kept; use
 #> `gtropic_cache_clear()` to remove them.

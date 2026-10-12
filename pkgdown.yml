@@ -5,8 +5,9 @@ articles:
   filtering: filtering.html
   getting-started: getting-started.html
   linkage: linkage.html
+  plotting: plotting.html
   versions-and-caching: versions-and-caching.html
-last_built: 2026-09-09T15:48Z
+last_built: 2026-10-12T15:44Z
 urls:
   reference: https://sparklabnyc.github.io/gtropic/reference
   article: https://sparklabnyc.github.io/gtropic/articles

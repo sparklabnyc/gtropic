@@ -332,7 +332,7 @@ jamaica
 #> 
 #> ── G-TROPIC data ───────────────────────────────────────────────────────────────
 #> • Historical dataset: version "3.0"
-#> • Current-year dataset: version "4.0"
+#> • Current-year dataset: version "11.0"
 #> • Genesis dates: "2005-01-01" to "2005-12-31"
 #> • Storms: 75
 #> • ADM2 units: 827

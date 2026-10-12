@@ -52,6 +52,7 @@
 <li><a class="dropdown-item" href="articles/getting-started.html">Getting started with gtropic</a></li>
     <li><a class="dropdown-item" href="articles/filtering.html">Filtering: places, dates and storms</a></li>
     <li><a class="dropdown-item" href="articles/linkage.html">Linking rainfall and flooding to storms</a></li>
+    <li><a class="dropdown-item" href="articles/plotting.html">Plotting G-TROPIC data</a></li>
     <li><a class="dropdown-item" href="articles/versions-and-caching.html">Versions, reproducibility and caching</a></li>
   </ul>
 </li>
@@ -93,6 +94,7 @@
 <li>Discovery helpers for exploring the available vocabulary of administrative units and storms</li>
 <li>Version manifests for reproducible re-retrieval</li>
 <li>An optional opt-in on-disk cache</li>
+<li>Publication-ready static and interactive plots</li>
 </ul>
 </div>
 <div class="section level2">
@@ -115,37 +117,8 @@
 <span><span class="co"># Wind, precipitation, flooding and population for the USA, for storms that formed</span></span>
 <span><span class="co"># during 2005.</span></span>
 <span><span class="va">usa_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 8 files (133.0 MB) ; .</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/exposures/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '04_precip/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '03_flood/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '01_pop/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/codebook.json'.</span></span>
 <span></span>
-<span><span class="va">usa_05</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── G-TROPIC data ───────────────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; • Historical dataset: version "3.0"</span></span>
-<span><span class="co">#&gt; • Current-year dataset: version "4.0"</span></span>
-<span><span class="co">#&gt; • Genesis dates: "2005-01-01" to "2005-12-31"</span></span>
-<span><span class="co">#&gt; • Storms: 75</span></span>
-<span><span class="co">#&gt; • ADM2 units: 3231</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Tables </span></span>
-<span><span class="co">#&gt; • wind: 45899 rows x 12 columns</span></span>
-<span><span class="co">#&gt; • precip: 32739 rows x 3 columns</span></span>
-<span><span class="co">#&gt; • flood: 421 rows x 7 columns</span></span>
-<span><span class="co">#&gt; • pop: 3231 rows x 6 columns</span></span>
-<span><span class="co">#&gt; • storm_metadata: 75 rows x 4 columns</span></span>
-<span><span class="co">#&gt; • adm2: 3231 rows x 5 columns</span></span>
-<span><span class="co">#&gt; • codebook: 7 entries (list)</span></span>
-<span><span class="co">#&gt; • links: 239094 rows x 11 columns</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ℹ Use `summary()` for detail.</span></span></code></pre></div>
+<span><span class="va">usa_05</span></span></code></pre></div>
 <p>The <code><a href="reference/gtropic_data.html">gtropic_data()</a></code> function returns a named list of tables that by default includes:</p>
 <ul>
 <li>
@@ -169,13 +142,31 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="fu"><a href="reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span>, <span class="st">"usa-2005-manifest.rds"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="plotting">Plotting<a class="anchor" aria-label="anchor" href="#plotting"></a>
+</h2>
+<p>Request geometry and tracks with the original query, then plot the local result. Plotting never starts a new download or recomputes a published exposure value. <code><a href="reference/gtropic_exposures.html">gtropic_exposures()</a></code> lists the available wind, precipitation, and flooding metrics and their default aggregations.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">kat_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<span>  STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span>, WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
+<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span>,</span>
+<span>  tables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wind"</span>, <span class="st">"adm2"</span>, <span class="st">"geometry"</span>, <span class="st">"tracks"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"exposure"</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
+<span>  gridlines <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"count"</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
+<span>  gridlines <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"track"</span>, track_map_key <span class="op">=</span> <span class="fu"><a href="reference/saffir_simpson.html">saffir_simpson</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="articles/plotting.html">vignette("plotting")</a></code> for vectorized multi-metric maps, Saffir-Simpson track keys, gridlines, interactive maps, thresholds, and publication sizing.</p>
+</div>
+<div class="section level2">
 <h2 id="getting-help">Getting help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
 </h2>
 <p>Extensive documentation is available on our pkgdown website as well as offline within R. You can see the <code>gtropic</code> reference manual in R with:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/help.html" class="external-link">help</a></span><span class="op">(</span><span class="st">"gtropic"</span><span class="op">)</span></span></code></pre></div>
 <p>A number of vignettes are available and can be browsed in R using:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"gtropic"</span><span class="op">)</span></span></code></pre></div>
 <p>We recommend reading the vignettes in the following order:</p>
 <ul>
@@ -186,6 +177,8 @@
 <li>
 <code><a href="articles/linkage.html">vignette("linkage")</a></code> documents how to link precipitation/flood data to storm data and using the <code>links</code> table to perform joins without double-counting exposure rows.</li>
 <li>
+<code><a href="articles/plotting.html">vignette("plotting")</a></code> covers static and interactive maps, vectorized options, and publication-ready output.</li>
+<li>
 <code><a href="articles/versions-and-caching.html">vignette("versions-and-caching")</a></code> walks through reproducibility and download management best practices in <code>gtropic</code>.</li>
 </ul>
 </div>
@@ -193,20 +186,8 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>Please cite both the package and the underlying datasets. The dataset DOIs and versions used by any given result are recorded in its manifest:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── gtropic version manifest ────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; • Server: "demo.dataverse.org"</span></span>
-<span><span class="co">#&gt; • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")</span></span>
-<span><span class="co">#&gt; • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")</span></span>
-<span><span class="co">#&gt; • Files recorded: 8</span></span>
-<span><span class="co">#&gt; • Total size: 133.0 MB</span></span>
-<span><span class="co">#&gt; • Retrieved: 2026-09-08 16:57:17 EDT</span></span>
-<span><span class="co">#&gt; • Package version: "0.0.0.9000"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ℹ Pass this object as `manifest` to `gtropic_data()` to</span></span>
-<span><span class="co">#&gt; reproduce the same retrieval.</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
