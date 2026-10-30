@@ -3,58 +3,12 @@
 #' @keywords internal
 #' @noRd
 plot_validate_track_map_key <- function(track_map_key) {
-  if (!is.data.frame(track_map_key)) {
-    cli::cli_abort("{.arg track_map_key} must be a data frame.")
-  }
-  key <- tibble::as_tibble(track_map_key)
-  colour_columns <- intersect(c("colour", "color"), names(key))
-  required <- c("category", "threshold", "unit")
-  missing <- setdiff(required, names(key))
-  if (length(missing) || !length(colour_columns)) {
-    cli::cli_abort(c(
-      "{.arg track_map_key} must contain category, threshold, unit, and colour or color.",
-      i = "Missing columns: {.field {c(missing, if (!length(colour_columns)) 'colour/color')}}."
-    ))
-  }
-  if (length(colour_columns) == 2L && !identical(key$colour, key$color)) {
-    cli::cli_abort("{.arg track_map_key} cannot contain conflicting colour and color columns.")
-  }
-  if (!nrow(key)) {
-    cli::cli_abort("{.arg track_map_key} must contain at least one category.")
-  }
-  key$colour <- key[[colour_columns[1L]]]
-  if (
-    !is.character(key$category) || anyNA(key$category) ||
-      any(!nzchar(key$category)) || anyDuplicated(key$category)
-  ) {
-    cli::cli_abort("{.arg track_map_key}$category must contain unique, nonempty strings.")
-  }
-  if (!is.numeric(key$threshold) || anyNA(key$threshold)) {
-    cli::cli_abort("{.arg track_map_key}$threshold must contain numeric ceilings.")
-  }
-  if (
-    !is.character(key$unit) || anyNA(key$unit) ||
-      length(unique(key$unit)) != 1L || !key$unit[1L] %in% c("m/s", "knots", "mph", "km/h")
-  ) {
+  key <- plot_validate_wind_category_key(track_map_key, "track_map_key")
+  if (!key$unit[1L] %in% c("m/s", "knots", "mph", "km/h")) {
     cli::cli_abort("{.arg track_map_key}$unit must be one constant: m/s, knots, mph, or km/h.")
   }
-  if (!is.character(key$colour) || anyNA(key$colour) || any(!nzchar(key$colour))) {
-    cli::cli_abort("{.arg track_map_key}$colour must contain nonempty colour values.")
-  }
-  invalid_colours <- vapply(key$colour, function(x) {
-    inherits(try(grDevices::col2rgb(x), silent = TRUE), "try-error")
-  }, logical(1))
-  if (any(invalid_colours)) {
-    cli::cli_abort("{.arg track_map_key}$colour contains invalid colour values.")
-  }
-  thresholds <- key$threshold
-  if (
-    !is.infinite(thresholds[length(thresholds)]) ||
-      any(thresholds < 0) ||
-      any(!is.finite(thresholds[-length(thresholds)])) ||
-      any(diff(thresholds) <= 0)
-  ) {
-    cli::cli_abort("{.arg track_map_key}$threshold must be strictly increasing ceilings ending in Inf.")
+  if (any(key$threshold < 0)) {
+    cli::cli_abort("{.arg track_map_key}$threshold must contain nonnegative ceilings.")
   }
   key
 }
@@ -252,11 +206,14 @@ plot_add_tracks <- function(p, tracks, facet_by = NULL, colour_metric = NULL,
       points <- ggplot2::geom_point(
         data = points_data,
         mapping = ggplot2::aes(x = .data$LON, y = .data$LAT, fill = .data$.track_category),
-        inherit.aes = FALSE, shape = 21, size = 2.5, colour = "grey20", na.rm = TRUE
+        inherit.aes = FALSE, shape = 21, size = 2.5, colour = "grey20",
+        na.rm = TRUE, show.legend = TRUE
       )
       p <- p + paths + points + ggplot2::scale_fill_manual(
         values = stats::setNames(key$colour, key$category),
-        breaks = key$category, drop = FALSE,
+        # Explicit limits retain every key category in static track and overlay
+        # legends, even when no plotted observation falls in a category.
+        limits = key$category, breaks = key$category, drop = FALSE,
         name = paste0(
           registry$label[match("USA_WIND", registry$metric)],
           " (", key$unit[1L], ")"

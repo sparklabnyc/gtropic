@@ -59,7 +59,8 @@ fetcher_listing <- function(years = 2001:2005, directory = "yearly") {
     file_id = seq_along(years),
     label = paste0(years, ".parquet"),
     directory_label = directory,
-    md5 = vapply(bytes, md5_raw, character(1)),
+    checksum = vapply(bytes, checksum_raw, character(1)),
+    checksum_type = "MD5",
     size_bytes = vapply(bytes, length, integer(1)),
     content_type = "application/octet-stream"
   )

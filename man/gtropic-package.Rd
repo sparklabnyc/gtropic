@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-A retrieval, filtering, and plotting client for the live (updated weekly) G-TROPIC collection of tropical cyclone exposure datasets published on Harvard Dataverse. Exposure datasets include wind, precipitation, and flooding data at second-level administrative unit (ADM2) resolution for every ADM2 and International Best Track Archive for Climate Stewardship (IBTrACS) recorded storm globally, from 1980 to the present. Provides a single cornerstone query function, discovery helpers for exploring the available vocabulary of administrative units and storms, version manifests for reproducible re-retrieval, and an optional opt-in on-disk cache. The package performs no scientific recomputation, published exposure columns are authoritative.
+A retrieval, filtering, and plotting client for the live (updated weekly) G-TROPIC collection of tropical cyclone exposure datasets published on Harvard Dataverse. Exposure datasets include wind, precipitation, and flooding data at second-level administrative unit (ADM2) resolution for every ADM2 and International Best Track Archive for Climate Stewardship (IBTrACS) recorded storm globally, from 1980 to the present. Provides a single cornerstone query function, discovery helpers for exploring the available vocabulary of administrative units and storms, version manifests for reproducible re-retrieval, and an on-disk cache enabled by default. The package performs no scientific recomputation, published exposure columns are authoritative.
 }
 \seealso{
 Useful links:

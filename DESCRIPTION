@@ -22,7 +22,7 @@ Description: A retrieval, filtering, and plotting client for the live
     from 1980 to the present. Provides a single cornerstone query
     function, discovery helpers for exploring the available vocabulary of
     administrative units and storms, version manifests for reproducible
-    re-retrieval, and an optional opt-in on-disk cache. The package
+    re-retrieval, and an on-disk cache enabled by default. The package
     performs no scientific recomputation, published exposure columns are
     authoritative.
 License: GPL (>= 3)
@@ -34,6 +34,7 @@ Imports:
     arrow,
     cli,
     dataverse,
+    digest,
     dplyr (>= 1.1.0),
     glue,
     jsonlite,

@@ -18,7 +18,9 @@ gtropic_data(
   STORM_ID = NULL,
   STORM_NAME = NULL,
   USA_ATCF_ID = NULL,
-  tables = c("wind", "precip", "flood", "pop", "adm2", "codebook"),
+  wind_radius_km = 500,
+  tables = c("wind", "precip", "flood", "pop", "adm2", "codebook", "zero_pairs",
+    "tracks", "geometry", "storm_metadata"),
   precip_days_before = 2,
   precip_days_after = 1,
   precip_radius_km = 500,
@@ -32,7 +34,8 @@ gtropic_data(
   cache = NULL,
   as = c("tibble", "arrow"),
   confirm = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  offline = FALSE
 )
 }
 \arguments{
@@ -60,8 +63,9 @@ must have a coordinate reference system; use requires the \code{sf} and
 EPSG:4326 is transformed before evaluation. If \code{FALSE}, a non-EPSG:4326
 polygon produces an error.}
 
-\item{date_range}{Optional vector of length two defining an inclusive period
-of storm genesis dates. Cannot be combined with \code{date_list}.}
+\item{date_range}{Optional vector of one or two endpoints defining an
+inclusive period of storm genesis dates. A single value is used for both
+endpoints. Cannot be combined with \code{date_list}.}
 
 \item{date_list}{Optional vector of complete genesis dates to match exactly.
 Cannot be combined with \code{date_range}.}
@@ -73,31 +77,45 @@ automatic date-order inference is not used.}
 \item{STORM_ID}{Optional character vector of published G-TROPIC storm
 identifiers. Matching is exact and case-sensitive.}
 
-\item{STORM_NAME}{Optional character vector of storm names, matched
-case-insensitively.}
+\item{STORM_NAME}{Optional character vector of published, disambiguated storm
+names in \code{Name-YYYY} form, such as \code{Katrina-2005}, matched
+case-insensitively. The suffix year limits the metadata files scanned;
+storm and date filters are still combined with AND.}
 
 \item{USA_ATCF_ID}{Optional character vector of US Automated Tropical Cyclone
 Forecasting System identifiers. Matching is exact and case-sensitive.}
 
-\item{tables}{Character vector specifying tables to return. Available values
-are \code{"wind"}, \code{"precip"}, \code{"flood"}, \code{"pop"}, \code{"adm2"}, \code{"codebook"},
-\code{"zero_pairs"}, \code{"tracks"}, \code{"geometry"}, and \code{"storm_metadata"}.
-\code{storm_metadata} is added whenever a storm-linked table is requested. A
-\code{links} table describing evaluated ADM2-storm pairs is also returned.}
+\item{wind_radius_km}{Maximum published storm-track distance, in kilometers,
+for returned wind records; defaults to 500. A finite positive value
+restricts them inclusively. It also contributes to the union-boundary of
+\code{links} when wind is requested. \code{Inf} or \code{NULL} is unbounded; with an
+unbounded wind radius, wind records with missing published distances are
+retained. This argument does not filter returned \code{zero_pairs} records.}
+
+\item{tables}{Character vector specifying tables to return. By default, all
+available tables are returned: \code{"wind"}, \code{"precip"}, \code{"flood"}, \code{"pop"},
+\code{"adm2"}, \code{"codebook"}, \code{"zero_pairs"}, \code{"tracks"}, \code{"geometry"}, and
+\code{"storm_metadata"}. Supply a smaller vector to reduce transfer and storage
+requirements. Because the default includes \code{"geometry"}, it requires the
+suggested \code{sf} and \code{sfarrow} packages. \code{storm_metadata} is added whenever a
+storm-linked table is requested. A \code{links} table describing retained
+ADM2-storm pairs is also returned.}
 
 \item{precip_days_before, precip_days_after}{Non-negative whole numbers of
 days before and after local storm closest approach to include in each
 precipitation window.}
 
 \item{precip_radius_km}{Positive numeric value giving the maximum storm-track
-distance, in kilometres, for inclusion in precipitation linkages.}
+distance, in kilometers, for inclusion in precipitation linkages. \code{Inf} or
+\code{NULL} leaves this radius unbounded.}
 
 \item{flood_days_before, flood_days_after}{Non-negative whole numbers of days
 before and after local storm closest approach to include in each flood
 window.}
 
 \item{flood_radius_km}{Positive numeric value giving the maximum storm-track
-distance, in kilometres, for inclusion in flood linkages.}
+distance, in kilometers, for inclusion in flood linkages. \code{Inf} or \code{NULL}
+leaves this radius unbounded.}
 
 \item{flood_match}{Method for matching flood intervals to storm-relative
 windows. \code{"start"} includes floods whose start date is within the window.
@@ -113,8 +131,9 @@ a single version applied to both datasets, or a named character vector such
 as \code{c(historical = "2.0", current = "3.0")}.}
 
 \item{manifest}{Optional \code{gtropic_manifest} from \code{\link[=gtropic_manifest]{gtropic_manifest()}}. When
-supplied, the recorded source files are used and \code{version} and configured
-DOI options are ignored.}
+supplied, its recorded source files and canonical resolved query are used.
+Data-shaping arguments cannot also be supplied; only \code{cache}, \code{as},
+\code{confirm}, \code{quiet}, and \code{offline} may differ during replay.}
 
 \item{cache}{Whether downloaded source files may be cached. \code{NULL} uses
 \code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
@@ -132,23 +151,30 @@ interactive confirmation.}
 
 \item{quiet}{Logical. If \code{TRUE}, progress and informational messages are
 suppressed. Warnings and errors are still reported.}
+
+\item{offline}{Logical. If \code{TRUE}, use only cached source files and a
+persisted discovery snapshot; no Dataverse update check is made and the
+snapshot age is reported. Requires an enabled cache. Defaults to \code{FALSE}.}
 }
 \value{
 An object of class \code{gtropic_data}, implemented as a named list. It
 contains the requested data tables and a \code{links} tibble with one row per
-evaluated ADM2-storm pair. \code{links} includes \code{ADM2_ID}, \code{STORM_ID}, the
-published local date and distance at closest approach, logical
+ADM2-storm pair retained by the union of requested hazard radii (or all
+available selected pairs when that union is unbounded). \code{links} includes \code{ADM2_ID},
+\code{STORM_ID}, the published local date and distance at closest approach, logical
 \code{WIND_EXPOSURE} status (\code{TRUE} for nonzero wind exposure and \code{FALSE} for
-zero), indicators for whether the pair falls within the precipitation and
-flood radii, and the start and end of each hazard-specific temporal window.
+zero), \code{WIND_IN_FIELD} and indicators for whether the pair falls within the
+precipitation and flood radii, and the start and end of each hazard-specific
+temporal window.
+With a finite requested hazard radius, \code{tracks} contains only storms with
+at least one qualifying link; otherwise it retains all selected storms.
 The \code{pop} table includes a \code{YEAR} column derived from each yearly source
-filename.
-By default, tabular elements are tibbles, \code{codebook} is a nested list, and
-\code{geometry} is an \code{sf} object.
+filename. By default, all available tables are returned. Tabular elements
+are tibbles, \code{codebook} is a nested list, and \code{geometry} is an \code{sf} object.
 
 The object also stores the source-file manifest, original query, resolved
 filters, recorded diagnostics, retrieval time, and package version as
-attributes. Use \code{\link[=gtropic_manifest]{gtropic_manifest()}}, \code{\link[=gtropic_filters]{gtropic_filters()}}, and
+attributes, including structured availability and coverage metadata. Use \code{\link[=gtropic_manifest]{gtropic_manifest()}}, \code{\link[=gtropic_filters]{gtropic_filters()}}, and
 \code{\link[=gtropic_warnings]{gtropic_warnings()}} to retrieve the principal metadata attributes.
 }
 \description{
@@ -174,7 +200,9 @@ conditions to be met.
 identifiers. Names and geographic classifications are matched
 case-insensitively after whitespace normalization. Every supplied value must
 match the published metadata, and the intersection of all filters must be
-nonempty. Use \code{\link[=gtropic_adm2]{gtropic_adm2()}} and \code{\link[=gtropic_storms]{gtropic_storms()}} to review valid values.
+nonempty. An unmatched \code{STORM_ID} or \code{STORM_NAME} is checked against the
+published exclusion records; use \code{\link[=gtropic_adm2]{gtropic_adm2()}}, \code{\link[=gtropic_storms]{gtropic_storms()}}, and
+\code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}} to review valid or excluded values.
 
 A spatial filter supplied through \code{polygon} is combined with other geographic
 filters using AND. An ADM2 unit is selected when its published
@@ -220,6 +248,21 @@ the hazard-specific day and radius arguments. Geographic filters define the
 eligible study area; radius arguments can narrow that area but do not add
 units outside it.
 
+\code{wind_radius_km} defaults to 500 km and inclusively limits returned wind
+records to pairs at or below their published \code{STORM_DIST_KM}. \code{links}
+contains every published pair needed by the union of requested hazard fields:
+a larger precipitation or flood radius can therefore retain pairs beyond the
+wind radius. Its \code{WIND_IN_FIELD} flag identifies whether each retained pair
+falls inside the configured wind field. For every \verb{*_IN_FIELD} flag, a finite
+radius excludes pairs with missing published distance, while \code{Inf} or \code{NULL}
+includes them. An unbounded radius does not constrain this union.
+When no finite requested hazard field bounds a query, \code{links} retains all
+available pairs within the selected geography and storms, and returned ADM2,
+population, geometry, and tracks retain their original selected scope.
+When a requested hazard table has a finite radius, returned ADM2, population,
+and geometry rows are limited to units in its qualifying links; the union is
+used for several such hazards.
+
 Precipitation and flood tables contain unique source records and are not
 duplicated when one record falls within the windows of multiple storms. To
 assign records to storms, join them to \code{links} using \code{ADM2_ID} and the
@@ -241,14 +284,15 @@ produce an error in a non-interactive session unless \code{confirm = FALSE}.
 
 Each result includes a manifest containing the source dataset versions,
 files, and checksums used. Supplying that manifest to a later call requests
-the same published source files. The same analytic filters must also be
-supplied to reproduce the query.
+the same published source files and replays its canonical resolved query,
+including resolved ADM2 and storm identifiers and the metadata-file years
+originally scanned.
 }
 }
 \examples{
 \donttest{
-# Wind, precipitation, flood, and population data for storms that formed
-# during the 2005 season and were evaluated in Jamaica
+# All available tables for storms that formed during the 2005 season and
+# were evaluated in Jamaica
 jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 jamaica
 
@@ -271,15 +315,7 @@ philippines <- gtropic_data(
 
 # Retain source-file provenance for a subsequent retrieval
 source_manifest <- gtropic_manifest(philippines)
-philippines_retrieved_again <- gtropic_data(
-  WHO_ENTITY = "Philippines",
-  date_range = c("2015-06-01", "2015-12-31"),
-  precip_days_before = 3,
-  precip_days_after = 3,
-  precip_radius_km = 300,
-  tables = c("precip", "pop", "adm2"),
-  manifest = source_manifest
-)
+philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
 }
 
 }

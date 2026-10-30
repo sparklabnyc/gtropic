@@ -88,8 +88,8 @@ abort_dataverse <- function(err, what = "request", call = rlang::caller_env()) {
 #' @param server Dataverse host.
 #' @param quiet Suppress progress messages.
 #'
-#' @return A tibble with columns `file_id`, `label`, `directory_label`, `md5`,
-#'   `size_bytes`, `content_type`.
+#' @return A tibble with columns `file_id`, `label`, `directory_label`,
+#'   `checksum`, `checksum_type`, `size_bytes`, `content_type`.
 #' @keywords internal
 #' @noRd
 dv_list_files <- function(doi,
@@ -112,15 +112,29 @@ dv_list_files <- function(doi,
   }
 
   # `dataset_files()` returns a list of per-file records whose shape differs a
-  # little between Dataverse releases: the checksum may be `md5` or nested under
-  # `checksum`. Pull defensively rather than assuming one layout.
+  # little between Dataverse releases: the checksum may be supplied in a legacy
+  # `md5` field or nested under `checksum`. Preserve its declared algorithm.
   rows <- lapply(raw_files, function(f) {
     df <- f$dataFile %||% list()
+    checksum_record <- df$checksum %||% list()
+    checksum_value <- if (is.list(checksum_record)) {
+      checksum_record$value %||% NA_character_
+    } else {
+      checksum_record
+    }
+    checksum_type <- if (is.list(checksum_record)) {
+      checksum_record$type %||% NA_character_
+    } else {
+      NA_character_
+    }
     tibble::tibble(
       file_id = as.integer(df$id %||% NA_integer_),
       label = as.character(f$label %||% df$filename %||% NA_character_),
       directory_label = as.character(f$directoryLabel %||% ""),
-      md5 = as.character(df$md5 %||% df$checksum$value %||% NA_character_),
+      checksum = as.character(df$md5 %||% checksum_value),
+      checksum_type = as.character(
+        if (!is.null(df$md5)) "MD5" else checksum_type
+      ),
       size_bytes = as.numeric(df$filesize %||% NA_real_),
       content_type = as.character(df$contentType %||% NA_character_)
     )
@@ -136,7 +150,8 @@ dv_empty_listing <- function() {
     file_id = integer(0),
     label = character(0),
     directory_label = character(0),
-    md5 = character(0),
+    checksum = character(0),
+    checksum_type = character(0),
     size_bytes = numeric(0),
     content_type = character(0)
   )
@@ -303,36 +318,66 @@ dv_key <- function() {
   if (nzchar(key)) key else ""
 }
 
-#' MD5 of a raw vector
+#' Identify the hashing algorithm used by a published checksum
 #'
-#' [tools::md5sum()] only operates on files, so the bytes go through a
-#' temporary file. This avoids taking on a hashing dependency (`digest`,
-#' `openssl`) purely for checksum verification.
+#' Prefer the type in a current file listing; otherwise infer it from the
+#' standard hexadecimal digest length.
 #'
-#' @param raw A raw vector.
-#' @return Character scalar, lower-case hex.
+#' @param checksum Published checksum value.
+#' @param checksum_type Optional algorithm published alongside `checksum`.
 #' @keywords internal
 #' @noRd
-md5_raw <- function(raw) {
-  tf <- tempfile(fileext = ".bin")
-  on.exit(unlink(tf), add = TRUE)
-  writeBin(raw, tf)
-  unname(tools::md5sum(tf))
+checksum_algorithm <- function(checksum, checksum_type = NA_character_) {
+  if (!is.na(checksum_type) && nzchar(checksum_type)) {
+    type <- toupper(gsub("[-_ ]", "", checksum_type))
+    algorithms <- c(MD5 = "md5", SHA1 = "sha1", SHA256 = "sha256", SHA512 = "sha512")
+    if (!type %in% names(algorithms)) {
+      cli::cli_abort("Unsupported Dataverse checksum algorithm {.val {checksum_type}}.")
+    }
+    return(unname(algorithms[[type]]))
+  }
+
+  if (is.null(checksum) || is.na(checksum) || !nzchar(checksum)) {
+    return("md5")
+  }
+
+  n <- nchar(checksum, type = "chars")
+  if (identical(n, 32L)) return("md5")
+  if (identical(n, 40L)) return("sha1")
+  if (identical(n, 64L)) return("sha256")
+  if (identical(n, 128L)) return("sha512")
+  cli::cli_abort(
+    "Unsupported published checksum with {n} hexadecimal characters."
+  )
+}
+
+#' Hash downloaded bytes using the algorithm of a published checksum
+#'
+#' @param raw Raw vector to hash.
+#' @param checksum Published checksum value.
+#' @param checksum_type Optional declared checksum algorithm.
+#' @keywords internal
+#' @noRd
+checksum_raw <- function(raw, checksum = NULL, checksum_type = NA_character_) {
+  digest::digest(
+    raw, algo = checksum_algorithm(checksum, checksum_type), serialize = FALSE
+  )
 }
 
 #' Verify downloaded bytes against the published checksum
 #'
 #' @param raw Raw vector as downloaded.
-#' @param expected_md5 MD5 recorded in the Dataverse listing.
+#' @param expected_checksum Checksum recorded in the Dataverse listing.
+#' @param checksum_type Optional checksum algorithm recorded in the listing.
 #' @param label Path used in messages.
 #' @param call Calling environment.
 #'
 #' @return Invisibly `TRUE`; aborts on mismatch.
 #' @keywords internal
 #' @noRd
-verify_md5 <- function(raw, expected_md5, label = "file",
-                       call = rlang::caller_env()) {
-  if (is.na(expected_md5) || !nzchar(expected_md5)) {
+verify_checksum <- function(raw, expected_checksum, label = "file",
+                         call = rlang::caller_env(), checksum_type = NA_character_) {
+  if (is.na(expected_checksum) || !nzchar(expected_checksum)) {
     # Nothing published to check against; not an error, but worth knowing.
     cli::cli_warn(
       c("No checksum published for {.path {label}}; integrity not verified.")
@@ -340,11 +385,11 @@ verify_md5 <- function(raw, expected_md5, label = "file",
     return(invisible(TRUE))
   }
 
-  got <- md5_raw(raw)
-  if (!identical(tolower(got), tolower(expected_md5))) {
+  got <- checksum_raw(raw, expected_checksum, checksum_type)
+  if (!identical(tolower(got), tolower(expected_checksum))) {
     cli::cli_abort(
       c("Checksum mismatch for {.path {label}}.",
-        x = "Expected {.val {expected_md5}} but the download hashed to
+        x = "Expected {.val {expected_checksum}} but the download hashed to
              {.val {got}}.",
         i = "The download was likely truncated. Try again; if it persists the
              published file may have changed."

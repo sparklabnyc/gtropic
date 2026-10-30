@@ -3,36 +3,44 @@
 \name{gtropic_cache_enable}
 \alias{gtropic_cache_enable}
 \alias{gtropic_cache_disable}
-\title{Enable or disable persistent caching}
+\title{Enable or disable caching}
 \usage{
-gtropic_cache_enable(dir = NULL)
+gtropic_cache_enable(dir = NULL, persist = FALSE)
 
-gtropic_cache_disable()
+gtropic_cache_disable(persist = FALSE)
 }
 \arguments{
-\item{dir}{Optional path for the persistent cache. If \code{NULL}, the current
-value returned by \code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}} is used. A custom location may be
-useful when exposure files must be stored on a larger disk.}
+\item{dir}{Optional path for the cache. If \code{NULL}, the current value returned
+by \code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}} is used. A custom location may be useful when
+exposure files must be stored on a larger disk.}
+
+\item{persist}{Logical. Should this enabled or disabled state be used in
+future R sessions? Defaults to \code{FALSE}, so the change affects only the
+current session.}
 }
 \value{
 Invisibly, a character scalar containing the cache directory path.
 }
 \description{
-\code{gtropic_cache_enable()} stores downloaded G-TROPIC source files for reuse
-across R sessions. \code{gtropic_cache_disable()} stops using persistent caching
-for subsequent retrievals but leaves existing files unchanged.
+\code{gtropic_cache_enable()} enables storage of downloaded G-TROPIC source files
+for reuse. \code{gtropic_cache_disable()} stops using the cache for subsequent
+retrievals but leaves existing files unchanged.
 }
 \details{
-Persistent caching is disabled by default. Enabling it sets the
-\code{gtropic.cache_enabled} option for the current R session and creates the cache
-directory if needed. Disabling it sets that option to \code{FALSE}; use
-\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}} to delete stored files.
+Caching is enabled by default for each R session. These functions change the
+\code{gtropic.cache_enabled} option for the current session. Set \code{persist = TRUE}
+to use the same choice in future sessions; this writes the setting under
+\code{tools::R_user_dir("gtropic", "config")}. The package never edits
+\code{.Rprofile}. Enabling creates the cache directory if needed; disabling does
+not delete cached files. Use \code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}} to delete them.
 }
 \examples{
 \donttest{
-# Use a temporary cache location for this session
-gtropic_cache_enable(dir = file.path(tempdir(), "gtropic-cache"))
+# Bypass the cache for the current session
 gtropic_cache_disable()
+
+# Keep that choice for future sessions
+gtropic_cache_disable(persist = TRUE)
 }
 
 }

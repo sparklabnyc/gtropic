@@ -10,14 +10,14 @@ gtropic_cache_dir()
 A character scalar containing the cache directory path.
 }
 \description{
-Returns the directory used to store downloaded G-TROPIC source files when
-persistent caching is enabled. Reusing these files can reduce data transfer
-and retrieval time for repeated or overlapping analyses.
+Returns the directory used to store downloaded G-TROPIC source files.
+Reusing these files can reduce data transfer and retrieval time for repeated
+or overlapping analyses.
 }
 \details{
 Unless changed through \code{options(gtropic.cache_dir = ...)} or
-\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}}, the path is the platform-specific user cache
-location returned by \code{\link[tools:R_user_dir]{tools::R_user_dir()}}. Calling this function reports the
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}}, the path is
+\code{tools::R_user_dir("gtropic", "cache")}. Calling this function reports the
 path but does not create it.
 }
 \examples{

@@ -83,13 +83,20 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' first best-track observation. They do not select storms by landfall, closest
 #' approach, or date of exposure.
 #'
+#' When a requested `STORM_NAME` is not available, G-TROPIC checks the published
+#' exclusion records and reports whether the storm is excluded or absent from
+#' both lists.
+#'
 #' @param date_range Optional vector of length two defining an inclusive range
 #'   of storm genesis dates. Bare years, year-month values, complete dates, and
 #'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
 #' @param year Optional vector of years to retrieve. Ignored when `date_range`
 #'   is supplied. Years outside the published collection are omitted.
-#' @param STORM_NAME Optional character vector of storm names. Matching is
-#'   case-insensitive; every supplied value must match a published name.
+#' @param STORM_NAME Optional character vector of published, disambiguated storm
+#'   names in `Name-YYYY` form, such as `Katrina-2005`. Matching is
+#'   case-insensitive; every supplied value must match a published name. The
+#'   suffix year limits the metadata files scanned and is combined with an
+#'   explicit `year` or `date_range` filter using AND.
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
 #' @param cache Whether downloaded files may be cached. `NULL` uses
@@ -110,13 +117,15 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' gtropic_storms(STORM_NAME = "Katrina-2005")
 #' }
 #'
-#' @seealso [gtropic_data()], [gtropic_adm2()]
+#' @seealso [gtropic_data()], [gtropic_adm2()], [gtropic_excluded_storms()]
 #' @export
 gtropic_storms <- function(date_range = NULL,
-                           year = NULL,
-                           STORM_NAME = NULL,
-                           version = ":latest",
-                           cache = NULL) {
+                            year = NULL,
+                            STORM_NAME = NULL,
+                            version = ":latest",
+                            cache = NULL) {
+  storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
+  storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
 
   date_spec <- parse_date_input(date_range = date_range)
@@ -127,6 +136,13 @@ gtropic_storms <- function(date_range = NULL,
     as_year_int(year)
   } else {
     ctx$discovery$year_index$year
+  }
+  if (!is.null(storm_name_year)) {
+    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
+      intersect(years, storm_name_year)
+    } else {
+      storm_name_year
+    }
   }
   years <- intersect(years, ctx$discovery$year_index$year)
 
@@ -145,12 +161,16 @@ gtropic_storms <- function(date_range = NULL,
     ]
   }
 
-  if (!is.null(STORM_NAME)) {
-    values <- as_filter_chr(STORM_NAME, "STORM_NAME")
-    canonical <- match_values(values, meta$STORM_NAME,
+  if (!is.null(storm_name)) {
+    canonical <- match_storm_values(storm_name, meta$STORM_NAME,
       arg = "STORM_NAME",
       exact = FALSE, helper = "gtropic_storms()",
-      what = "storm"
+      what = "storm",
+      excluded_lookup = function() {
+        fetch_excluded_storms(years, ctx,
+          col_select = c("STORM_ID", "STORM_NAME")
+        )
+      }
     )
     meta <- meta[norm_key(meta$STORM_NAME) %in% norm_key(canonical), ,
       drop = FALSE
@@ -158,6 +178,121 @@ gtropic_storms <- function(date_range = NULL,
   }
 
   meta
+}
+
+#' List excluded tropical cyclones
+#'
+#' @description
+#' Retrieves records for storms excluded from the published wind data. These
+#' records identify storms that cannot be retrieved with [gtropic_data()].
+#'
+#' Date filters are applied to `STORM_GENESIS_DATE_UTC`, the UTC date of the
+#' first best-track observation. They do not select storms by landfall, closest
+#' approach, or date of exposure.
+#'
+#' @param date_range Optional vector of length two defining an inclusive range
+#'   of storm genesis dates. Bare years, year-month values, complete dates, and
+#'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
+#' @param year Optional vector of years to retrieve. Ignored when `date_range`
+#'   is supplied. Years outside the published collection are omitted.
+#' @param STORM_NAME Optional character vector of published, disambiguated storm
+#'   names in `Name-YYYY` form. Matching is case-insensitive; every supplied
+#'   value must match an excluded-storm record. The suffix year limits the files
+#'   scanned and is combined with an explicit `year` or `date_range` filter using
+#'   AND.
+#' @param version Dataset version to use. The default, `":latest"`, uses the
+#'   most recent published version. See [gtropic_data()] for version formats.
+#' @param cache Whether downloaded files may be cached. `NULL` uses
+#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
+#'   setting for this call.
+#'
+#' @return A tibble with `STORM_ID`, `STORM_NAME`, and
+#'   `STORM_GENESIS_DATE_UTC` for published excluded storms satisfying the
+#'   requested genesis period and name filters. If no exclusion files are
+#'   available for the selected years, a warning is issued and an empty tibble is
+#'   returned.
+#'
+#' @examples
+#' \donttest{
+#' # Review exclusion records for storms that formed during the 2005 season
+#' gtropic_excluded_storms(year = 2005)
+#' }
+#'
+#' @seealso [gtropic_storms()], [gtropic_data()]
+#' @export
+gtropic_excluded_storms <- function(date_range = NULL,
+                                     year = NULL,
+                                     STORM_NAME = NULL,
+                                     version = ":latest",
+                                     cache = NULL) {
+  storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
+  storm_name_year <- storm_name_years(storm_name)
+  ctx <- helper_context(version, cache)
+
+  date_spec <- parse_date_input(date_range = date_range)
+  years <- if (!identical(date_spec$type, "none")) {
+    year_span(date_spec$start, date_spec$end)
+  } else if (!is.null(year)) {
+    as_year_int(year)
+  } else {
+    ctx$discovery$year_index$year
+  }
+  if (!is.null(storm_name_year)) {
+    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
+      intersect(years, storm_name_year)
+    } else {
+      storm_name_year
+    }
+  }
+  years <- intersect(years, ctx$discovery$year_index$year)
+
+  excluded <- fetch_excluded_storms(years, ctx)
+  if (nrow(excluded) == 0L) {
+    cli::cli_warn("No excluded-storm records found for the years requested.")
+    return(tibble::tibble())
+  }
+
+  if (!identical(date_spec$type, "none")) {
+    genesis <- as.Date(excluded$STORM_GENESIS_DATE_UTC)
+    excluded <- excluded[
+      !is.na(genesis) &
+        genesis >= date_spec$start & genesis <= date_spec$end, ,
+      drop = FALSE
+    ]
+  }
+
+  if (!is.null(storm_name)) {
+    canonical <- match_values(storm_name, excluded$STORM_NAME,
+      arg = "STORM_NAME",
+      exact = FALSE, helper = "gtropic_excluded_storms()",
+      what = "excluded storm"
+    )
+    excluded <- excluded[
+      norm_key(excluded$STORM_NAME) %in% norm_key(canonical), ,
+      drop = FALSE
+    ]
+  }
+
+  excluded
+}
+
+#' Fetch excluded-storm records for selected years
+#'
+#' @param years Integer years.
+#' @param ctx Fetch context.
+#' @param col_select Optional projected columns.
+#'
+#' @return A tibble, possibly with zero rows.
+#' @keywords internal
+#' @noRd
+fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
+  excluded <- fetch_yearly("excluded_storms", years, ctx,
+    col_select = col_select
+  )
+  if (!is.null(excluded)) {
+    return(excluded)
+  }
+  tibble::tibble(STORM_ID = character(), STORM_NAME = character())
 }
 
 #' Report the temporal coverage of G-TROPIC
@@ -207,6 +342,9 @@ gtropic_years <- function(version = ":latest") {
 #'
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
+#' @param cache Whether downloaded source files may be cached. `NULL` uses
+#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
+#'   setting for this call.
 #'
 #' @return A nested list preserving the structure of the published JSON
 #'   codebook.
@@ -219,8 +357,8 @@ gtropic_years <- function(version = ":latest") {
 #'
 #' @seealso [gtropic_data()]
 #' @export
-gtropic_codebook <- function(version = ":latest") {
-  ctx <- helper_context(version, cache = NULL)
+gtropic_codebook <- function(version = ":latest", cache = NULL) {
+  ctx <- helper_context(version, cache = cache)
   fetch_file("historical", "metadata", "codebook.json", ctx, kind = "json")
 }
 

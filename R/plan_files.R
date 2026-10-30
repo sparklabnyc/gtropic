@@ -20,6 +20,7 @@ TABLE_SPEC <- list(
   wind = list(dir = "02_wind/exposures", yearly = TRUE),
   zero_pairs = list(dir = "02_wind/zero_pairs", yearly = TRUE),
   storm_metadata = list(dir = "02_wind/storm_metadata", yearly = TRUE),
+  excluded_storms = list(dir = "02_wind/excluded_storms", yearly = TRUE),
   tracks = list(dir = "02_wind/storm_tracks", yearly = TRUE),
   flood = list(dir = "03_flood", yearly = TRUE),
   precip = list(dir = "04_precip", yearly = TRUE),
@@ -56,11 +57,11 @@ VALID_TABLES <- c(
 #' @noRd
 STORM_LINKED_TABLES <- c("wind", "precip", "flood", "zero_pairs", "tracks")
 
-#' Normalise and validate the `tables` argument
+#' Normalize and validate the `tables` argument
 #'
 #' `storm_metadata` is always included when any storm-linked table is returned:
 #' the results are uninterpretable without storm names and genesis dates, and
-#' the file is small. `zero_pairs`, `tracks` and `geometry` are opt-in only.
+#' the file is small.
 #'
 #' @param tables User-supplied table names.
 #' @param call Calling environment.
@@ -92,7 +93,7 @@ normalize_tables <- function(tables, call = rlang::caller_env()) {
 #' Does this query need zero-pairs data internally?
 #'
 #' STORM_DIST_KM for far-field ADM2s exists ONLY in zero_pairs. An ADM2 several
-#' hundred kilometres inland that received heavy rain but no measurable wind
+#' hundred kilometers inland that received heavy rain but no measurable wind
 #' appears nowhere else -- and those are exactly the compound-hazard cases the
 #' dataset exists to support. So whenever precip or flood is requested, the
 #' zero-pairs files are downloaded and read regardless of `tables`.
@@ -100,7 +101,7 @@ normalize_tables <- function(tables, call = rlang::caller_env()) {
 #' `"zero_pairs" %in% tables` controls only whether the table is *returned to
 #' the user*, never whether it is fetched.
 #'
-#' @param tables Normalised table names.
+#' @param tables Normalized table names.
 #' @return Logical scalar.
 #' @keywords internal
 #' @noRd
@@ -112,7 +113,7 @@ needs_zero_pairs <- function(tables) {
 #'
 #' @param years_by_table Named list mapping each yearly table to the integer
 #'   years it must be read for.
-#' @param tables Normalised table names (drives the non-yearly entries).
+#' @param tables Normalized table names (drives the non-yearly entries).
 #' @param year_index Tibble of `year` and `dataset` from discovery.
 #' @param geometry_resolution `"simplified"` or `"full"`.
 #' @param call Calling environment.
@@ -205,7 +206,7 @@ plan_files <- function(years_by_table,
 #' @param storm_years Integer years of the genesis span.
 #' @param window_years Integer years spanned by the computed precip/flood
 #'   windows, or `NULL` before the windows are known.
-#' @param tables Normalised table names.
+#' @param tables Normalized table names.
 #' @param flood_match `"start"` or `"overlap"`.
 #' @param pop_years Integer years the returned data spans.
 #'

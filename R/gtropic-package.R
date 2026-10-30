@@ -19,6 +19,6 @@ utils::globalVariables(c(
   "FLOOD_START_DATE", "FLOOD_END_DATE",
   "PRECIP_WINDOW_START", "PRECIP_WINDOW_END",
   "FLOOD_WINDOW_START", "FLOOD_WINDOW_END",
-  "PRECIP_IN_FIELD", "FLOOD_IN_FIELD", "WIND_EXPOSURE", "YEAR",
+  "WIND_IN_FIELD", "PRECIP_IN_FIELD", "FLOOD_IN_FIELD", "WIND_EXPOSURE", "YEAR",
   ".gtropic_date", ".gtropic_start", ".gtropic_end"
 ))

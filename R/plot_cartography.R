@@ -112,7 +112,7 @@ plot_geometry_longitudes <- function(x, fun) {
 #' Rotate to GDAL's conventional dateline, wrap, then rotate back. This keeps
 #' Greenwich-crossing land in separate pieces at the edges of a Pacific map.
 #' Unlike global spherical intersections, GDAL wrapping needs no s2 rebuild and
-#' keeps one geometry per input row. A sub-metre gap assigns seam vertices to
+#' keeps one geometry per input row. A sub-meter gap assigns seam vertices to
 #' their proper side when PROJ normalizes longitudes during projection.
 #' @keywords internal
 #' @noRd
@@ -358,17 +358,7 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
       labeller = labels
     )
   }
-  default_title <- switch(info$type,
-    exposure = "Tropical cyclone exposure",
-    count = paste("Tropical cyclone exposure", info$count_unit),
-    track = "Tropical cyclone tracks",
-    "G-TROPIC"
-  )
-  if (isTRUE(info$track) && !is.null(info$tracks) &&
-    dplyr::n_distinct(info$tracks$STORM_ID) == 1L) {
-    label <- plot_track_display_name(info$tracks)[1L]
-    default_title <- paste0(default_title, ": ", label)
-  }
+  default_title <- plot_default_title(info)
   default_subtitle <- plot_date_subtitle(info)
   projected <- !isTRUE(sf::st_is_longlat(cartography$crs))
   key_band <- if (info$type %in% c("exposure", "count") &&
@@ -401,7 +391,7 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
   ) + ggplot2::labs(
     title = title %||% default_title,
     subtitle = subtitle %||% default_subtitle,
-    caption = plot_wrap_caption(plot_caption(info, caption, cartography$crs))
+    caption = plot_map_caption(info, caption, cartography$crs)
   )
   attr(p, "gtropic_bbox") <- cartography$bbox
   p
@@ -412,6 +402,15 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
 #' @noRd
 plot_wrap_caption <- function(caption, width = 80L) {
   stringr::str_wrap(caption, width = width)
+}
+
+#' Preserve automatic caption lines for static maps
+#' @keywords internal
+#' @noRd
+plot_map_caption <- function(info, caption = NULL, crs = NULL) {
+  text <- plot_caption(info, caption, crs)
+  if (!is.null(caption)) return(plot_wrap_caption(text))
+  text
 }
 
 #' Format finite numeric values without scientific notation
@@ -438,7 +437,42 @@ plot_date_subtitle <- function(info) {
   if (is.null(dates) || length(dates) != 2L || anyNA(dates)) {
     return(NULL)
   }
-  paste(format(as.Date(dates), "%m/%d/%Y"), collapse = " - ")
+  paste0("Aggregated across ", paste(
+    format(as.Date(dates), "%m/%d/%Y"), collapse = " - "
+  ))
+}
+
+#' Create an automatic title from the plotted storm set
+#' @keywords internal
+#' @noRd
+plot_default_title <- function(info) {
+  multiple_metrics <- length(info$metric) > 1L
+  title <- if (info$type == "exposure" && multiple_metrics) {
+    "Exposure metrics"
+  } else if (info$type == "count" && multiple_metrics) {
+    if (identical(info$count_unit, "days")) {
+      "Exposure-days (n) per metric"
+    } else {
+      "Storm-exposures (n) per metric"
+    }
+  } else if (info$type == "track") {
+    if (length(unique(info$storm_ids %||% character())) == 1L) {
+      "Storm track"
+    } else {
+      "Storm tracks"
+    }
+  } else if (info$type == "count") {
+    spec <- info$metrics[1L, ]
+    unit <- if (identical(info$count_unit, "days")) "Exposure-days" else "Storm-exposures"
+    paste0(unit, " (n): ", plot_metric_display_label(spec))
+  } else {
+    plot_metric_display_label(info$metrics[1L, ])
+  }
+  labels <- unique(info$storm_labels %||% character())
+  if (length(labels) == 1L) {
+    return(paste0(labels, ": ", title))
+  }
+  title
 }
 
 #' Format a CRS for the automatic map caption

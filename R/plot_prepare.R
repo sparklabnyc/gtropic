@@ -90,13 +90,19 @@ resolve_plot_metrics <- function(data, type, metric = NULL, aggregate = NULL,
     candidates$metric[i] %in% names(data[[candidates$table[i]]])
   }, logical(1))]
   if (is.null(metric)) {
-    preferred <- if (type == "track") {
-      "USA_WIND"
+    if (type == "exposure") {
+      # Exposure maps make the core wind, rainfall, and flooded-area measures
+      # visible together whenever their source tables are available.
+      preferred <- c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+      metric <- intersect(preferred, available)
+      if (!length(metric)) metric <- preferred[1L]
     } else {
-      c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_POP")
+      preferred <- if (type == "track") "USA_WIND" else {
+        c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_POP")
+      }
+      metric <- intersect(preferred, available)[1L]
+      if (is.na(metric)) metric <- preferred[1L]
     }
-    metric <- intersect(preferred, available)[1L]
-    if (is.na(metric)) metric <- preferred[1L]
   }
   if (
     !is.character(metric) || !length(metric) || anyNA(metric) ||
@@ -195,6 +201,97 @@ plot_resolve_metric_option <- function(value, metrics, argument, choices, defaul
     cli::cli_abort("{.arg {argument}} must have length one or length {.val {length(metrics)}}.")
   }
   unname(value)
+}
+
+#' Resolve optional categorical keys for aggregated exposure metrics
+#'
+#' A category key uses inclusive upper-bound thresholds and must state the same
+#' unit as its source metric. The built-in Saffir-Simpson key is deliberately
+#' restricted to the published local maximum sustained-wind measure.
+#' @keywords internal
+#' @noRd
+plot_resolve_wind_categories <- function(wind_categories, type, binary, metrics) {
+  if (is.null(wind_categories)) {
+    return(list())
+  }
+  if (type != "exposure") {
+    cli::cli_abort("{.arg wind_categories} applies only to type = 'exposure' maps.")
+  }
+  if (binary) {
+    cli::cli_abort("{.arg wind_categories} requires {.code binary = FALSE}.")
+  }
+
+  if (is.data.frame(wind_categories)) {
+    if (nrow(metrics) != 1L) {
+      cli::cli_abort(c(
+        "A bare {.arg wind_categories} key requires exactly one selected metric.",
+        i = "For multiple metrics, supply a named list keyed by metric."
+      ))
+    }
+    keys <- stats::setNames(list(wind_categories), metrics$metric)
+  } else {
+    if (!is.list(wind_categories) || !length(wind_categories) ||
+      is.null(names(wind_categories)) || anyNA(names(wind_categories)) ||
+      any(!nzchar(names(wind_categories))) || anyDuplicated(names(wind_categories)) ||
+      any(!names(wind_categories) %in% metrics$metric)) {
+      cli::cli_abort("{.arg wind_categories} must be a category-key data frame or a uniquely named list keyed by selected metrics.")
+    }
+    keys <- wind_categories
+  }
+
+  out <- lapply(names(keys), function(metric) {
+    key <- plot_validate_wind_category_key(
+      keys[[metric]], paste0("wind_categories$", metric)
+    )
+    spec <- metrics[match(metric, metrics$metric), ]
+    if (!identical(as.character(spec$table), "wind")) {
+      cli::cli_abort(c(
+        "{.arg wind_categories} can classify only selected wind metrics.",
+        i = "{.val {metric}} is not a wind exposure metric."
+      ))
+    }
+    standard <- plot_is_saffir_simpson_key(key)
+    if (standard && (!identical(metric, "VMAX_SUST_MS") || !identical(as.character(spec$aggregate), "max"))) {
+      cli::cli_abort(c(
+        "The built-in Saffir-Simpson key is valid only for {.field VMAX_SUST_MS} with {.code aggregate = 'max'}.",
+        i = "Provide an explicitly custom wind-category key for other metrics or aggregates."
+      ))
+    }
+    if (!plot_units_are_compatible(key$unit[1L], as.character(spec$unit[1L]))) {
+      cli::cli_abort(c(
+        "{.arg wind_categories} key for {.val {metric}} has incompatible units.",
+        i = "Its unit must be {.val {spec$unit}}, the unit of the numeric source metric."
+      ))
+    }
+    list(
+      key = key,
+      kind = if (standard) "saffir_simpson" else "custom",
+      label = if (standard) {
+        "Maximum local sustained wind category (Saffir\u2013Simpson-equivalent)"
+      } else {
+        paste0("Local exposure category (user-defined; ", key$unit[1L], ")")
+      }
+    )
+  })
+  stats::setNames(out, names(keys))
+}
+
+#' Categorize numeric aggregated exposure values using a category key
+#' @keywords internal
+#' @noRd
+plot_categorize_wind_exposure <- function(value, key) {
+  key <- plot_validate_wind_category_key(key, "wind_categories")
+  if (!is.numeric(value)) {
+    cli::cli_abort("Categorical exposure values must be numeric.")
+  }
+  category <- rep(NA_character_, length(value))
+  present <- !is.na(value)
+  if (any(present)) {
+    category[present] <- key$category[vapply(value[present], function(x) {
+      which(x <= key$threshold)[1L]
+    }, integer(1))]
+  }
+  factor(category, levels = key$category, ordered = TRUE)
 }
 
 #' Subset every local table consistently by storm IDs/names and ADM2 IDs
@@ -301,7 +398,7 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   dots <- rlang::list2(...)
   unknown <- setdiff(names(dots), c(
     "interactive", "quiet", "palette", "direction", "track_map_key",
-    "track_labels", "track_interval", "track_legend_position"
+    "track_labels", "track_interval", "track_legend_position", "wind_categories"
   ))
   unnamed <- length(dots) &&
     (is.null(names(dots)) || any(!nzchar(names(dots))))
@@ -309,7 +406,7 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
     cli::cli_abort("Unused preparation arguments in {.arg ...};
                     supported: interactive, quiet, palette, direction,
                     track_map_key, track_labels, track_interval,
-                    track_legend_position.")
+                    track_legend_position, wind_categories.")
   }
   type <- rlang::arg_match(type, c("exposure", "count", "track"))
   count_unit <- rlang::arg_match(count_unit, c("storms", "days"))
@@ -330,6 +427,18 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
     data, type, metric,
     aggregate, threshold, binary, dots$palette, dots$direction
   )
+  wind_categories <- plot_resolve_wind_categories(
+    dots$wind_categories, type, binary, metrics
+  )
+  if (type == "count") {
+    # Counts summarize precipitation observations, so retain its measure but
+    # not the source-table's daily-rate suffix in count-map labels.
+    precipitation <- metrics$metric == "PRECIP_MM"
+    metrics$label[precipitation] <- gsub(
+      "\\s+per\\s+local\\s+day\\b", "", metrics$label[precipitation],
+      ignore.case = TRUE
+    )
+  }
   if (type == "count" && !binary) {
     metrics$value_label <- paste("Number of", count_unit)
     metrics$value_unit <- count_unit
@@ -387,6 +496,15 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
     cli::cli_abort("No plotting data remain after subsetting
                     and matching storm windows.")
   }
+  if (length(wind_categories)) {
+    out$wind_category <- NA_character_
+    for (metric in names(wind_categories)) {
+      selected <- as.character(out$metric) == metric
+      out$wind_category[selected] <- as.character(plot_categorize_wind_exposure(
+        out$value[selected], wind_categories[[metric]]$key
+      ))
+    }
+  }
   validate_plot_facet(out, facet_by)
   if (type %in% c("exposure", "count")) {
     rlang::check_installed("sf", reason = "to prepare ADM2 maps")
@@ -441,24 +559,33 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   } else {
     plot_observation_date_range(raw_parts)
   }
-  wind_radius <- plot_wind_radius(if (type == "track") NULL else raw_parts)
+  hazard_settings <- plot_hazard_settings(if (type == "track") NULL else raw_parts)
+  storm_info <- plot_storm_info(out, data$storm_metadata, membership)
   info <- list(
     type = type, metrics = metrics, metric = metrics$metric,
     registry = plot_metric_registry(data$codebook),
     aggregate = stats::setNames(metrics$aggregate, metrics$metric),
     threshold = stats::setNames(metrics$threshold, metrics$metric),
     binary = binary, count_unit = count_unit,
+    wind_categories = wind_categories,
     facet_by = facet_by, facets = facets,
-    metric_labels = stats::setNames(metrics$label, metrics$metric),
     track = track, tracks = tracks, plotted_pairs = membership,
     track_map_key = dots$track_map_key %||% saffir_simpson(),
     track_labels = dots$track_labels %||% TRUE,
     track_interval = dots$track_interval %||% 6L,
     track_legend_position = dots$track_legend_position,
-    observed_range = observed_range, wind_radius_km = wind_radius,
+    observed_range = observed_range,
+    hazard_settings = hazard_settings,
+    # Retain this field for callers which used the earlier prepared-data API.
+    wind_radius_km = hazard_settings$wind$radius_km,
+    storm_ids = storm_info$ids, storm_labels = storm_info$labels,
     filters = filters, flood_match = flood_match,
-    query = attr(data, "query", exact = TRUE)
+    query = attr(data, "query", exact = TRUE),
+    manifest = attr(data, "manifest", exact = TRUE),
+    retrieved_at = attr(data, "retrieved_at", exact = TRUE),
+    gtropic_version = attr(data, "gtropic_version", exact = TRUE)
   )
+  info$metric_labels <- plot_metric_panel_labels(metrics)
   info$caption <- plot_caption(info)
   attr(out, "plot_info") <- info
   out
@@ -512,24 +639,73 @@ plot_track_date_range <- function(tracks) {
   range(dates)
 }
 
-#' Find the maximum published wind distance among mapped wind observations
+#' Derive plotted radii and temporal windows from the contributing rows
+#'
+#' These settings deliberately come from rows that contributed to the plotted
+#' values, not from original retrieval filters. A supplied or subsequently
+#' subsetted object can therefore describe a smaller effective window.
 #' @keywords internal
 #' @noRd
-plot_wind_radius <- function(raw_parts) {
-  wind <- raw_parts[vapply(raw_parts, function(x) {
-    "STORM_DIST_KM" %in% names(x) &&
-      any(as.character(x$metric) %in% plot_metric_registry()$metric[
-        plot_metric_registry()$table == "wind"
-      ])
-  }, logical(1))]
-  values <- unlist(lapply(wind, function(x) {
-    x$STORM_DIST_KM[
-      !is.na(x$.plot_row_id) & is.finite(x$value)
-    ]
-  }), use.names = FALSE)
-  values <- values[is.finite(values)]
-  if (!length(values)) {
-    return(NULL)
+plot_hazard_settings <- function(raw_parts) {
+  empty <- list(radius_km = NULL, days_before = NULL, days_after = NULL)
+  settings <- stats::setNames(rep(list(empty), 3L), c("wind", "precip", "flood"))
+  if (is.null(raw_parts)) return(settings)
+
+  registry <- plot_metric_registry()
+  for (rows in raw_parts) {
+    if (!nrow(rows) || !"metric" %in% names(rows)) next
+    table <- registry$table[match(as.character(rows$metric[1L]), registry$metric)]
+    if (is.na(table) || !table %in% names(settings)) next
+    observed <- !is.na(rows$.plot_row_id) & is.finite(rows$value)
+    if (!any(observed)) next
+    if ("STORM_DIST_KM" %in% names(rows)) {
+      radius <- rows$STORM_DIST_KM[observed]
+      radius <- radius[is.finite(radius)]
+      if (length(radius)) {
+        settings[[table]]$radius_km <- max(c(settings[[table]]$radius_km, radius))
+      }
+    }
+    window_columns <- c(
+      "LOCAL_DATE_STORM_CLOSEST", paste0(toupper(table), "_WINDOW_START"),
+      paste0(toupper(table), "_WINDOW_END")
+    )
+    if (!all(window_columns %in% names(rows))) next
+    closest <- plot_join_date(rows[[window_columns[1L]]][observed], window_columns[1L])
+    start <- plot_join_date(rows[[window_columns[2L]]][observed], window_columns[2L])
+    end <- plot_join_date(rows[[window_columns[3L]]][observed], window_columns[3L])
+    before <- as.numeric(closest - start)
+    after <- as.numeric(end - closest)
+    if (any(is.finite(before))) {
+      settings[[table]]$days_before <- max(c(settings[[table]]$days_before, before), na.rm = TRUE)
+    }
+    if (any(is.finite(after))) {
+      settings[[table]]$days_after <- max(c(settings[[table]]$days_after, after), na.rm = TRUE)
+    }
   }
-  max(values)
+  settings
+}
+
+#' Identify plotted storms and use published names where available
+#' @keywords internal
+#' @noRd
+plot_storm_info <- function(data, storm_metadata = NULL, membership = NULL) {
+  ids <- if (!is.null(membership) && "STORM_ID" %in% names(membership)) {
+    unique(as.character(membership$STORM_ID))
+  } else if ("STORM_ID" %in% names(data)) {
+    unique(as.character(data$STORM_ID))
+  } else {
+    character()
+  }
+  ids <- ids[!is.na(ids) & nzchar(ids)]
+  labels <- ids
+  if (!is.null(storm_metadata) && all(c("STORM_ID", "STORM_NAME") %in% names(storm_metadata))) {
+    names <- storm_metadata$STORM_NAME[match(ids, storm_metadata$STORM_ID)]
+    present <- !is.na(names) & nzchar(trimws(names))
+    labels[present] <- as.character(names[present])
+  } else if ("STORM_NAME" %in% names(data)) {
+    names <- data$STORM_NAME[match(ids, data$STORM_ID)]
+    present <- !is.na(names) & nzchar(trimws(names))
+    labels[present] <- as.character(names[present])
+  }
+  list(ids = ids, labels = labels)
 }

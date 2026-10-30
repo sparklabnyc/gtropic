@@ -41,7 +41,7 @@ A continuous or discrete ggplot2 fill scale.
 }
 \description{
 Native ggplot2 viridis scales: inferno for wind, mako for precipitation,
-and viridis for flooding when a metric is supplied. Missing values are grey.
+and viridis for flooding when a metric is supplied. Missing values are gray.
 }
 \examples{
 \donttest{

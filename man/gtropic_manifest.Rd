@@ -4,6 +4,7 @@
 \alias{gtropic_manifest}
 \alias{gtropic_filters}
 \alias{gtropic_warnings}
+\alias{gtropic_availability}
 \title{Extract metadata from a G-TROPIC result}
 \usage{
 gtropic_manifest(x)
@@ -11,15 +12,20 @@ gtropic_manifest(x)
 gtropic_filters(x)
 
 gtropic_warnings(x)
+
+gtropic_availability(x)
 }
 \arguments{
 \item{x}{A \code{gtropic_data} object.}
 }
 \value{
 \code{gtropic_manifest()} returns an object of class \code{gtropic_manifest}.
-\code{gtropic_filters()} returns a named list of resolved query settings.
+\code{gtropic_filters()} returns a named \code{gtropic_filters} list of resolved
+query settings. List elements retain their complete values; printing shows
+a compact preview.
 \code{gtropic_warnings()} returns a named list of recorded diagnostics, which is
-empty when none were retained.
+empty when none were retained. \code{gtropic_availability()} returns a named
+list of source availability and coverage metadata.
 }
 \description{
 These accessor functions retrieve provenance, resolved query settings, and
@@ -32,14 +38,17 @@ remain available.
 
 \code{gtropic_filters()} reports the filters as resolved by the package, including
 selected ADM2 and storm identifiers, genesis-date bounds, years represented
-by the selected storms, and precipitation and flood window settings. These
-values support transparent reporting and quality assurance in downstream
-analyses.
+by the selected storms, the wind radius, and precipitation and flood window
+settings. These values support transparent reporting and quality assurance in
+downstream analyses.
 
 \code{gtropic_warnings()} returns diagnostic details retained with the result.
 This can include complete values that were abbreviated in a console warning,
 such as ADM2 units whose polygon membership varied over time. It is not a log
 of every warning that may have been emitted during retrieval.
+
+\code{gtropic_availability()} returns structured source update schedules, known
+coverage, and the requested time range used for availability diagnostics.
 }
 \examples{
 \donttest{

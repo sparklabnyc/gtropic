@@ -33,16 +33,30 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   for (i in seq_len(nrow(info$metrics))) {
     spec <- info$metrics[i, ]
     part <- mapped[mapped$metric == spec$metric, , drop = FALSE]
-    values <- if (info$binary) part$exposed else part$value
-    if (!info$binary) values[!is.finite(values)] <- NA_real_
-    scale <- plot_interactive_scale(values, spec, info$binary)
+    category_config <- info$wind_categories[[as.character(spec$metric)]]
+    values <- if (!is.null(category_config)) {
+      part$wind_category
+    } else if (info$binary) {
+      part$exposed
+    } else {
+      part$value
+    }
+    if (is.null(category_config) && !info$binary) values[!is.finite(values)] <- NA_real_
+    count_categories <- NULL
+    if (info$type == "count" && !info$binary) {
+      count_categories <- plot_count_categories(values)
+      values <- plot_count_category(values, count_categories)
+    }
+    scale <- plot_interactive_scale(
+      values, spec, info$binary, category_config, count_categories
+    )
     facet <- setdiff(info$facet_by, "metric")
     levels <- if (length(facet)) unique(part[[facet]]) else NA_character_
     for (j in seq_along(levels)) {
       selected <- if (length(facet)) part[[facet]] %in% levels[j] else TRUE
       panel <- part[selected, , drop = FALSE]
       label <- paste0(
-        spec$label,
+        info$metric_labels[[as.character(spec$metric)]],
         if (length(facet)) paste0(" | ", facet, "=", levels[j])
       )
       # Layer-control names are HTML too; distinguish a missing facet from
@@ -56,7 +70,9 @@ build_interactive_plot <- function(data, cartography, title = NULL,
         fillColor = scale$map(values[selected]),
         popup = plot_interactive_popup(panel, spec, info)
       ), dots))
-      map <- plot_interactive_legend(map, scale, values, group, spec, info)
+      map <- plot_interactive_legend(
+        map, scale, values, group, spec, info, category_config
+      )
     }
   }
   panel_groups <- plot_interactive_escape(panels)
@@ -75,17 +91,7 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   if (length(panel_groups) > 1L) {
     map <- leaflet::hideGroup(map, panel_groups[-1L])
   }
-  default_title <- if (info$type == "count") {
-    paste("Tropical cyclone exposure", info$count_unit)
-  } else {
-    "Tropical cyclone exposure"
-  }
-  if (isTRUE(info$track) && !is.null(info$tracks) &&
-    dplyr::n_distinct(info$tracks$STORM_ID) == 1L) {
-    default_title <- paste0(
-      default_title, ": ", plot_track_display_name(info$tracks)[1L]
-    )
-  }
+  default_title <- plot_default_title(info)
   heading <- paste0(
     "<strong>", plot_interactive_escape(title %||% default_title), "</strong>",
     "<br/>", plot_interactive_escape(
@@ -171,11 +177,24 @@ plot_interactive_geometry <- function(data, cartography) {
 #' Train native ggplot2 scales over every facet of a metric
 #' @keywords internal
 #' @noRd
-plot_interactive_scale <- function(values, spec, binary) {
-  if (binary) {
+plot_interactive_scale <- function(values, spec, binary, category_config = NULL,
+                                   count_categories = NULL) {
+  if (!is.null(category_config)) {
+    key <- category_config$key
+    scale <- ggplot2::scale_fill_manual(
+      values = stats::setNames(key$colour, key$category),
+      limits = key$category, breaks = key$category, drop = FALSE,
+      name = category_config$label, na.value = "grey90"
+    )
+  } else if (binary) {
     scale <- scale_fill_gtropic_d(
       metric = spec$metric, palette = spec$palette, direction = spec$direction,
       limits = c(FALSE, TRUE), drop = FALSE
+    )
+  } else if (!is.null(count_categories)) {
+    scale <- scale_fill_gtropic_d(
+      metric = spec$metric, palette = spec$palette, direction = spec$direction,
+      limits = count_categories, breaks = count_categories, drop = FALSE
     )
   } else {
     observed <- values[is.finite(values)]
@@ -191,16 +210,27 @@ plot_interactive_scale <- function(values, spec, binary) {
 #' Attach group-aware legends, including constant and wholly missing metrics
 #' @keywords internal
 #' @noRd
-plot_interactive_legend <- function(map, scale, values, group, spec, info) {
-  title <- plot_interactive_escape(spec$legend)
-  observed <- if (info$binary) c(FALSE, TRUE) else sort(unique(stats::na.omit(values)))
-  if (!info$binary && length(observed) > 1L) {
+plot_interactive_legend <- function(map, scale, values, group, spec, info,
+                                    category_config = NULL) {
+  title <- plot_interactive_escape(category_config$label %||% spec$legend)
+  observed <- if (!is.null(category_config)) {
+    category_config$key$category
+  } else if (info$binary) {
+    c(FALSE, TRUE)
+  } else {
+    sort(unique(stats::na.omit(values)))
+  }
+  if (identical(info$type, "count") && !info$binary) {
+    observed <- levels(values)
+  } else if (is.null(category_config) && !info$binary && length(observed) > 1L) {
     limits <- range(observed)
     observed <- pretty(limits, n = 5L)
     observed <- observed[observed >= limits[1] & observed <= limits[2]]
     if (!length(observed)) observed <- limits
   }
-  labels <- if (info$binary) {
+  labels <- if (!is.null(category_config) || (identical(info$type, "count") && !info$binary)) {
+    as.character(observed)
+  } else if (info$binary) {
     c("Not exposed", "Exposed")
   } else {
     plot_format_key_number(observed)
@@ -245,6 +275,9 @@ plot_interactive_popup <- function(data, spec, info) {
     "<br/><b>", plot_interactive_escape(spec$metric), ":</b> ", field("value"),
     " ", plot_interactive_escape(unit),
     if (info$binary) paste0("<br/><b>Exposed:</b> ", field("exposed")),
+    if (!is.null(info$wind_categories[[as.character(spec$metric)]])) {
+      paste0("<br/><b>Category:</b> ", field("wind_category"))
+    },
     "<br/><b>", distance_label, ":</b> ", field("STORM_DIST_KM"), " km"
   )
 }

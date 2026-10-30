@@ -34,7 +34,7 @@ globally, from 1980 to the present. Key features include:
 * Discovery helpers for exploring the available vocabulary of
 administrative units and storms
 * Version manifests for reproducible re-retrieval
-* An optional opt-in on-disk cache
+* An on-disk cache enabled by default, with per-call bypass controls
 * Publication-ready static and interactive plots
 
 ## Installation
@@ -54,14 +54,12 @@ library(gtropic)
 
 ## Usage
 
-```{r, eval = FALSE}
+```{r}
 library(gtropic)
 
-# Wind, precipitation, flooding and population for the USA, for storms that formed
-# during 2005.
-usa_05 <- gtropic_data(WHO_ENTITY = "United States", date_range = c(2005, 2005))
-
-usa_05
+# Grab exposure data for Hurricane Katrina (2005)
+katrina <- gtropic_data(STORM_NAME = "Katrina-2005")
+summary(katrina)
 ```
 
 The `gtropic_data()` function returns a named list of tables that by default includes:
@@ -74,12 +72,21 @@ The `gtropic_data()` function returns a named list of tables that by default inc
 - **`pop`** -- population and population-weighted centroid data, per ADM2 per year.
 - **`adm2`** -- the lookup table of administrative units.
 - **`codebook`** -- the dataset's own documentation, as a nested list.
+- **`zero_pairs`** -- administrative unit-storm pairs with no measurable wind.
+- **`tracks`** -- raw storm-track observations.
+- **`geometry`** -- administrative boundaries, as an `sf` object.
+- **`storm_metadata`** -- storm names, identifiers, and genesis dates.
 - **`links`** -- see below.
 
-Three further tables are available on request via the `tables` argument:
-`zero_pairs` (unit-storm pairs with no measurable wind), `tracks` (raw storm
-track observations, for plotting purposes), and `geometry` (administrative boundaries,
-again for plotting purposes, and requiring the `sf` package).
+Pass a shorter `tables` vector when you do not need every table and want to
+reduce transfer and storage requirements. The default includes `geometry`, so
+it requires the suggested `sf` and `sfarrow` packages.
+
+By default, `wind_radius_km = 500` retains returned `wind` records and `links`
+whose published `STORM_DIST_KM` is at or below 500 km, inclusively. Set it to
+`Inf` or `NULL` for no wind-distance bound. The precipitation and flood radii
+remain independent, but their windows are evaluated only for links retained by
+the wind-radius filter.
 
 Every result also carries a **manifest** providing a record of which published files went
 into the result, including their paths, dataset versions, sizes and checksums.
@@ -91,27 +98,20 @@ saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
 
 ## Plotting
 
-Request geometry and tracks with the original query, then plot the local result.
-Plotting never starts a new download or recomputes a published exposure value.
-`gtropic_exposures()` lists the available wind, precipitation, and flooding
-metrics and their default aggregations.
+```{r}
+gtropic_plot(katrina)
+```
 
-```{r, eval = FALSE}
-kat_05 <- gtropic_data(
-  STORM_NAME = "Katrina-2005", WHO_ENTITY = "United States",
-  date_range = c(2005, 2005),
-  tables = c("wind", "adm2", "geometry", "tracks")
-)
+```{r}
+# Grab exposure data for Hurricane Helene (2024)
+helene <- gtropic_data(STORM_NAME = "Helene-2024")
 
-gtropic_plot(kat_05, type = "exposure", metric = "VMAX_SUST_MS",
-  gridlines = TRUE)
-gtropic_plot(kat_05, type = "count", metric = "VMAX_SUST_MS",
-  gridlines = FALSE)
-gtropic_plot(kat_05, type = "track", track_map_key = saffir_simpson())
+# Plot Helene's exposure data
+gtropic_plot(helene)
 ```
 
 See `vignette("plotting")` for vectorized multi-metric maps, Saffir-Simpson
-track keys, gridlines, interactive maps, thresholds, and publication sizing.
+track keys, gridlines, interactive maps, thresholds, and more.
 
 ## Getting help
 

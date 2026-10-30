@@ -23,7 +23,9 @@
 #' identifiers. Names and geographic classifications are matched
 #' case-insensitively after whitespace normalization. Every supplied value must
 #' match the published metadata, and the intersection of all filters must be
-#' nonempty. Use [gtropic_adm2()] and [gtropic_storms()] to review valid values.
+#' nonempty. An unmatched `STORM_ID` or `STORM_NAME` is checked against the
+#' published exclusion records; use [gtropic_adm2()], [gtropic_storms()], and
+#' [gtropic_excluded_storms()] to review valid or excluded values.
 #'
 #' A spatial filter supplied through `polygon` is combined with other geographic
 #' filters using AND. An ADM2 unit is selected when its published
@@ -67,6 +69,21 @@
 #' eligible study area; radius arguments can narrow that area but do not add
 #' units outside it.
 #'
+#' `wind_radius_km` defaults to 500 km and inclusively limits returned wind
+#' records to pairs at or below their published `STORM_DIST_KM`. `links`
+#' contains every published pair needed by the union of requested hazard fields:
+#' a larger precipitation or flood radius can therefore retain pairs beyond the
+#' wind radius. Its `WIND_IN_FIELD` flag identifies whether each retained pair
+#' falls inside the configured wind field. For every `*_IN_FIELD` flag, a finite
+#' radius excludes pairs with missing published distance, while `Inf` or `NULL`
+#' includes them. An unbounded radius does not constrain this union.
+#' When no finite requested hazard field bounds a query, `links` retains all
+#' available pairs within the selected geography and storms, and returned ADM2,
+#' population, geometry, and tracks retain their original selected scope.
+#' When a requested hazard table has a finite radius, returned ADM2, population,
+#' and geometry rows are limited to units in its qualifying links; the union is
+#' used for several such hazards.
+#'
 #' Precipitation and flood tables contain unique source records and are not
 #' duplicated when one record falls within the windows of multiple storms. To
 #' assign records to storms, join them to `links` using `ADM2_ID` and the
@@ -87,8 +104,9 @@
 #'
 #' Each result includes a manifest containing the source dataset versions,
 #' files, and checksums used. Supplying that manifest to a later call requests
-#' the same published source files. The same analytic filters must also be
-#' supplied to reproduce the query.
+#' the same published source files and replays its canonical resolved query,
+#' including resolved ADM2 and storm identifiers and the metadata-file years
+#' originally scanned.
 #'
 #' @param ADM2_ID Optional character vector of published ADM2 identifiers.
 #'   Matching is exact and case-sensitive.
@@ -107,8 +125,9 @@
 #' @param reproject Logical. If `TRUE` (the default), a `polygon` not already in
 #'   EPSG:4326 is transformed before evaluation. If `FALSE`, a non-EPSG:4326
 #'   polygon produces an error.
-#' @param date_range Optional vector of length two defining an inclusive period
-#'   of storm genesis dates. Cannot be combined with `date_list`.
+#' @param date_range Optional vector of one or two endpoints defining an
+#'   inclusive period of storm genesis dates. A single value is used for both
+#'   endpoints. Cannot be combined with `date_list`.
 #' @param date_list Optional vector of complete genesis dates to match exactly.
 #'   Cannot be combined with `date_range`.
 #' @param date_format Optional character scalar specifying the order of
@@ -116,25 +135,38 @@
 #'   automatic date-order inference is not used.
 #' @param STORM_ID Optional character vector of published G-TROPIC storm
 #'   identifiers. Matching is exact and case-sensitive.
-#' @param STORM_NAME Optional character vector of storm names, matched
-#'   case-insensitively.
+#' @param STORM_NAME Optional character vector of published, disambiguated storm
+#'   names in `Name-YYYY` form, such as `Katrina-2005`, matched
+#'   case-insensitively. The suffix year limits the metadata files scanned;
+#'   storm and date filters are still combined with AND.
 #' @param USA_ATCF_ID Optional character vector of US Automated Tropical Cyclone
 #'   Forecasting System identifiers. Matching is exact and case-sensitive.
-#' @param tables Character vector specifying tables to return. Available values
-#'   are `"wind"`, `"precip"`, `"flood"`, `"pop"`, `"adm2"`, `"codebook"`,
-#'   `"zero_pairs"`, `"tracks"`, `"geometry"`, and `"storm_metadata"`.
-#'   `storm_metadata` is added whenever a storm-linked table is requested. A
-#'   `links` table describing evaluated ADM2-storm pairs is also returned.
+#' @param wind_radius_km Maximum published storm-track distance, in kilometers,
+#'   for returned wind records; defaults to 500. A finite positive value
+#'   restricts them inclusively. It also contributes to the union-boundary of
+#'   `links` when wind is requested. `Inf` or `NULL` is unbounded; with an
+#'   unbounded wind radius, wind records with missing published distances are
+#'   retained. This argument does not filter returned `zero_pairs` records.
+#' @param tables Character vector specifying tables to return. By default, all
+#'   available tables are returned: `"wind"`, `"precip"`, `"flood"`, `"pop"`,
+#'   `"adm2"`, `"codebook"`, `"zero_pairs"`, `"tracks"`, `"geometry"`, and
+#'   `"storm_metadata"`. Supply a smaller vector to reduce transfer and storage
+#'   requirements. Because the default includes `"geometry"`, it requires the
+#'   suggested `sf` and `sfarrow` packages. `storm_metadata` is added whenever a
+#'   storm-linked table is requested. A `links` table describing retained
+#'   ADM2-storm pairs is also returned.
 #' @param precip_days_before,precip_days_after Non-negative whole numbers of
 #'   days before and after local storm closest approach to include in each
 #'   precipitation window.
 #' @param precip_radius_km Positive numeric value giving the maximum storm-track
-#'   distance, in kilometres, for inclusion in precipitation linkages.
+#'   distance, in kilometers, for inclusion in precipitation linkages. `Inf` or
+#'   `NULL` leaves this radius unbounded.
 #' @param flood_days_before,flood_days_after Non-negative whole numbers of days
 #'   before and after local storm closest approach to include in each flood
 #'   window.
 #' @param flood_radius_km Positive numeric value giving the maximum storm-track
-#'   distance, in kilometres, for inclusion in flood linkages.
+#'   distance, in kilometers, for inclusion in flood linkages. `Inf` or `NULL`
+#'   leaves this radius unbounded.
 #' @param flood_match Method for matching flood intervals to storm-relative
 #'   windows. `"start"` includes floods whose start date is within the window.
 #'   `"overlap"` includes any flood interval that overlaps the window, including
@@ -146,8 +178,9 @@
 #'   a single version applied to both datasets, or a named character vector such
 #'   as `c(historical = "2.0", current = "3.0")`.
 #' @param manifest Optional `gtropic_manifest` from [gtropic_manifest()]. When
-#'   supplied, the recorded source files are used and `version` and configured
-#'   DOI options are ignored.
+#'   supplied, its recorded source files and canonical resolved query are used.
+#'   Data-shaping arguments cannot also be supplied; only `cache`, `as`,
+#'   `confirm`, `quiet`, and `offline` may differ during replay.
 #' @param cache Whether downloaded source files may be cached. `NULL` uses
 #'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
 #'   setting for this call.
@@ -161,28 +194,34 @@
 #'   interactive confirmation.
 #' @param quiet Logical. If `TRUE`, progress and informational messages are
 #'   suppressed. Warnings and errors are still reported.
+#' @param offline Logical. If `TRUE`, use only cached source files and a
+#'   persisted discovery snapshot; no Dataverse update check is made and the
+#'   snapshot age is reported. Requires an enabled cache. Defaults to `FALSE`.
 #'
 #' @return An object of class `gtropic_data`, implemented as a named list. It
 #'   contains the requested data tables and a `links` tibble with one row per
-#'   evaluated ADM2-storm pair. `links` includes `ADM2_ID`, `STORM_ID`, the
-#'   published local date and distance at closest approach, logical
+#'   ADM2-storm pair retained by the union of requested hazard radii (or all
+#'   available selected pairs when that union is unbounded). `links` includes `ADM2_ID`,
+#'   `STORM_ID`, the published local date and distance at closest approach, logical
 #'   `WIND_EXPOSURE` status (`TRUE` for nonzero wind exposure and `FALSE` for
-#'   zero), indicators for whether the pair falls within the precipitation and
-#'   flood radii, and the start and end of each hazard-specific temporal window.
+#'   zero), `WIND_IN_FIELD` and indicators for whether the pair falls within the
+#'   precipitation and flood radii, and the start and end of each hazard-specific
+#'   temporal window.
+#'   With a finite requested hazard radius, `tracks` contains only storms with
+#'   at least one qualifying link; otherwise it retains all selected storms.
 #'   The `pop` table includes a `YEAR` column derived from each yearly source
-#'   filename.
-#'   By default, tabular elements are tibbles, `codebook` is a nested list, and
-#'   `geometry` is an `sf` object.
+#'   filename. By default, all available tables are returned. Tabular elements
+#'   are tibbles, `codebook` is a nested list, and `geometry` is an `sf` object.
 #'
 #'   The object also stores the source-file manifest, original query, resolved
 #'   filters, recorded diagnostics, retrieval time, and package version as
-#'   attributes. Use [gtropic_manifest()], [gtropic_filters()], and
+#'   attributes, including structured availability and coverage metadata. Use [gtropic_manifest()], [gtropic_filters()], and
 #'   [gtropic_warnings()] to retrieve the principal metadata attributes.
 #'
 #' @examples
 #' \donttest{
-#' # Wind, precipitation, flood, and population data for storms that formed
-#' # during the 2005 season and were evaluated in Jamaica
+#' # All available tables for storms that formed during the 2005 season and
+#' # were evaluated in Jamaica
 #' jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #' jamaica
 #'
@@ -205,15 +244,7 @@
 #'
 #' # Retain source-file provenance for a subsequent retrieval
 #' source_manifest <- gtropic_manifest(philippines)
-#' philippines_retrieved_again <- gtropic_data(
-#'   WHO_ENTITY = "Philippines",
-#'   date_range = c("2015-06-01", "2015-12-31"),
-#'   precip_days_before = 3,
-#'   precip_days_after = 3,
-#'   precip_radius_km = 300,
-#'   tables = c("precip", "pop", "adm2"),
-#'   manifest = source_manifest
-#' )
+#' philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
 #' }
 #'
 #' @seealso [gtropic_adm2()], [gtropic_storms()], [gtropic_years()],
@@ -233,9 +264,11 @@ gtropic_data <- function(ADM2_ID = NULL,
                          STORM_ID = NULL,
                          STORM_NAME = NULL,
                          USA_ATCF_ID = NULL,
+                         wind_radius_km = 500,
                          tables = c(
                            "wind", "precip", "flood", "pop", "adm2",
-                           "codebook"
+                           "codebook", "zero_pairs", "tracks", "geometry",
+                           "storm_metadata"
                          ),
                          precip_days_before = 2,
                          precip_days_after = 1,
@@ -247,15 +280,26 @@ gtropic_data <- function(ADM2_ID = NULL,
                          geometry_resolution = c("simplified", "full"),
                          version = ":latest",
                          manifest = NULL,
-                         cache = NULL,
-                         as = c("tibble", "arrow"),
-                         confirm = NULL,
-                         quiet = FALSE) {
+                          cache = NULL,
+                          as = c("tibble", "arrow"),
+                          confirm = NULL,
+                          quiet = FALSE,
+                          offline = FALSE) {
   call <- match.call()
+
+  if (!is.null(manifest)) {
+    manifest_validate(manifest)
+    manifest_assert_replay_arguments(call)
+  }
+
+  if (!is.null(date_range) && length(date_range) == 1L) {
+    date_range <- c(date_range, date_range)
+  }
 
   flood_match <- rlang::arg_match(flood_match)
   geometry_resolution <- rlang::arg_match(geometry_resolution)
   as <- rlang::arg_match(as)
+  storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
 
   args <- list(
     geo_filters = compact(list(
@@ -267,9 +311,11 @@ gtropic_data <- function(ADM2_ID = NULL,
     )),
     storm_filters = compact(list(
       STORM_ID = as_filter_chr(STORM_ID, "STORM_ID"),
-      STORM_NAME = as_filter_chr(STORM_NAME, "STORM_NAME"),
+      STORM_NAME = storm_name,
       USA_ATCF_ID = as_filter_chr(USA_ATCF_ID, "USA_ATCF_ID")
     )),
+    storm_name_years = storm_name_years(storm_name),
+    wind_radius_km = check_wind_radius_km(wind_radius_km),
     polygon = polygon,
     reproject = reproject,
     date_range = date_range,
@@ -301,10 +347,84 @@ gtropic_data <- function(ADM2_ID = NULL,
     cache = cache,
     as = as,
     confirm = confirm,
-    quiet = isTRUE(quiet)
+    quiet = isTRUE(quiet),
+    offline = check_offline(offline),
+    # Populated after source metadata has resolved the user-facing filters.
+    # They are separate from the original filters so a replay does not need to
+    # read ADM2 metadata merely to validate already-canonical IDs.
+    resolved_adm2_ids = NULL,
+    resolved_storm_ids = NULL,
+    storm_metadata_years = NULL
   )
 
+  if (!is.null(manifest)) {
+    args[names(manifest$resolved_query)] <- manifest$resolved_query
+    args$manifest <- manifest
+  }
+  args$resolved_query <- manifest_query_from_args(args)
+
   assemble_gtropic_data(args, call = call)
+}
+
+#' Reject conflicting data-shaping arguments on manifest replay
+#' @keywords internal
+#' @noRd
+manifest_assert_replay_arguments <- function(call, call_env = rlang::caller_env()) {
+  supplied <- setdiff(names(call), "")
+  shaping <- c(
+    "ADM2_ID", "ADM2_NAME", "ADM2_GROUP", "WHO_ENTITY", "WHO_REGION",
+    "polygon", "reproject", "date_range", "date_list", "date_format",
+    "STORM_ID", "STORM_NAME", "USA_ATCF_ID", "wind_radius_km", "tables",
+    "precip_days_before", "precip_days_after", "precip_radius_km",
+    "flood_days_before", "flood_days_after", "flood_radius_km", "flood_match",
+    "geometry_resolution", "version"
+  )
+  conflicts <- intersect(supplied, shaping)
+  if (length(conflicts) > 0L) {
+    cli::cli_abort(c(
+      "A manifest already defines the resolved query.",
+      x = "Do not also supply data-shaping argument{?s}: {.arg {conflicts}}.",
+      i = "You may change {.arg cache}, {.arg as}, {.arg confirm}, {.arg quiet}, or {.arg offline}."
+    ), call = call_env)
+  }
+  invisible(TRUE)
+}
+
+#' Create the canonical, replayable portion of a query
+#' @keywords internal
+#' @noRd
+manifest_query_from_args <- function(args, resolved_adm2_ids = NULL,
+                                     resolved_storm_ids = NULL,
+                                     storm_metadata_years = NULL) {
+  out <- args[manifest_query_fields()]
+  if (!is.null(resolved_adm2_ids)) {
+    out$resolved_adm2_ids <- sort(unique(as.character(resolved_adm2_ids)))
+    # IDs below are the canonical geographic selection; name/country filters
+    # and polygon geometry have already done their work.
+    out$geo_filters <- list()
+    # `$<- NULL` removes a list element. Keep this named field so manifests
+    # always satisfy the complete canonical-query schema.
+    out["polygon"] <- list(NULL)
+  }
+  if (!is.null(resolved_storm_ids)) {
+    out$resolved_storm_ids <- sort(unique(as.character(resolved_storm_ids)))
+    out$storm_filters <- list(STORM_ID = out$resolved_storm_ids)
+    out["storm_name_years"] <- list(NULL)
+  }
+  if (!is.null(storm_metadata_years)) {
+    out$storm_metadata_years <- sort(unique(as.integer(storm_metadata_years)))
+  }
+  out
+}
+
+#' Validate offline mode
+#' @keywords internal
+#' @noRd
+check_offline <- function(x, call = rlang::caller_env()) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    cli::cli_abort("{.arg offline} must be a single `TRUE` or `FALSE` value.", call = call)
+  }
+  x
 }
 
 #' Validate a non-negative whole-number argument
@@ -329,19 +449,57 @@ check_nonneg_int <- function(x, arg, call = rlang::caller_env()) {
   as.numeric(x)
 }
 
-#' Validate a positive numeric argument
+#' Validate a positive numeric radius argument
 #'
 #' @param x Value supplied.
 #' @param arg Argument name.
 #' @param call Calling environment.
 #'
-#' @return `x` as a numeric scalar.
+#' @return `x` as a positive numeric scalar or `Inf`.
 #' @keywords internal
 #' @noRd
 check_positive_num <- function(x, arg, call = rlang::caller_env()) {
-  if (!is.numeric(x) || length(x) != 1L || is.na(x) || x <= 0) {
+  if (is.null(x)) {
+    return(Inf)
+  }
+
+  valid <- is.numeric(x) && length(x) == 1L &&
+    (is.infinite(x) && x > 0 || is.finite(x) && x > 0)
+  if (!valid) {
     cli::cli_abort(
-      c("{.arg {arg}} must be a single positive number.",
+      c("{.arg {arg}} must be a single positive finite number, {.val Inf}, or {.code NULL}.",
+        x = "Got {.val {x}}."
+      ),
+      call = call
+    )
+  }
+  as.numeric(x)
+}
+
+#' Validate the wind radius argument
+#'
+#' `NULL` is an explicit request for no wind-distance restriction. It is
+#' normalized to `Inf` so downstream filtering has one unbounded representation.
+#'
+#' @param x Value supplied.
+#' @param arg Argument name.
+#' @param call Calling environment.
+#'
+#' @return A positive finite numeric scalar or `Inf`.
+#' @keywords internal
+#' @noRd
+check_wind_radius_km <- function(x,
+                                 arg = "wind_radius_km",
+                                 call = rlang::caller_env()) {
+  if (is.null(x)) {
+    return(Inf)
+  }
+
+  valid <- is.numeric(x) && length(x) == 1L &&
+    (is.infinite(x) && x > 0 || is.finite(x) && x > 0)
+  if (!valid) {
+    cli::cli_abort(
+      c("{.arg {arg}} must be a single positive finite number, {.val Inf}, or {.code NULL}.",
         x = "Got {.val {x}}."
       ),
       call = call

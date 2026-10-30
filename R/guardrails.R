@@ -1,11 +1,10 @@
 # ---------------------------------------------------------------------------
 # The download guardrail.
 #
-# gtropic_data() with no arguments means roughly 47 years of global daily
-# precipitation. That is the case this exists to catch. Any query including
-# precip or flood also pulls zero_pairs (~30 MB/year) whether or not the user
-# asked for it, so a full-history precip query is legitimately enormous and
-# SHOULD trip the prompt.
+# gtropic_data() with no arguments requests every available table for the full
+# global record. That is the case this exists to catch. Any query including
+# precip or flood also pulls zero_pairs (~30 MB/year), so a full-history query
+# is legitimately enormous and SHOULD trip the prompt.
 #
 # The non-interactive branch errors rather than prompting. Hanging a batch job
 # on a readline() that no one will ever answer is worse than failing fast.
@@ -33,10 +32,18 @@ estimate_download <- function(plan, cache, discovery) {
     if (is.null(slot)) {
       return(FALSE)
     }
+    row <- slot$listing[
+      slot$listing$directory_label == plan$directory_label[i] &
+        slot$listing$label == plan$label[i], ,
+      drop = FALSE
+    ]
+    if (nrow(row) == 0L) {
+      return(FALSE)
+    }
     cache_has(cache, list(
       server = discovery$server, doi = slot$doi, version = slot$version,
       directory_label = plan$directory_label[i], label = plan$label[i]
-    ))
+    ), expected_checksum = row$checksum[1])
   }, logical(1))
 
   list(

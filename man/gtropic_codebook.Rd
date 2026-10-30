@@ -4,11 +4,15 @@
 \alias{gtropic_codebook}
 \title{Retrieve the G-TROPIC data codebook}
 \usage{
-gtropic_codebook(version = ":latest")
+gtropic_codebook(version = ":latest", cache = NULL)
 }
 \arguments{
 \item{version}{Dataset version to use. The default, \code{":latest"}, uses the
 most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
+
+\item{cache}{Whether downloaded source files may be cached. \code{NULL} uses
+\code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
+setting for this call.}
 }
 \value{
 A nested list preserving the structure of the published JSON

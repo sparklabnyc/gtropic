@@ -40,9 +40,8 @@
 #' @keywords internal
 #' @noRd
 fetch_file <- function(dataset, directory_label, label, ctx,
-                       col_select = NULL, kind = "parquet",
-                       optional = FALSE) {
-  slot <- discovery_slot(ctx$discovery, dataset)
+                        col_select = NULL, kind = "parquet",
+                        optional = FALSE) {
   path <- file.path(directory_label, label)
 
   # Reproducibility path: resolve against what was recorded, not what is live.
@@ -61,8 +60,10 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     doi <- row$dataset_doi
     version <- row$dataset_version
     file_id <- row$file_id
-    md5 <- row$md5
+    checksum <- row$checksum
+    checksum_type <- row$checksum_type
   } else {
+    slot <- discovery_slot(ctx$discovery, dataset)
     row <- dv_resolve_file(slot$listing, directory_label, label, doi = slot$doi)
     if (is.null(row)) {
       if (optional) {
@@ -76,7 +77,8 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     doi <- slot$doi
     version <- slot$version
     file_id <- row$file_id
-    md5 <- row$md5
+    checksum <- row$checksum
+    checksum_type <- row$checksum_type
   }
 
   key <- list(
@@ -84,25 +86,36 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     directory_label = directory_label, label = label
   )
 
-  raw <- cache_get(ctx$cache, key, expected_md5 = md5)
+  cached <- cache_get_record(ctx$cache, key, expected_checksum = checksum)
+  raw <- if (is.null(cached)) NULL else cached$raw
+  downloaded_at <- if (is.null(cached)) NULL else cached$downloaded_at
 
   if (is.null(raw)) {
+    if (isTRUE(ctx$offline)) {
+      cli::cli_abort(c(
+        "Offline retrieval could not find {.path {path}} in the cache.",
+        i = "Connect to Dataverse and run this query once, or use {.code offline = FALSE}."
+      ))
+    }
     inform_unless_quiet("Downloading {.path {path}}.", quiet = ctx$quiet)
     raw <- dv_get_file(file_id,
       server = ctx$discovery$server,
       quiet = ctx$quiet
     )
-    verify_md5(raw, md5, label = path)
-    cache_put(ctx$cache, key, raw, md5 = md5)
+    verify_checksum(raw, checksum, label = path, checksum_type = checksum_type)
+    downloaded_at <- cache_put(ctx$cache, key, raw, checksum = checksum)
+    # Caching may be disabled. The timestamp still records this download.
+    if (is.null(downloaded_at) || is.na(downloaded_at)) downloaded_at <- Sys.time()
   }
 
   ctx$manifest_out$value <- manifest_add(
     ctx$manifest_out$value, doi, version,
     tibble::tibble(
       directory_label = directory_label, label = label,
-      file_id = file_id, md5 = md5,
+       file_id = file_id, checksum = checksum,
+      checksum_type = checksum_type,
       size_bytes = as.numeric(length(raw))
-    )
+    ), downloaded_at = downloaded_at, source_role = dataset
   )
 
   switch(kind,
@@ -174,7 +187,8 @@ fetch_yearly <- function(table, years, ctx, col_select = NULL,
 #'   nested calls does not depend on returning it everywhere.
 #' @keywords internal
 #' @noRd
-fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE) {
+fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE,
+                          offline = FALSE) {
   out <- new.env(parent = emptyenv())
   out$value <- manifest_new(discovery)
 
@@ -183,7 +197,8 @@ fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE) {
     cache = cache,
     manifest_in = manifest_in,
     manifest_out = out,
-    quiet = quiet
+    quiet = quiet,
+    offline = offline
   )
 }
 
@@ -200,11 +215,12 @@ assemble_gtropic_data <- function(args, call = NULL) {
   warnings <- list()
 
   # --- 1-2. options, versions, discovery ----------------------------------
-  versions <- resolve_versions(args$version)
   cache <- cache_resolve(args$cache, quiet = quiet)
+  if (isTRUE(args$offline) && !isTRUE(cache$enabled)) {
+    cli::cli_abort("{.code offline = TRUE} requires an enabled cache.")
+  }
 
   if (!is.null(args$manifest)) {
-    manifest_validate(args$manifest)
     # A manifest pins the exact files, so version and DOI options are ignored
     # entirely -- honouring them would defeat the point.
     inform_unless_quiet(
@@ -213,36 +229,59 @@ assemble_gtropic_data <- function(args, call = NULL) {
       ),
       quiet = quiet
     )
-    versions <- list(
-      historical = args$manifest$historical_version,
-      current = args$manifest$current_version
+    discovery <- discovery_from_manifest(args$manifest)
+  } else {
+    versions <- resolve_versions(args$version)
+    discovery <- discover_datasets(
+      versions, quiet = quiet, offline = args$offline,
+      cache_dir = if (isTRUE(cache$enabled)) cache$dir else NULL
     )
   }
 
-  discovery <- discover_datasets(versions, quiet = quiet)
-  ctx <- fetch_context(discovery, cache, args$manifest, quiet)
-
-  # --- 3. adm2 and geography ----------------------------------------------
-  adm2 <- tibble::as_tibble(dplyr::collect(fetch_file(
-    "historical", "metadata", "adm2.parquet", ctx
-  )))
+  ctx <- fetch_context(discovery, cache, args$manifest, quiet,
+    offline = args$offline
+  )
 
   date_spec <- parse_date_input(
     args$date_range, args$date_list,
     args$date_format
   )
 
-  # Polygon membership needs centroids, which live in the yearly pop files, so
-  # the candidate year span has to be known before geography can be resolved.
-  candidate_years <- if (identical(date_spec$type, "none")) {
+  # A replay carries the exact metadata files scanned originally. This avoids
+  # broadening its plan if the collection gains a new year after the manifest
+  # was made.
+  candidate_years <- if (!is.null(args$storm_metadata_years)) {
+    args$storm_metadata_years
+  } else if (identical(date_spec$type, "none")) {
     discovery$year_index$year
   } else {
     year_span(date_spec$start, date_spec$end)
   }
+  if (!is.null(args$storm_name_years)) {
+    # Name suffixes safely identify the only metadata files that can contain
+    # these storms. resolve_storms() still applies date filters afterwards.
+    candidate_years <- args$storm_name_years
+  }
   candidate_years <- intersect(candidate_years, discovery$year_index$year)
 
+  # ADM2 metadata is required only to resolve user-facing geography or to
+  # return/clip ADM2-based metadata. An unrestricted hazard query can instead
+  # derive its selected IDs from the current source files, avoiding a spurious
+  # historical provenance record.
+  resolve_geo <- is.null(args$resolved_adm2_ids) &&
+    (length(args$geo_filters) > 0L || !is.null(args$polygon))
+  need_adm2 <- resolve_geo || any(c("adm2", "geometry") %in% args$tables)
+  adm2 <- NULL
+  if (need_adm2) {
+    adm2 <- tibble::as_tibble(dplyr::collect(fetch_file(
+      "historical", "metadata", "adm2.parquet", ctx
+    )))
+  }
+
+  # Polygon membership needs centroids, which live in the yearly pop files, so
+  # the candidate year span has to be known before geography can be resolved.
   pop_by_year <- NULL
-  if (!is.null(args$polygon)) {
+  if (resolve_geo && !is.null(args$polygon)) {
     pop_by_year <- lapply(candidate_years, function(y) {
       fetch_yearly("pop", y, ctx,
         col_select = c(
@@ -255,13 +294,22 @@ assemble_gtropic_data <- function(args, call = NULL) {
     pop_by_year <- compact(pop_by_year)
   }
 
-  geo <- resolve_geography(
-    adm2 = adm2,
-    pop_by_year = pop_by_year,
-    filters = args$geo_filters,
-    polygon = args$polygon,
-    reproject = args$reproject
-  )
+  geo <- if (!is.null(args$resolved_adm2_ids)) {
+    list(
+      adm2_ids = args$resolved_adm2_ids,
+      inconsistent_adm2_ids = character(0), warnings = list()
+    )
+  } else if (resolve_geo) {
+    resolve_geography(
+      adm2 = adm2,
+      pop_by_year = pop_by_year,
+      filters = args$geo_filters,
+      polygon = args$polygon,
+      reproject = args$reproject
+    )
+  } else {
+    list(adm2_ids = NULL, inconsistent_adm2_ids = character(0), warnings = list())
+  }
   warnings <- c(warnings, geo$warnings)
 
   # --- 5. storms ------------------------------------------------------------
@@ -287,7 +335,18 @@ assemble_gtropic_data <- function(args, call = NULL) {
     )
   }
 
-  storm_ids <- resolve_storms(storm_metadata, date_spec, args$storm_filters)
+  excluded_lookup <- if (any(c("STORM_ID", "STORM_NAME") %in% names(args$storm_filters))) {
+    function() {
+      fetch_excluded_storms(candidate_years, ctx,
+        col_select = c("STORM_ID", "STORM_NAME")
+      )
+    }
+  } else {
+    NULL
+  }
+  storm_ids <- resolve_storms(
+    storm_metadata, date_spec, args$storm_filters, excluded_lookup
+  )
   storm_metadata <- storm_metadata[storm_metadata$STORM_ID %in% storm_ids, ,
     drop = FALSE
   ]
@@ -316,7 +375,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
 
   # --- 7. wind and zero pairs ----------------------------------------------
   wind_cols <- NULL # full schema: users want the exposure columns
-  wind <- fetch_yearly("wind", storm_years, ctx, col_select = wind_cols)
+  wind_links <- fetch_yearly("wind", storm_years, ctx, col_select = wind_cols)
 
   zero <- NULL
   if (needs_zero_pairs(args$tables)) {
@@ -326,23 +385,42 @@ assemble_gtropic_data <- function(args, call = NULL) {
     zero <- fetch_yearly("zero_pairs", storm_years, ctx)
   }
 
-  if (!is.null(wind)) {
-    wind <- derive_local_date(wind, label = "02_wind/exposures")
-    wind <- wind[wind$ADM2_ID %in% geo$adm2_ids &
-      wind$STORM_ID %in% storm_ids, , drop = FALSE]
+  if (!is.null(wind_links)) {
+    wind_links <- derive_local_date(wind_links, label = "02_wind/exposures")
+    wind_links <- wind_links[wind_links$STORM_ID %in% storm_ids, , drop = FALSE]
+    if (!is.null(geo$adm2_ids)) {
+      wind_links <- wind_links[wind_links$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
+    }
   }
   if (!is.null(zero)) {
     zero <- derive_local_date(zero, label = "02_wind/zero_pairs")
-    zero <- zero[zero$ADM2_ID %in% geo$adm2_ids &
-      zero$STORM_ID %in% storm_ids, , drop = FALSE]
+    zero <- zero[zero$STORM_ID %in% storm_ids, , drop = FALSE]
+    if (!is.null(geo$adm2_ids)) {
+      zero <- zero[zero$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
+    }
+  }
+  if (is.null(geo$adm2_ids)) {
+    geo$adm2_ids <- sort(unique(c(
+      wind_links$ADM2_ID %||% character(0), zero$ADM2_ID %||% character(0)
+    )))
   }
 
   # --- 8. links -------------------------------------------------------------
+  # Links retain pairs needed by any requested hazard field. This is separate
+  # from the returned wind table, which remains restricted to its own radius.
+  link_radius_km <- link_radius_for_tables(
+    args$tables,
+    wind_radius_km = args$wind_radius_km,
+    precip_radius_km = args$precip_radius_km,
+    flood_radius_km = args$flood_radius_km
+  )
   links <- build_links(
-    wind = wind,
+    wind = wind_links,
     zero_pairs = zero,
     adm2_ids = geo$adm2_ids,
     storm_ids = storm_ids,
+    wind_radius_km = args$wind_radius_km,
+    link_radius_km = link_radius_km,
     precip_window = list(
       before = args$precip_days_before,
       after = args$precip_days_after,
@@ -355,6 +433,35 @@ assemble_gtropic_data <- function(args, call = NULL) {
     )
   )
 
+  # Wind is the one returned table narrowed by the wind radius. Zero-pair
+  # records remain intact when returned, even when their links extend farther.
+  wind <- filter_wind_radius(wind_links, args$wind_radius_km)
+
+  # Apply finite requested hazard fields only after published pair links are
+  # known. STORM_DIST_KM is authoritative; never infer distances from tracks.
+  hazard_scope <- resolve_hazard_scope(
+    links = links,
+    adm2_ids = geo$adm2_ids,
+    storm_ids = storm_ids,
+    tables = args$tables,
+    wind_radius_km = args$wind_radius_km,
+    precip_radius_km = args$precip_radius_km,
+    flood_radius_km = args$flood_radius_km
+  )
+
+  # The metadata and ancillary tables describe the returned hazard scope.
+  # Keep `storm_years` and `links` intact as selection/provenance diagnostics.
+  storm_metadata <- storm_metadata[
+    storm_metadata$STORM_ID %in% hazard_scope$storm_ids,
+    , drop = FALSE
+  ]
+  scoped_storm_years <- sort(unique(storm_metadata$.gtropic_file_year))
+  scoped_links <- links[
+    links$ADM2_ID %in% hazard_scope$adm2_ids &
+      links$STORM_ID %in% hazard_scope$storm_ids,
+    , drop = FALSE
+  ]
+
   # --- 9. precip and flood from real window bounds --------------------------
   wy <- window_years(links)
   real_years <- years_for_tables(
@@ -363,6 +470,16 @@ assemble_gtropic_data <- function(args, call = NULL) {
     tables = args$tables,
     flood_match = args$flood_match
   )
+
+  # Availability diagnostics describe the resolved storms and the actual
+  # precip/flood windows, rather than an omitted date filter or a provisional
+  # year-level estimate.
+  availability <- availability_metadata(
+    date_spec, args$tables, storm_metadata = storm_metadata, links = links
+  )
+  availability_messages <- availability_warnings(availability)
+  warnings <- c(warnings, availability_messages)
+  for (message in unname(availability_messages)) cli::cli_warn(message)
 
   precip <- NULL
   if ("precip" %in% args$tables) {
@@ -386,12 +503,14 @@ assemble_gtropic_data <- function(args, call = NULL) {
   pop <- NULL
   if ("pop" %in% args$tables) {
     returned_years <- sort(unique(c(
-      storm_years,
-      year_span(links$PRECIP_WINDOW_START, links$PRECIP_WINDOW_END),
-      year_span(links$FLOOD_WINDOW_START, links$FLOOD_WINDOW_END)
+      scoped_storm_years,
+      year_span(scoped_links$PRECIP_WINDOW_START, scoped_links$PRECIP_WINDOW_END),
+      year_span(scoped_links$FLOOD_WINDOW_START, scoped_links$FLOOD_WINDOW_END)
     )))
     pop <- fetch_yearly("pop", returned_years, ctx, year_col = "YEAR")
-    if (!is.null(pop)) pop <- pop[pop$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
+    if (!is.null(pop)) {
+      pop <- pop[pop$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
+    }
   }
 
   # --- 11. remaining requested tables ---------------------------------------
@@ -399,7 +518,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   if ("tracks" %in% args$tables) {
     tracks <- fetch_yearly("tracks", storm_years, ctx)
     if (!is.null(tracks)) {
-      tracks <- tracks[tracks$STORM_ID %in% storm_ids, , drop = FALSE]
+      tracks <- tracks[tracks$STORM_ID %in% hazard_scope$storm_ids, , drop = FALSE]
     }
   }
 
@@ -416,7 +535,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
     geometry <- fetch_file("historical", spec$dir, spec$label, ctx,
       kind = "geoparquet"
     )
-    geometry <- geometry[geometry$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
+    geometry <- geometry[geometry$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
   }
 
   # --- 12. build the result -------------------------------------------------
@@ -453,7 +572,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
     },
     adm2 = if ("adm2" %in% args$tables) {
       finalize_table(
-        adm2[adm2$ADM2_ID %in% geo$adm2_ids, , drop = FALSE],
+        adm2[adm2$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE],
         args$as
       )
     },
@@ -462,17 +581,29 @@ assemble_gtropic_data <- function(args, call = NULL) {
     links = links
   ))
 
+  manifest <- manifest_finalize(
+    ctx$manifest_out$value,
+    resolved_query = manifest_query_from_args(
+      args,
+      resolved_adm2_ids = geo$adm2_ids,
+      resolved_storm_ids = storm_ids,
+      storm_metadata_years = candidate_years
+    ),
+    availability = availability
+  )
+
   new_gtropic_data(
     tables = out,
-    manifest = manifest_finalize(ctx$manifest_out$value),
+    manifest = manifest,
     query = call,
     filters_resolved = list(
-      adm2_ids = geo$adm2_ids,
-      storm_ids = storm_ids,
+      adm2_ids = hazard_scope$adm2_ids,
+      storm_ids = hazard_scope$storm_ids,
       date_start = date_spec$start,
       date_end = date_spec$end,
       date_order = date_spec$inferred_order,
       years_scanned = storm_years,
+      wind_radius_km = args$wind_radius_km,
       precip_days_before = args$precip_days_before,
       precip_days_after = args$precip_days_after,
       precip_radius_km = args$precip_radius_km,
@@ -482,7 +613,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
       flood_match = args$flood_match,
       inconsistent_adm2_ids = geo$inconsistent_adm2_ids
     ),
-    warnings = warnings
+    warnings = warnings,
+    availability = availability,
+    retrieved_at = manifest$retrieved_at
   )
 }
 

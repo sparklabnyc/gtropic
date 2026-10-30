@@ -20,8 +20,11 @@ of storm genesis dates. Bare years, year-month values, complete dates, and
 \item{year}{Optional vector of years to retrieve. Ignored when \code{date_range}
 is supplied. Years outside the published collection are omitted.}
 
-\item{STORM_NAME}{Optional character vector of storm names. Matching is
-case-insensitive; every supplied value must match a published name.}
+\item{STORM_NAME}{Optional character vector of published, disambiguated storm
+names in \code{Name-YYYY} form, such as \code{Katrina-2005}. Matching is
+case-insensitive; every supplied value must match a published name. The
+suffix year limits the metadata files scanned and is combined with an
+explicit \code{year} or \code{date_range} filter using AND.}
 
 \item{version}{Dataset version to use. The default, \code{":latest"}, uses the
 most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
@@ -45,6 +48,10 @@ data with \code{\link[=gtropic_data]{gtropic_data()}}.
 Date filters are applied to \code{STORM_GENESIS_DATE_UTC}, the UTC date of the
 first best-track observation. They do not select storms by landfall, closest
 approach, or date of exposure.
+
+When a requested \code{STORM_NAME} is not available, G-TROPIC checks the published
+exclusion records and reports whether the storm is excluded or absent from
+both lists.
 }
 \examples{
 \donttest{
@@ -57,5 +64,5 @@ gtropic_storms(STORM_NAME = "Katrina-2005")
 
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_adm2]{gtropic_adm2()}}
+\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_adm2]{gtropic_adm2()}}, \code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}}
 }

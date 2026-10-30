@@ -18,8 +18,23 @@
 #
 # Then inspect the generated .Rmd files and commit both .orig and .Rmd.
 
+# Load gtropic to clear the cache
+library(gtropic)
+gtropic_cache_clear()
+
 if (!requireNamespace("knitr", quietly = TRUE)) {
   stop("knitr is required to precompute the vignettes.")
+}
+
+# Ensure knitted output is clean for version control while retaining UTF-8 text
+# and the terminating newline expected of text files.
+normalize_rmd_whitespace <- function(path) {
+  lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
+  lines <- sub("[ \t]+$", "", lines)
+
+  con <- file(path, open = "w", encoding = "UTF-8")
+  on.exit(close(con), add = TRUE)
+  writeLines(if (length(lines)) lines else "", con, useBytes = TRUE)
 }
 
 vignettes <- c(
@@ -46,6 +61,7 @@ for (v in vignettes) {
 
   message("Knitting ", input, " -> ", output)
   knitr::knit(input = input, output = output)
+  normalize_rmd_whitespace(output)
 }
 
 message(

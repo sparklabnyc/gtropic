@@ -15,14 +15,17 @@
 #' warn rather than pick silently, because a wrong assignment sends every
 #' subsequent request to the wrong DOI.
 #'
-#' The result is memoised for the session: discovery costs one request per
-#' dataset in the collection and the answer cannot change mid-session in any way
-#' the user would want us to notice.
+#' Explicit versions are memoised for the session. `":latest"` is deliberately
+#' rediscovered on every call so a long-lived R session does not silently miss a
+#' newly published Dataverse version.
 #'
 #' @param versions List with `historical` and `current` version strings.
 #' @param server Dataverse host.
 #' @param collection Collection alias.
 #' @param refresh Force rediscovery, ignoring the session cache.
+#' @param offline Use a persisted cache snapshot rather than the network.
+#' @param cache_dir Cache directory containing the persisted snapshot. Required
+#'   when `offline` is `TRUE`.
 #' @param quiet Suppress progress messages.
 #'
 #' @return A list with `historical` and `current` (each `doi`, `version`,
@@ -33,14 +36,30 @@ discover_datasets <- function(versions = list(
                                 historical = ":latest",
                                 current = ":latest"
                               ),
-                              server = opt_server(),
-                              collection = opt_collection(),
-                              refresh = FALSE,
-                              quiet = FALSE) {
+                               server = opt_server(),
+                               collection = opt_collection(),
+                               refresh = FALSE,
+                               quiet = FALSE,
+                               offline = FALSE,
+                               cache_dir = NULL) {
+  if (isTRUE(offline)) {
+    if (is.null(cache_dir)) {
+      cli::cli_abort("{.code offline = TRUE} requires an enabled cache.")
+    }
+    snapshot <- cache_discovery_read(cache_dir, server, collection, versions)
+    age <- difftime(Sys.time(), snapshot$saved_at, units = "days")
+    cli::cli_warn(c(
+      "Using an offline G-TROPIC discovery snapshot saved {format(snapshot$saved_at, usetz = TRUE)}.",
+      i = "The snapshot is {format(round(as.numeric(age), 1), nsmall = 1)} day{?s} old; no Dataverse update check was made."
+    ))
+    return(snapshot$discovery)
+  }
+
   key <- paste(server, collection, versions$historical, versions$current,
     sep = "|"
   )
-  if (!refresh && !is.null(.gtropic_session[[key]])) {
+  latest_requested <- any(unlist(versions, use.names = FALSE) == ":latest")
+  if (!refresh && !latest_requested && !is.null(.gtropic_session[[key]])) {
     return(.gtropic_session[[key]])
   }
 
@@ -61,8 +80,54 @@ discover_datasets <- function(versions = list(
     }
   )
 
-  .gtropic_session[[key]] <- result
+  if (!latest_requested) .gtropic_session[[key]] <- result
+  if (!is.null(cache_dir)) cache_discovery_write(cache_dir, result, collection)
   result
+}
+
+#' Reconstruct the routing information needed to replay a manifest
+#'
+#' Manifest replay resolves individual paths against the recorded rows, so this
+#' helper never lists Dataverse. The yearly routing is inferred from the recorded
+#' files and is sufficient because the canonical query can only request paths in
+#' that manifest.
+#' @keywords internal
+#' @noRd
+discovery_from_manifest <- function(manifest) {
+  files <- manifest$files
+  years <- suppressWarnings(as.integer(sub("\\.parquet$", "", files$label)))
+  yearly <- !is.na(years)
+  routing <- files[yearly, c("dataset_doi", "dataset_version"), drop = FALSE]
+  routing$year <- years[yearly]
+  routing <- routing[!duplicated(routing$year), , drop = FALSE]
+  if (nrow(routing) == 0L) {
+    routing <- tibble::tibble(
+      dataset_doi = character(0), dataset_version = character(0), year = integer(0)
+    )
+  }
+  sources <- manifest_datasets(manifest)
+  make_slot <- function(role) {
+    source <- sources[sources$source_role == role, , drop = FALSE]
+    if (nrow(source) == 0L) return(NULL)
+    source <- source[1L, , drop = FALSE]
+    list(doi = source$dataset_doi, version = source$dataset_version,
+      listing = files[files$dataset_doi == source$dataset_doi &
+        files$dataset_version == source$dataset_version, , drop = FALSE], years = integer(0))
+  }
+  historical <- make_slot("Historical")
+  current <- make_slot("Current-year")
+  year_dataset <- if (nrow(routing) == 0L) character(0) else {
+    ifelse(!is.null(historical) & routing$dataset_doi == historical$doi &
+      routing$dataset_version == historical$version, "historical", "current")
+  }
+  if (!is.null(historical)) historical$years <- routing$year[year_dataset == "historical"]
+  if (!is.null(current)) current$years <- routing$year[year_dataset == "current"]
+  list(
+    server = manifest$server,
+    historical = historical,
+    current = current,
+    year_index = tibble::tibble(year = routing$year, dataset = year_dataset)
+  )
 }
 
 #' @keywords internal

@@ -13,10 +13,11 @@
 #'   `threshold`s; and track maps draw storm track paths.
 #' @param metric A supported published metric name, or a character vector of metric
 #'   names to plot. The `metric`s are plotted in the order they are given.
-#'   `NULL` selects the first available default: `"VMAX_SUST_MS"`,
-#'   `"PRECIP_MM"`, or `"PROP_FLOODED_POP"` for `type = "exposure"` or `"count"`
-#'   maps and `"USA_WIND"` for `type = "track"` maps. Track maps require exactly one
-#'   of `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_exposures()] for all available
+#'   For `type = "exposure"`, `NULL` selects every available core metric in this
+#'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_FLOODED_AREA"`.
+#'   For `type = "count"`, it selects the first available count default;
+#'   `type = "track"` selects `"USA_WIND"`. Track maps require exactly one of
+#'   `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_exposures()] for all available
 #'   `metric`s available for plotting.
 #' @param storm Optional character vector of `STORM_ID`s or `STORM_NAME`s used
 #'   to subset all applicable tables in `data`. Specifying `storm`s requires that the `data`
@@ -42,6 +43,19 @@
 #' @param binary Logical; if `TRUE`, show exposure/count maps as exposed or not
 #'   exposed using `threshold`, rather than as a continuous value scale. Defaults
 #'   to `FALSE`. Ignored when `type = "track"`.
+#' @param wind_categories Optional categorical exposure key or named list of
+#'   keys. A key is a data frame with `category`, numeric upper `threshold`,
+#'   constant `unit`, and `color` columns. It classifies aggregated
+#'   ADM2 values, retaining every key category in the static and interactive
+#'   legends even when unobserved. With multiple selected metrics, supply a
+#'   uniquely named list keyed by selected wind metric; a bare key is allowed
+#'   only for one selected metric. Keys must use the source metric's unit;
+#'   conventional spellings of meters per second, such as `"m/s"` and
+#'   `"meters per second"`, are treated as compatible. The
+#'   [saffir_simpson()] key is allowed only for `VMAX_SUST_MS` with
+#'   `aggregate = "max"`, where it means a local sustained-wind equivalent,
+#'   not a storm status. Other wind metrics or aggregates require an explicitly
+#'   custom key. Applies only to non-binary exposure maps and wind metrics.
 #' @param count_unit The unit counted when `type = "count"`: distinct qualifying
 #'   `"storms"` (the default) or `"days"`. It applies only when `type = "count"`
 #'   and is otherwise ignored.
@@ -56,11 +70,12 @@
 #' @param track_map_key A data frame defining the discrete color scale used when
 #'   plotting track points. Defaults to the data frame returned by [saffir_simpson()].
 #'   The `track_map_key` must contain the following four columns: `category`,
-#'   `threshold`, `unit`, and `color` (or equivalently `colour`).
+#'   `threshold`, `unit`, and `color`.
 #'   The `unit` column must contain a single, constant value, and can be one of:
 #'   `"m/s"`, `"knots"`, `"mph"`, `"km/h"`. This key controls
 #'   `USA_WIND` track points and exposure/count track overlays, but not a
-#'   `USA_STATUS` track map.
+#'   `USA_STATUS` track map. Static wind legends display every category in the
+#'   supplied key, including categories absent from the plotted observations.
 #' @param track_labels Logical; if `TRUE` (the default), static maps label each
 #'   storm with more than one valid observation at its first valid position when
 #'   multiple storms are shown. It is ignored for interactive maps.
@@ -110,14 +125,19 @@
 #'
 #' @details
 #' Maps use the actual date range of contributing observations after storm, ADM2,
-#' and linkage filters. Metric panels use readable metric names. Automatic
-#' captions report the applicable radii, windows, aggregations, track interval,
-#' and plotting CRS in metric order.
+#' and linkage filters. Automatic subtitles begin with `"Aggregated across"` and
+#' show the displayed date range. Single-metric titles use readable aggregate
+#' labels; multi-metric titles describe the panel set. A single plotted storm
+#' prefixes the title, while multiple storms do not alter it. Metric strips use
+#' readable aggregate and active-threshold labels. Automatic captions use
+#' newline-separated source, retrieval, dataset-provenance, hazard-parameter,
+#' track-interval, and plotting-CRS lines. Hazard radii and windows are derived
+#' from rows that contributed to the plot.
 #'
 #' Track paths are drawn from every supplied observation. By default, constant-
 #' size points use [saffir_simpson()] categories derived from `USA_WIND`, which is
 #' published in knots and converted to the map key's unit before classification.
-#' An explicit `metric = "USA_STATUS"` retains the status-colour display.
+#' An explicit `metric = "USA_STATUS"` retains the status-color display.
 #'
 #' @return A ggplot for static output or a leaflet widget for interactive output.
 #' @export
@@ -126,6 +146,7 @@ gtropic_plot <- function(
   type = c("exposure", "count", "track"),
   metric = NULL, storm = NULL, adm2 = NULL,
   aggregate = NULL, threshold = NULL, binary = FALSE,
+  wind_categories = NULL,
   count_unit = c("storms", "days"),
   facet_by = NULL, track = NULL,
   track_map_key = saffir_simpson(), track_labels = TRUE, track_interval = 6,
@@ -171,6 +192,7 @@ gtropic_plot <- function(
     data,
     type = type, metric = metric, storm = storm, adm2 = adm2,
     aggregate = aggregate, threshold = threshold, binary = binary,
+    wind_categories = wind_categories,
     count_unit = count_unit, facet_by = facet_by, track = track,
     palette = palette, direction = direction, track_map_key = track_map_key,
     track_labels = track_labels, track_interval = track_interval,

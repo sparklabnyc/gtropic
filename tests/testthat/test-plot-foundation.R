@@ -56,6 +56,22 @@ test_that("missing tables and columns give a copyable amended query", {
 
 test_that("metrics carry defaults, codebook units and explicit overrides", {
   x <- plot_fixture()
+  expect_equal(
+    resolve_plot_metrics(x, "exposure")$metric,
+    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+  )
+  expect_equal(
+    attr(prepare_plot_data(x, "exposure", track = FALSE), "plot_info")$metrics$metric,
+    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+  )
+  expect_equal(resolve_plot_metrics(x, "count")$metric, "VMAX_SUST_MS")
+  expect_equal(resolve_plot_metrics(x, "track")$metric, "USA_WIND")
+  x$flood <- NULL
+  expect_equal(
+    resolve_plot_metrics(x, "exposure")$metric,
+    c("VMAX_SUST_MS", "PRECIP_MM")
+  )
+  x <- plot_fixture()
   spec <- resolve_plot_metrics(x, "count", c(
     "VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_POP", "STORM_DIST_KM"
   ))
@@ -131,18 +147,18 @@ test_that("theme, scale and caption defaults need no rendering", {
   discrete <- scale_fill_gtropic_d()
   expect_false(continuous$is_discrete())
   expect_true(discrete$is_discrete())
-  expect_equal(continuous$name, "Precipitation (millimeters per local day)")
+  expect_equal(continuous$name, "Precipitation (mm)")
   expect_equal(continuous$na.value, "grey90")
   expect_error(scale_fill_gtropic_c(direction = 0), "direction")
   x <- plot_fixture()
-  info <- list(
-    type = "count", metrics = resolve_plot_metrics(x, "count", "PRECIP_MM"),
-    filters = attr(x, "filters_resolved"), flood_match = "start"
-  )
+  prepared <- prepare_plot_data(x, "count", "PRECIP_MM", track = FALSE)
+  info <- attr(prepared, "plot_info")
   caption <- plot_caption(info)
-   expect_match(caption, "exposed PRECIP_MM: >= 75 mm", fixed = TRUE)
-  expect_match(caption, "precip window: -2/+1 days", fixed = TRUE)
-  expect_match(caption, "500 km", fixed = TRUE)
+  expect_match(
+    caption,
+    "Precip parameters: radius=400 km, window=-2/+1 days, aggregate=n",
+    fixed = TRUE
+  )
   expect_equal(plot_caption(info, "Custom caption"), "Custom caption")
 })
 

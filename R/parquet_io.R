@@ -82,9 +82,8 @@ read_json_raw <- function(raw, label = "file", call = rlang::caller_env()) {
 #' Read GeoParquet bytes into an sf object
 #'
 #' `sf` and `sfarrow` are Suggests, not Imports: only the `polygon` filter and
-#' the `geometry` table need them, and hard-depending would push a heavy
-#' geospatial toolchain onto every user of a package that is mostly about
-#' tabular exposure data.
+#' the `geometry` table need them. Users who do not need geometry can omit it
+#' from `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
 #'
 #' @param raw Raw vector of GeoParquet bytes.
 #' @param label Path used in messages.
@@ -147,7 +146,7 @@ check_installed_geo <- function(what = "this feature",
   cli::cli_abort(
     c("{what} requires the {.pkg {missing}} package{?s}.",
       i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.',
-      i = "These are optional because most gtropic queries need no geospatial
+      i = "Omit {.val geometry} from {.arg tables} if you do not need geospatial
            tooling."
     ),
     call = call

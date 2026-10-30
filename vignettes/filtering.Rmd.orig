@@ -19,10 +19,9 @@ library(gtropic)
 ```
 
 `gtropic_data()` has three ways to filter queries: by geography, temporality, and by specific
-storms. There is just one rule governing how the different filters can combine. This vignette covers the rule,
-each type of filter, and a worked example.
+storms. This vignette covers the each of these filters and how they combine with one another.
 
-## The combination rule
+## How filters combine
 
 **Values within a single argument are combined with a logical "OR" (union). Values across different arguments are
 combined with a logical "AND" (intersection).**
@@ -35,12 +34,7 @@ gtropic_data(WHO_ENTITY = c("United States", "Mexico"))
 
 # Across arguments implies an intersection (AND). E.g., Units named "San Jose" that are ALSO in Costa Rica
 gtropic_data(ADM2_NAME = "San Jose", ADM2_GROUP = "CRI")
-```
 
-The second query returns all G-TROPIC data for one ADM2 unit, not every San Jose in the world plus every
-Costa Rican unit. Another example:
-
-```{r, eval = FALSE}
 # Across arguments implies an intersection (AND), e.g. Hurrican Katrina (2005)'s USA rows only
 gtropic_data(STORM_NAME = "Katrina-2005", WHO_ENTITY = "United States")
 ```
@@ -99,7 +93,7 @@ nc_10to11$adm2
 
 There are two important points to keep in mind:
 
-1. **The polygon must carry a coordinate reference system**. 
+1. **The polygon must carry a coordinate reference system**.
 Without one there is no way for `gtropic` to know what its coordinates mean,
 and an error will be thrown. By default a polygon in any other CRS is silently transformed
 to EPSG:4326 to match the published centroids. Setting `reproject = FALSE` turns
@@ -107,8 +101,8 @@ that transformation off, which means a non-4326 input polygon will throw an erro
 
 2. **Polygon membership can change between years**. Population-weighted
 centroids move as populations shift, so a unit whose centroid sits near the
-boundary may fall inside the polygon in some years and outside in others. The
-rule is inclusive: a unit is included if its centroid fell inside the polygon in
+boundary may fall inside the polygon in some years and outside in others.
+A unit is included in the resulting query if its centroid fell inside the polygon in
 *any* year your query spans. The package warns whenever a polygon query covers
 more than one year, and warns again, listing the units, if membership actually
 varied. The complete list is always available:
@@ -120,12 +114,34 @@ gtropic_warnings(nc_10to11)$polygon_inconsistent
 The named geographic filters are not year-varying, so they raise no such
 warning.
 
+### The wind, precip, and flood radius filters
+
+The `[wind/precip/flood]_radius_km` arguments (all `500` by default) specify the maximum
+distance (in km) an ADM2 must be from the closest approach made by a storm track
+for that ADM2's corresponding wind/precip/flood data to be returned. These filters
+are applied directly to the `STORM_DIST_KM` data column in the `$links` table.
+Set these `[wind/precip/flood]_radius_km`
+arguments to `Inf` or `NULL` to retrieve wind/precip/flood data for all ADM2s regardless
+of their distance to the selected storm tracks.
+
+These filters also restric the set of storms returned in your query. For example, using the
+defaults mean that storms failing to come within 500km of any ADM2 in your search will be excluded
+from your resulting `gtropic_data` object.
+
+**Note that these defaults of `500`km
+are not prescriptive, and we do not claim to define an "exposure" with these default values. We leave this
+configurable per data retrieval query so that you the user can define your specific wind/precipitation/flood
+fields of interest. Smaller values for these arguments will also result in smaller data tables
+being returned, which can help save on memory consumption.**
+
 ## Temporal filters
 
-The `date_range` argument takes two endpoints; Alternatively, you can use `date_list`, which takes a vector of specific dates.
-The two arguments cannot be combined.
+The `date_range` argument takes two endpoints (if you pass in a single value it gets
+broadcast/parsed as both endpoints, e.g. "2025" is understood to be c("2025", "2025")).
+Alternatively, you can use `date_list`, which takes a vector of
+specific dates. The two arguments cannot be combined.
 
-### What counts as a date
+### Date parsing
 
 Partial dates are expanded to the start of their period for the first element of
 a range and the end for the second, so `c(2001, 2003)` covers all three years:
@@ -137,16 +153,8 @@ a range and the end for the second, so `c(2001, 2003)` covers all three years:
 | `"2001-03-04"` | as given | as given |
 | a `Date` or `POSIXct` | as given | as given |
 
-```{r, eval = FALSE}
-gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2013, 2014))
-gtropic_data(WHO_ENTITY = "Philippines", date_range = c("2013-11", "2013-12"))
-```
-
-### When the order is not obvious
-
 If your dates are not written in ISO order, the package works out the order for
-you, jointly, across every value you supplied rather than one at a time. That
-distinction matters:
+you using every value you supplied to make the determination:
 
 ```{r}
 # On its own "01/04/2001" could be 4 January or 1 April. But 19 cannot be a
@@ -156,8 +164,7 @@ gtropic_storms(date_range = c("01/04/2001", "05/19/2001"))
 ```
 
 When more than one interpretation of the supplied dates is possible, `gtropic` will pick by precedence -- `ymd`,
-then `mdy`, then `dmy` -- before issuing a warning, naming both the interpretation chosen and
-the one rejected:
+then `mdy`, then `dmy` -- before issuing a warning, naming the interpretation chosen:
 
 ```{r, warning = TRUE}
 gtropic_storms(date_range = c("01/04/2001", "05/06/2001"))
@@ -169,15 +176,15 @@ Supplying `date_format` skips inference entirely and silences the warning:
 gtropic_storms(date_range = c("01/04/2001", "05/06/2001"), date_format = "dmy")
 ```
 
-If none of the above interpretations work, you get an error showing the offending strings.
+If none of the above interpretations work, you will get an error showing the offending strings.
 
-## Storms are selected by their genesis date
+### Storms are selected by their genesis date
 
 Importantly, `date_range` and `date_list` select **storms whose `STORM_GENESIS_DATE_UTC`
 falls within the requested period**, i.e. the UTC calendar date of a storm's first best-track
 observation, which is when it formed, not when it made landfall, and not when it began to impact ADM2s.
 In this way, all data for these storms is then returned, subject to your other filters.
-There are two consequences to this approach: 
+There are two consequences to this approach:
 
 1. **This will retrieve exposure data that may fall outside the requested range,** provided it is associated
 with a storm whose `STORM_GENESIS_DATE_UTC` is within the range. E.g., A storm forming on 30 September
@@ -193,22 +200,24 @@ that hits Texas on 3 September would *not* be returned by:
 gtropic_data(ADM2_GROUP = "USA", date_range = c("2002-09-01", "2002-09-30"))
 ```
 
-That is an expected exclusion of a Texas storm, and if you are studying
-September hospital admissions, you will want to expand your date range accordingly. 
+That is an expected exclusion, and if you are studying
+September hospital admissions, you will want to expand your date range accordingly.
 
-### Why does the temporal filter use storm genesis date?
+### Temporal precipitation and flood windows
 
-Because genesis is a property of the storm rather than of any place it visited,
-`date_range` selects the same set of storms every time, whatever geographic
-filters accompany it. Two collaborators studying Florida and Cuba over the same
-period are working from the same storm list, and can compare results directly.
-Selecting by exposure date instead would give each of them a different storm set.
+The `[precip/flood]_days_[before/after]` arguments are used to define precipitation and flood *temporal* fields,
+i.e., the window of dates around the anchor date for an `ADM2_ID`-`STORM_ID` pair.
+The anchor date for an `ADM2_ID`-`STORM_ID` pair is the `LOCAL_DATETIME_STORM_CLOSEST` value for that pair,
+found in the returned `$links` table. This column defines the local datetime when that `STORM_ID`'s storm track
+came nearest to that `ADM2_ID`'s population-weighted centroid. By default, `[precip/flood]_days_before = 2`, and
+`[precip/flood]_days_after = 1`, meaning precipitation/flood data is obtained for an `ADM2_ID` for all days inside
+the window given by the 2 days before and 1 day after a `STORM_ID`'s `LOCAL_DATETIME_STORM_CLOSEST` date.
 
 ### How to retrieve storms by when they impacted an ADM2
 
-Query a generous range and filter the returned `links` table on
-`LOCAL_DATE_STORM_CLOSEST`, which is the local date the storm passed closest to
-each unit:
+Query a generous range and filter the returned `$links` table on
+`LOCAL_DATE_STORM_CLOSEST` (the local date the storm passed closest to
+each unit):
 
 ```{r, eval = FALSE}
 library(dplyr)
@@ -226,7 +235,8 @@ struck_in_september <- res$links |>
   )
 ```
 
-How far to widen is a judgement call: tropical cyclones rarely persist beyond
+How far to widen is a judgment call left to you to make:
+tropical cyclones rarely persist beyond
 two or three weeks, so two months either side is generous.
 
 ## Storm filters
@@ -235,80 +245,39 @@ Three arguments select storms directly. `STORM_NAME` is matched
 case-insensitively; `STORM_ID` and `USA_ATCF_ID` must match exactly.
 
 ```{r, eval = FALSE}
-gtropic_data(STORM_NAME = "Haiyan", date_range = 2013)
-gtropic_data(USA_ATCF_ID = "WP312013")
+gtropic_data(STORM_NAME = "Haiyan-2013")
+gtropic_data(USA_ATCF_ID = "WP312013", date_range = c(2013, 2013))
 ```
 
-Storm names repeat across basins and years, so pairing a name with a date range
-is usually what you want. `gtropic_storms()` disambiguates:
+Storm names repeat across basins and years, so you must be careful when selecting by `STORM_NAME`.
+`gtropic_storms()` helps you disambiguate storms from one another. The `STORM_ID` column always gives
+a unique value for every individual storm, and we recommend you perform most of your operations using this
+variable:
 
 ```{r}
-gtropic_storms(STORM_NAME = "Haiyan")
+# Use the storms() function to look up a storm you know by NAME-YEAR
+# Then grab it's STORM_ID value for later data operations
+gtropic_storms(STORM_NAME = "Haiyan-2013")
 ```
 
-## Worked example: an exposure cohort
+## Summary
 
-Suppose you are estimating the effect of cyclone exposure on hospital admissions
-in the Philippines over 2013-2015, and you need an exposure table keyed by
-administrative unit and date.
+- Geographic, temporal, and storm filters combine with AND across arguments and
+  OR within an argument.
+- Date filters select storms by genesis date, so retrieved exposure records can
+  extend outside the requested date range.
+- The `[wind/precip/flood]_radius_km` arguments, along with the `[precip/flood]_days_[before/after]`
+  arguments are crucial in defining your spatial and temporal fields linking exposures to storms.
+  The default values we supply are not prescriptive.
+- Use `LOCAL_DATE_STORM_CLOSEST` in the `links` table when analysis should be
+  anchored to the date a storm affected an ADM2.
 
-```{r, eval = FALSE}
-library(dplyr)
+## Where to go next
 
-phl <- gtropic_data(
-  WHO_ENTITY = "Philippines",
-  date_range = c(2013, 2015),
-  tables = c("wind", "precip", "pop", "adm2")
-)
-```
-
-Start from the pairs. Every unit-storm pair the dataset evaluated is in `links`,
-including pairs with no measurable wind, which matters here: a unit that got
-heavy rain but no wind is still exposed.
-
-```{r, eval = FALSE}
-exposure <- phl$links |>
-  select(ADM2_ID, STORM_ID, LOCAL_DATE_STORM_CLOSEST, STORM_DIST_KM,
-         WIND_EXPOSURE)
-
-# How many units did each storm reach, and how closely?
-exposure |>
-  group_by(STORM_ID) |>
-  summarise(
-    units = n(),
-    with_wind = sum(WIND_EXPOSURE),
-    nearest_km = min(STORM_DIST_KM)
-  ) |>
-  arrange(desc(units))
-```
-
-Attach the wind measurements, and population so you can express exposure per
-capita:
-
-```{r, eval = FALSE}
-cohort <- exposure |>
-  left_join(phl$wind, by = c("ADM2_ID", "STORM_ID")) |>
-  mutate(year = as.integer(format(LOCAL_DATE_STORM_CLOSEST, "%Y"))) |>
-  left_join(
-    phl$pop |> select(ADM2_ID, YEAR, POP_TOTAL),
-    by = c("ADM2_ID", "year" = "YEAR")
-  ) |>
-  left_join(
-    phl$adm2 |> select(ADM2_ID, ADM2_NAME),
-    by = "ADM2_ID"
-  )
-```
-
-Note the population join is on year as well as unit: population changes, and
-using a single year's figures across a multi-year study would bias any per
-capita rate.
-
-For rainfall, do not join `precip` to `links` naively -- one rainy day can fall
-inside two storms' windows, and joining without care will count it twice. The
-`linkage` vignette shows how to do it properly.
-
-Finally, record what you used:
-
-```{r, eval = FALSE}
-saveRDS(gtropic_manifest(phl), "phl-2013-2015-manifest.rds")
-```
+- `vignette("getting-started")` introduces G-TROPIC discovery helpers and the
+  structure of a `gtropic_data` result.
+- `vignette("linkage")` explains how to join precipitation and flood records to
+  storms without double counting.
+- `vignette("plotting")` shows how to map exposure, count, and track data.
+- `vignette("versions-and-caching")` covers manifests, cache management, and
+  reproducible retrievals.

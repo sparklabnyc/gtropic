@@ -13,15 +13,17 @@
 #' | `gtropic.doi_historical` | `"doi:10.70122/FK2/SWEYST"` | DOI of the historical dataset. |
 #' | `gtropic.doi_current` | `"doi:10.70122/FK2/DDSYYD"` | DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. |
 #' | `gtropic.collection` | `"gtropic"` | Dataverse collection (alias) searched during discovery. |
-#' | `gtropic.cache_enabled` | `FALSE` | Whether downloaded files are kept on disk between sessions. |
+#' | `gtropic.cache_enabled` | `TRUE` | Whether downloaded files are kept on disk. |
 #' | `gtropic.cache_dir` | `tools::R_user_dir("gtropic", "cache")` | Where cached files live. |
 #' | `gtropic.confirm_threshold_gb` | `1` | Download size, in gigabytes, above which you are asked to confirm. |
 #' | `gtropic.timeout` | `600` | Per-request timeout in seconds. |
 #' | `gtropic.max_tries` | `3` | Maximum attempts per request before giving up. |
 #'
 #' A "cache" here means a folder of previously downloaded files on your own
-#' computer. It is switched off by default, and turning it on writes only to a
-#' standard per-user location chosen by R (see [gtropic_cache_enable()]).
+#' computer. It is enabled by default and uses a standard per-user location
+#' chosen by R. Use [gtropic_cache_disable()] or `cache = FALSE` on a retrieval
+#' to bypass it. See [gtropic_cache_enable()] to persist an enabled or disabled
+#' choice across R sessions.
 #'
 #' @return These are options, not a function; nothing is returned. This topic
 #'   exists for documentation only.
@@ -83,7 +85,7 @@ opt_confirm_threshold_gb <- function() as.numeric(opt("confirm_threshold_gb", 1)
 #'
 #' `version` may be a single string applied to both datasets, or a named vector
 #' such as `c(historical = "2.0", current = "1.3")`. Anything else is a user
-#' error rather than something to silently normalise.
+#' error rather than something to silently normalize.
 #'
 #' @param version User-supplied `version` argument.
 #' @param call Calling environment for error reporting.

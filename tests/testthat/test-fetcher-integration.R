@@ -19,12 +19,20 @@ test_that("file resolution uses directory and label together", {
   resolved <- lapply(paths, function(path) {
     dv_resolve_file(listing, path, "1980.parquet")
   })
+  recorded <- lapply(paths, function(path) {
+    listing[
+      listing$directory_label == path & listing$label == "1980.parquet", ,
+      drop = FALSE
+    ]
+  })
 
   expect_true(all(vapply(resolved, nrow, integer(1)) == 1L))
-  expect_equal(
-    vapply(resolved, `[[`, integer(1), "file_id"),
-    c(2703825L, 2703963L, 2703871L, 2703917L)
-  )
+  expect_equal(vapply(resolved, `[[`, integer(1), "file_id"),
+    vapply(recorded, `[[`, integer(1), "file_id"))
+  expect_equal(vapply(resolved, `[[`, character(1), "checksum"),
+    vapply(recorded, `[[`, character(1), "checksum"))
+  expect_equal(vapply(resolved, `[[`, character(1), "checksum_type"),
+    vapply(recorded, `[[`, character(1), "checksum_type"))
   expect_equal(vapply(resolved, `[[`, character(1), "directory_label"), paths)
 })
 
@@ -94,13 +102,29 @@ test_that("failed automatic discovery warns before using configured DOIs", {
   expect_identical(result, fallback)
 })
 
-test_that("MD5 verification rejects changed bytes", {
+test_that("checksum verification rejects changed bytes", {
   skip_fetcher_integration()
   bytes <- charToRaw("published bytes")
 
-  expect_invisible(verify_md5(bytes, md5_raw(bytes), "fixture.bin"))
+  expect_invisible(verify_checksum(bytes, checksum_raw(bytes), "fixture.bin"))
   expect_error(
-    verify_md5(charToRaw("changed bytes"), md5_raw(bytes), "fixture.bin"),
+    verify_checksum(charToRaw("changed bytes"), checksum_raw(bytes), "fixture.bin"),
+    "Checksum mismatch"
+  )
+})
+
+test_that("checksum verification supports Dataverse SHA-256 digests", {
+  skip_fetcher_integration()
+  bytes <- charToRaw("published bytes")
+  checksum <- digest::digest(bytes, algo = "sha256", serialize = FALSE)
+
+  expect_identical(checksum_algorithm(checksum), "sha256")
+  expect_identical(checksum_algorithm(checksum, "SHA-256"), "sha256")
+  expect_invisible(verify_checksum(
+    bytes, checksum, "fixture.bin", checksum_type = "SHA-256"
+  ))
+  expect_error(
+    verify_checksum(charToRaw("changed bytes"), checksum, "fixture.bin"),
     "Checksum mismatch"
   )
 })
@@ -111,19 +135,31 @@ test_that("a corrupt cached blob is invalidated", {
   cache <- fetcher_cache(cache_dir)
   key <- fetcher_key()
   bytes <- charToRaw("valid bytes")
-  checksum <- md5_raw(bytes)
+  checksum <- checksum_raw(bytes)
   cache_put(cache, key, bytes, checksum)
 
   blob <- file.path(cache_dir, "blobs", paste0(checksum, ".blob"))
   writeBin(charToRaw("corrupt"), blob)
 
   expect_warning(
-    result <- cache_get(cache, key, expected_md5 = checksum),
+    result <- cache_get(cache, key, expected_checksum = checksum),
     "failed checksum verification"
   )
   expect_null(result)
   expect_false(file.exists(blob))
   expect_false(cache_has(cache, key))
+})
+
+test_that("a cached SHA-256 blob is verified using SHA-256", {
+  skip_fetcher_integration()
+  cache_dir <- withr::local_tempdir()
+  cache <- fetcher_cache(cache_dir)
+  key <- fetcher_key()
+  bytes <- charToRaw("valid bytes")
+  checksum <- digest::digest(bytes, algo = "sha256", serialize = FALSE)
+  cache_put(cache, key, bytes, checksum)
+
+  expect_identical(cache_get(cache, key, expected_checksum = checksum), bytes)
 })
 
 test_that("cold, warm, and overlapping fetches download only missing years", {
@@ -163,7 +199,7 @@ test_that("content-addressed cache deduplicates bytes across versions", {
   cache_dir <- withr::local_tempdir()
   cache <- fetcher_cache(cache_dir)
   bytes <- charToRaw("same immutable file")
-  checksum <- md5_raw(bytes)
+  checksum <- checksum_raw(bytes)
 
   cache_put(cache, fetcher_key(version = "1.0"), bytes, checksum)
   cache_put(cache, fetcher_key(version = "2.0"), bytes, checksum)
@@ -196,6 +232,11 @@ test_that("manifest replay retrieves byte-identical recorded input", {
       refresh = TRUE,
       quiet = TRUE
     )
+    recorded <- dv_resolve_file(
+      discovery$current$listing,
+      "02_wind/storm_metadata", "2026.parquet",
+      doi = discovery$current$doi
+    )
     first_context <- fetch_context(
       discovery,
       list(enabled = FALSE, dir = NULL),
@@ -226,8 +267,13 @@ test_that("manifest replay retrieves byte-identical recorded input", {
   expect_length(downloaded, 2L)
   expect_identical(downloaded[[1L]], downloaded[[2L]])
   expect_equal(nrow(manifest$files), 1L)
-  expect_equal(manifest$files$file_id, 2703775L)
-  expect_equal(manifest$files$md5, md5_raw(downloaded[[1L]]))
+  expect_equal(manifest$files$file_id, recorded$file_id)
+  expect_equal(manifest$files$checksum, recorded$checksum)
+  expect_equal(manifest$files$checksum_type, recorded$checksum_type)
+  expect_equal(
+    manifest$files$checksum,
+    checksum_raw(downloaded[[1L]], recorded$checksum)
+  )
 })
 
 test_that("metadata remains historical when current listing contains a copy", {
@@ -236,7 +282,8 @@ test_that("metadata remains historical when current listing contains a copy", {
     file_id = c(1L, 2L),
     label = c("2001.parquet", "codebook.json"),
     directory_label = c("yearly", "metadata"),
-    md5 = c(md5_raw(charToRaw("year")), md5_raw(charToRaw('{"source":"historical"}'))),
+    checksum = c(checksum_raw(charToRaw("year")), checksum_raw(charToRaw('{"source":"historical"}'))),
+    checksum_type = "MD5",
     size_bytes = c(4, 23),
     content_type = c("application/octet-stream", "application/json")
   )
@@ -244,7 +291,8 @@ test_that("metadata remains historical when current listing contains a copy", {
     file_id = c(3L, 4L),
     label = c("2002.parquet", "codebook.json"),
     directory_label = c("yearly", "metadata"),
-    md5 = c(md5_raw(charToRaw("year")), md5_raw(charToRaw('{"source":"current"}'))),
+    checksum = c(checksum_raw(charToRaw("year")), checksum_raw(charToRaw('{"source":"current"}'))),
+    checksum_type = "MD5",
     size_bytes = c(4, 20),
     content_type = c("application/octet-stream", "application/json")
   )
@@ -293,6 +341,7 @@ test_that("metadata remains historical when current listing contains a copy", {
 
   expect_equal(codebook$source, "historical")
   expect_equal(manifest$files$dataset_doi, "doi:10.0000/HIST")
+  expect_equal(manifest$files$source_role, "Historical")
   expect_equal(manifest$files$dataset_version, "4.0")
   expect_equal(manifest$files$file_id, 2L)
 })

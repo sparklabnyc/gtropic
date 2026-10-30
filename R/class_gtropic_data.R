@@ -9,22 +9,27 @@
 #' @param query The matched call.
 #' @param filters_resolved List of resolved filter state.
 #' @param warnings Structured record of warnings raised.
+#' @param availability Structured source availability and coverage metadata.
+#' @param retrieved_at Manifest-level source acquisition time.
 #'
 #' @return An object of class `gtropic_data`.
 #' @keywords internal
 #' @noRd
 new_gtropic_data <- function(tables,
                              manifest,
-                             query = NULL,
-                             filters_resolved = list(),
-                             warnings = list()) {
+                              query = NULL,
+                              filters_resolved = list(),
+                              warnings = list(),
+                              availability = NULL,
+                              retrieved_at = Sys.time()) {
   structure(
     tables,
     manifest = manifest,
     query = query,
     filters_resolved = filters_resolved,
     warnings = warnings,
-    retrieved_at = Sys.time(),
+    availability = availability,
+    retrieved_at = retrieved_at,
     gtropic_version = as.character(utils::packageVersion("gtropic")),
     class = c("gtropic_data", "list")
   )
@@ -43,21 +48,27 @@ new_gtropic_data <- function(tables,
 #'
 #' `gtropic_filters()` reports the filters as resolved by the package, including
 #' selected ADM2 and storm identifiers, genesis-date bounds, years represented
-#' by the selected storms, and precipitation and flood window settings. These
-#' values support transparent reporting and quality assurance in downstream
-#' analyses.
+#' by the selected storms, the wind radius, and precipitation and flood window
+#' settings. These values support transparent reporting and quality assurance in
+#' downstream analyses.
 #'
 #' `gtropic_warnings()` returns diagnostic details retained with the result.
 #' This can include complete values that were abbreviated in a console warning,
 #' such as ADM2 units whose polygon membership varied over time. It is not a log
 #' of every warning that may have been emitted during retrieval.
 #'
+#' `gtropic_availability()` returns structured source update schedules, known
+#' coverage, and the requested time range used for availability diagnostics.
+#'
 #' @param x A `gtropic_data` object.
 #'
 #' @return `gtropic_manifest()` returns an object of class `gtropic_manifest`.
-#'   `gtropic_filters()` returns a named list of resolved query settings.
+#'   `gtropic_filters()` returns a named `gtropic_filters` list of resolved
+#'   query settings. List elements retain their complete values; printing shows
+#'   a compact preview.
 #'   `gtropic_warnings()` returns a named list of recorded diagnostics, which is
-#'   empty when none were retained.
+#'   empty when none were retained. `gtropic_availability()` returns a named
+#'   list of source availability and coverage metadata.
 #'
 #' @examples
 #' \donttest{
@@ -78,7 +89,7 @@ gtropic_manifest <- function(x) {
 #' @export
 gtropic_filters <- function(x) {
   stopifnot(inherits(x, "gtropic_data"))
-  attr(x, "filters_resolved")
+  structure(attr(x, "filters_resolved"), class = c("gtropic_filters", "list"))
 }
 
 #' @rdname gtropic_manifest
@@ -86,6 +97,93 @@ gtropic_filters <- function(x) {
 gtropic_warnings <- function(x) {
   stopifnot(inherits(x, "gtropic_data"))
   attr(x, "warnings")
+}
+
+#' @rdname gtropic_manifest
+#' @export
+gtropic_availability <- function(x) {
+  stopifnot(inherits(x, "gtropic_data"))
+  attr(x, "availability")
+}
+
+#' Print resolved G-TROPIC filters
+#'
+#' Displays each resolved filter with a compact value preview. Long vectors,
+#' such as selected ADM2 identifiers, show at most `n` values and state how many
+#' values were omitted. The complete values remain available through ordinary
+#' list access.
+#'
+#' @param x A `gtropic_filters` object returned by [gtropic_filters()].
+#' @param n Maximum number of values to display for each filter.
+#' @param ... Additional arguments passed to the print method. Currently
+#'   ignored.
+#'
+#' @return `x`, invisibly.
+#'
+#' @examples
+#' \donttest{
+#' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
+#' print(gtropic_filters(res))
+#' }
+#'
+#' @export
+print.gtropic_filters <- function(x, n = 10L, ...) {
+  if (!is.numeric(n) || length(n) != 1L || is.na(n) || !is.finite(n) ||
+      n < 1L || n != floor(n)) {
+    cli::cli_abort("{.arg n} must be a positive whole number.")
+  }
+  n <- as.integer(n)
+
+  cli::cli_h1("G-TROPIC resolved filters")
+  if (length(x) == 0L) {
+    cli::cli_text("No resolved filters.")
+    return(invisible(x))
+  }
+
+  filter_names <- names(x)
+  for (i in seq_along(x)) {
+    value <- x[[i]]
+    nm <- filter_names[[i]]
+    if (is.null(value)) {
+      cli::cli_li("{.field {nm}}: NULL")
+      next
+    }
+
+    n_values <- length(value)
+    value_label <- if (n_values == 1L) "value" else "values"
+    preview <- format_filter_preview(value, n)
+    n_omitted <- max(n_values - n, 0L)
+    omitted <- if (n_omitted > 0L) {
+      omitted_label <- if (n_omitted == 1L) "value" else "values"
+      paste0(" (", n_omitted, " ", omitted_label, " omitted)")
+    } else {
+      ""
+    }
+    cli::cli_li("{.field {nm}} ({n_values} {value_label}): {preview}{omitted}")
+  }
+
+  invisible(x)
+}
+
+#' Format a resolved filter value for compact printing
+#' @param x Filter value.
+#' @param n Maximum number of values to include.
+#' @return A single character string.
+#' @keywords internal
+#' @noRd
+format_filter_preview <- function(x, n) {
+  if (length(x) == 0L) {
+    return("<empty>")
+  }
+
+  values <- if (is.character(x)) {
+    ifelse(is.na(x), "NA", encodeString(x, quote = "\""))
+  } else {
+    out <- format(x, trim = TRUE, justify = "none")
+    out[is.na(x)] <- "NA"
+    out
+  }
+  paste0("[", paste(utils::head(values, n), collapse = ", "), "]")
 }
 
 #' Print a G-TROPIC data result
@@ -110,14 +208,15 @@ gtropic_warnings <- function(x) {
 print.gtropic_data <- function(x, ...) {
   mf <- attr(x, "manifest")
   fl <- attr(x, "filters_resolved")
+  datasets <- manifest_datasets(mf)
 
   cli::cli_h1("G-TROPIC data")
 
   cli::cli_bullets(c(
-    "*" = "Historical dataset: version {.val {mf$historical_version}}",
-    "*" = if (!is.na(mf$current_doi)) {
-      "Current-year dataset: version {.val {mf$current_version}}"
-    },
+    stats::setNames(
+      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi, " (version ",
+        datasets$dataset_version, ")"), rep("*", nrow(datasets))
+    ),
     "*" = if (!is.null(fl$date_start)) {
       "Genesis dates: {.val {format(fl$date_start)}} to
        {.val {format(fl$date_end)}}"
@@ -167,16 +266,18 @@ summary.gtropic_data <- function(object, ...) {
   mf <- attr(object, "manifest")
   fl <- attr(object, "filters_resolved")
   wn <- attr(object, "warnings")
+  datasets <- manifest_datasets(mf)
 
   cli::cli_h1("G-TROPIC data summary")
 
   cli::cli_h2("Sources")
   cli::cli_bullets(c(
     "*" = "Server: {.val {mf$server}}",
-    "*" = "Historical: {.val {mf$historical_doi}} v{mf$historical_version}",
-    "*" = if (!is.na(mf$current_doi)) {
-      "Current-year: {.val {mf$current_doi}} v{mf$current_version}"
-    },
+    stats::setNames(
+      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi,
+        " v", datasets$dataset_version),
+      rep("*", nrow(datasets))
+    ),
     "*" = "Files retrieved: {nrow(mf$files)}
            ({format_bytes(sum(mf$files$size_bytes, na.rm = TRUE))})",
     "*" = "Retrieved at: {format(attr(object, 'retrieved_at'), usetz = TRUE)}"
@@ -188,12 +289,19 @@ summary.gtropic_data <- function(object, ...) {
   }
 
   cli::cli_h2("Resolved filters")
+  wind_radius_km <- fl$wind_radius_km %||% Inf
+  wind_radius <- if (is.infinite(wind_radius_km)) {
+    "unbounded"
+  } else {
+    paste0(wind_radius_km, " km")
+  }
   cli::cli_bullets(c(
     "*" = "ADM2 units: {length(fl$adm2_ids %||% character(0))}",
     "*" = "Storms: {length(fl$storm_ids %||% character(0))}",
     "*" = if (!is.null(fl$date_start)) {
       "Genesis window: {format(fl$date_start)} to {format(fl$date_end)}"
     },
+    "*" = "Wind radius: {wind_radius}",
     "*" = "Precipitation window: -{fl$precip_days_before}/
            +{fl$precip_days_after} days within {fl$precip_radius_km} km",
     "*" = "Flood window: -{fl$flood_days_before}/+{fl$flood_days_after} days
@@ -208,6 +316,16 @@ summary.gtropic_data <- function(object, ...) {
   }
 
   invisible(object)
+}
+
+#' Return datasets actually represented in a manifest
+#' @keywords internal
+#' @noRd
+manifest_datasets <- function(manifest) {
+  datasets <- tibble::as_tibble(manifest$datasets)
+  datasets$source_role <- manifest_source_role(datasets$source_role)
+  datasets$source_role[is.na(datasets$source_role)] <- "Dataset"
+  manifest_order_datasets(datasets)
 }
 
 #' Describe a table's dimensions for printing

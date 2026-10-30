@@ -5,14 +5,17 @@
 .gtropic_session <- new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
+  persisted_cache_enabled <- cache_config_read()
   defaults <- list(
     gtropic.server = "demo.dataverse.org",
     gtropic.doi_historical = "doi:10.70122/FK2/SWEYST",
     gtropic.doi_current = "doi:10.70122/FK2/DDSYYD",
     gtropic.collection = "gtropic",
-    gtropic.cache_enabled = FALSE,
-    # Resolved lazily rather than at load time so that a user who has never
-    # enabled the cache never triggers directory creation.
+    # The config file is read without creating it. A user-supplied option takes
+    # precedence over this persisted setting.
+    gtropic.cache_enabled = persisted_cache_enabled %||% TRUE,
+    # Resolving this path does not create it; directories are made only when a
+    # retrieval writes its first cached file or caching is explicitly enabled.
     gtropic.cache_dir = tools::R_user_dir("gtropic", "cache"),
     gtropic.confirm_threshold_gb = 1,
     gtropic.timeout = 600,

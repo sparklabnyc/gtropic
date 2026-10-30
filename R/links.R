@@ -6,8 +6,9 @@
 #   window = [LOCAL_DATE_STORM_CLOSEST - days_before,
 #             LOCAL_DATE_STORM_CLOSEST + days_after]
 #
-#   field  = all evaluated pairs (from wind AND zero_pairs) with
-#            STORM_DIST_KM <= radius_km, intersected with the user's geography
+#   links  = all evaluated pairs (from wind AND zero_pairs) needed by the union
+#            of requested hazard fields and intersected with the user's geography
+#   field  = linked pairs with STORM_DIST_KM <= the hazard-specific radius_km
 #
 # The user's geographic filter is an OUTER BOUND. The radius narrows within it
 # and never widens beyond it: asking for Florida never returns Georgia because
@@ -129,6 +130,11 @@ validate_anchor <- function(x, n = 1000L, label = "file",
 #'   when neither precip nor flood was requested.
 #' @param adm2_ids Resolved ADM2 identifiers (the outer geographic bound).
 #' @param storm_ids Resolved storm identifiers.
+#' @param wind_radius_km Maximum published storm-track distance for wind
+#'   exposure rows.
+#' @param link_radius_km Maximum published storm-track distance for pairs kept
+#'   in `links`. It is the union-boundary for requested hazard fields; `Inf`
+#'   leaves links unbounded, including pairs with missing distance.
 #' @param precip_window List with `before`, `after`, `radius_km`.
 #' @param flood_window List with `before`, `after`, `radius_km`.
 #'
@@ -139,14 +145,32 @@ build_links <- function(wind,
                         zero_pairs = NULL,
                         adm2_ids,
                         storm_ids,
+                        wind_radius_km,
+                        link_radius_km,
                         precip_window = list(
-                          before = 2, after = 1,
-                          radius_km = 500
+                           before = 2, after = 1,
+                           radius_km = 500
                         ),
                         flood_window = list(
                           before = 2, after = 1,
                           radius_km = 500
                         )) {
+  wind_radius_km <- check_wind_radius_km(
+    wind_radius_km,
+    arg = "wind_radius_km"
+  )
+  link_radius_km <- check_wind_radius_km(
+    link_radius_km,
+    arg = "link_radius_km"
+  )
+  precip_window$radius_km <- check_wind_radius_km(
+    precip_window$radius_km,
+    arg = "precip_window$radius_km"
+  )
+  flood_window$radius_km <- check_wind_radius_km(
+    flood_window$radius_km,
+    arg = "flood_window$radius_km"
+  )
   cols <- c("ADM2_ID", "STORM_ID", "STORM_DIST_KM", "LOCAL_DATE_STORM_CLOSEST")
 
   take <- function(df, exposure) {
@@ -180,6 +204,21 @@ build_links <- function(wind,
     ) |>
     dplyr::distinct(.data$ADM2_ID, .data$STORM_ID, .keep_all = TRUE)
 
+  # A finite union-boundary defines the pairs needed by requested hazard fields.
+  # Unlike unbounded queries, missing published distances cannot establish that
+  # a pair is within a finite field.
+  if (is.finite(link_radius_km)) {
+    pairs <- pairs |>
+      dplyr::filter(
+        !is.na(.data$STORM_DIST_KM),
+        .data$STORM_DIST_KM <= link_radius_km
+      )
+  }
+
+  if (nrow(pairs) == 0L) {
+    return(links_empty())
+  }
+
   anchor <- as.Date(pairs$LOCAL_DATE_STORM_CLOSEST)
 
   tibble::tibble(
@@ -188,16 +227,140 @@ build_links <- function(wind,
     LOCAL_DATE_STORM_CLOSEST = anchor,
     STORM_DIST_KM = pairs$STORM_DIST_KM,
     WIND_EXPOSURE = pairs$WIND_EXPOSURE,
-    # The *_IN_FIELD flags make it explicit why a pair has no precip or flood
-    # rows: outside the radius, versus inside it with genuinely no data.
-    PRECIP_IN_FIELD = !is.na(pairs$STORM_DIST_KM) &
-      pairs$STORM_DIST_KM <= precip_window$radius_km,
+    # The *_IN_FIELD flags distinguish an out-of-field pair from one that was
+    # evaluated but has no corresponding hazard rows.
+    WIND_IN_FIELD = radius_in_field(pairs$STORM_DIST_KM, wind_radius_km),
+    PRECIP_IN_FIELD = radius_in_field(
+      pairs$STORM_DIST_KM,
+      precip_window$radius_km
+    ),
     PRECIP_WINDOW_START = anchor - precip_window$before,
     PRECIP_WINDOW_END = anchor + precip_window$after,
-    FLOOD_IN_FIELD = !is.na(pairs$STORM_DIST_KM) &
-      pairs$STORM_DIST_KM <= flood_window$radius_km,
+    FLOOD_IN_FIELD = radius_in_field(
+      pairs$STORM_DIST_KM,
+      flood_window$radius_km
+    ),
     FLOOD_WINDOW_START = anchor - flood_window$before,
     FLOOD_WINDOW_END = anchor + flood_window$after
+  )
+}
+
+#' Mark pairs included by a hazard radius
+#'
+#' A finite radius requires a known published distance and includes its boundary.
+#' An unbounded radius includes every retained pair, including pairs whose
+#' published distance is missing. This is the same rule used for unbounded wind
+#' filtering.
+#'
+#' @param distance Published `STORM_DIST_KM` values.
+#' @param radius_km Validated finite or infinite radius.
+#' @return A logical vector indicating whether each pair is in the field.
+#' @keywords internal
+#' @noRd
+radius_in_field <- function(distance, radius_km) {
+  if (is.infinite(radius_km)) {
+    return(rep(TRUE, length(distance)))
+  }
+  !is.na(distance) & distance <= radius_km
+}
+
+#' Restrict wind records to a finite published-distance radius
+#'
+#' @param wind A collected wind table, or `NULL`.
+#' @param wind_radius_km Validated wind radius.
+#'
+#' @return `wind`, limited to records at or below a finite radius.
+#' @keywords internal
+#' @noRd
+filter_wind_radius <- function(wind, wind_radius_km) {
+  if (is.null(wind) || is.infinite(wind_radius_km)) {
+    return(wind)
+  }
+
+  wind[radius_in_field(wind$STORM_DIST_KM, wind_radius_km), , drop = FALSE]
+}
+
+#' Find the union-boundary needed for requested hazard links
+#'
+#' @param tables Requested output tables.
+#' @param wind_radius_km,precip_radius_km,flood_radius_km Validated radii.
+#'
+#' @return A positive numeric scalar or `Inf`.
+#' @keywords internal
+#' @noRd
+link_radius_for_tables <- function(tables,
+                                   wind_radius_km,
+                                   precip_radius_km,
+                                   flood_radius_km) {
+  radii <- c(
+    if ("wind" %in% tables) wind_radius_km,
+    if ("precip" %in% tables) precip_radius_km,
+    if ("flood" %in% tables) flood_radius_km
+  )
+
+  if (length(radii) == 0L) Inf else max(radii)
+}
+
+#' Resolve geographic and track scope after links are known
+#'
+#' Source zero-pairs are ordinary links for this purpose. Thus, when a finite
+#' precipitation or flood radius qualifies a zero-wind pair, its ADM2 is in
+#' scope. The returned `zero_pairs` source table is not itself narrowed.
+#'
+#' @param links Published ADM2-storm links.
+#' @param adm2_ids ADM2 IDs selected by the user's geographic filters.
+#' @param storm_ids Storm IDs selected by the user's filters.
+#' @param tables Requested output tables.
+#' @param wind_radius_km,precip_radius_km,flood_radius_km Validated radii.
+#'
+#' @return A list with scoped `adm2_ids` and linked `storm_ids`.
+#' @keywords internal
+#' @noRd
+resolve_hazard_scope <- function(links,
+                                 adm2_ids,
+                                 tables,
+                                 wind_radius_km,
+                                 precip_radius_km,
+                                 flood_radius_km,
+                                 storm_ids = NULL) {
+  finite_hazards <- c(
+    wind = "wind" %in% tables && is.finite(wind_radius_km),
+    precip = "precip" %in% tables && is.finite(precip_radius_km),
+    flood = "flood" %in% tables && is.finite(flood_radius_km)
+  )
+  constrained <- any(finite_hazards)
+
+  # An unbounded request must not discard selected storms merely because there
+  # are no published links in the selected geography.
+  if (!constrained) {
+    return(list(
+      adm2_ids = adm2_ids,
+      storm_ids = storm_ids %||% unique(as.character(links$STORM_ID))
+    ))
+  }
+
+  if (nrow(links) == 0L) {
+    return(list(
+      adm2_ids = character(0),
+      storm_ids = character(0)
+    ))
+  }
+
+  qualifying <- rep(FALSE, nrow(links))
+  if (finite_hazards[["wind"]]) {
+    qualifying <- qualifying | links$WIND_IN_FIELD
+  }
+  if (finite_hazards[["precip"]]) {
+    qualifying <- qualifying | links$PRECIP_IN_FIELD
+  }
+  if (finite_hazards[["flood"]]) {
+    qualifying <- qualifying | links$FLOOD_IN_FIELD
+  }
+
+  scope <- links[qualifying, , drop = FALSE]
+  list(
+    adm2_ids = unique(as.character(scope$ADM2_ID)),
+    storm_ids = unique(as.character(scope$STORM_ID))
   )
 }
 
@@ -208,6 +371,7 @@ links_empty <- function() {
     STORM_ID = character(0), ADM2_ID = character(0),
     LOCAL_DATE_STORM_CLOSEST = as.Date(character(0)),
     STORM_DIST_KM = numeric(0), WIND_EXPOSURE = logical(0),
+    WIND_IN_FIELD = logical(0),
     PRECIP_IN_FIELD = logical(0),
     PRECIP_WINDOW_START = as.Date(character(0)),
     PRECIP_WINDOW_END = as.Date(character(0)),

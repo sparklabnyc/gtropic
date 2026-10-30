@@ -78,8 +78,26 @@ test_that("track points sample only requested UTC intervals while paths remain c
   expect_equal(rlang::as_label(p$layers[[2]]$mapping$fill), ".track_category")
   expect_null(p$layers[[2]]$mapping$size)
   expect_equal(p$layers[[2]]$aes_params$size, 2.5)
+  expect_true(p$layers[[2]]$show.legend)
   expect_s3_class(p$scales$get_scales("fill"), "ScaleDiscrete")
   expect_null(p$scales$get_scales("size"))
+})
+
+test_that("static track legend keys retain points for absent wind categories", {
+  tracks <- track_rows()
+  tracks$USA_WIND[] <- 40
+  p <- plot_add_tracks(ggplot2::ggplot(), tracks,
+    colour_metric = "USA_WIND", track_map_key = track_key()
+  )
+  grob <- ggplot2::ggplotGrob(p)
+  guide_box <- grob$grobs[[match("guide-box-bottom", grob$layout$name)]]
+  guide <- guide_box$grobs[[1L]]
+  key_grobs <- guide$grobs[grepl("^key", guide$layout$name)]
+
+  expect_length(key_grobs, 2L)
+  expect_true(all(vapply(key_grobs, function(key) {
+    any(vapply(key$children, inherits, logical(1), what = "points"))
+  }, logical(1))))
 })
 
 test_that("track labels use the first valid point and a readable name fallback", {

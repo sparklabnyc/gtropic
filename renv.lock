@@ -543,6 +543,11 @@
       "Maintainer": "Shiro Kuriwaki <shirokuriwaki@gmail.com>",
       "Repository": "CRAN"
     },
+    "digest": {
+      "Package": "digest",
+      "Version": "0.6.39",
+      "Source": "Repository"
+    },
     "dplyr": {
       "Package": "dplyr",
       "Version": "1.2.1",

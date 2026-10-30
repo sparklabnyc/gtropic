@@ -33,7 +33,10 @@ normalize_plot_data <- function(data) {
     tibble::as_tibble(x)
   })
   names(out) <- names(data)
-  metadata <- c("query", "manifest", "filters_resolved", "geometry_resolution")
+  metadata <- c(
+    "query", "manifest", "filters_resolved", "geometry_resolution",
+    "retrieved_at", "gtropic_version"
+  )
   for (nm in metadata) {
     attr(out, nm) <- attr(data, nm, exact = TRUE)
   }

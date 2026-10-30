@@ -2,7 +2,7 @@
 % Please edit documentation in R/gtropic_plot.R
 \name{gtropic_plot}
 \alias{gtropic_plot}
-\title{Plot locally available G-TROPIC data}
+\title{Plot G-TROPIC data as static or interactive maps}
 \usage{
 gtropic_plot(
   data,
@@ -13,6 +13,7 @@ gtropic_plot(
   aggregate = NULL,
   threshold = NULL,
   binary = FALSE,
+  wind_categories = NULL,
   count_unit = c("storms", "days"),
   facet_by = NULL,
   track = NULL,
@@ -36,47 +37,67 @@ gtropic_plot(
 )
 }
 \arguments{
-\item{data}{A \code{gtropic_data} object returned by \code{\link[=gtropic_data]{gtropic_data()}}, or a uniquely
-named list of equivalent local tables. Data are never downloaded and published
-exposure values, distances, and tracks are not recalculated.}
+\item{data}{A \code{gtropic_data} object returned by \code{\link[=gtropic_data]{gtropic_data()}}, or a named
+list of equivalent tables.}
 
 \item{type}{The output type. One of \code{"exposure"} (the default), \code{"count"}, or
-\code{"track"}. Exposure maps summarize the selected metric; count maps count
-observations meeting its exposure threshold; track maps draw storm positions.}
+\code{"track"}. Exposure maps summarize the specified \code{metric} argument; count
+maps plot exposure-day or exposure-storm counts that meet exposure-specific
+\code{threshold}s; and track maps draw storm track paths.}
 
 \item{metric}{A supported published metric name, or a character vector of metric
-names for exposure or count maps. Its order determines panel, scale, and
-caption order. \code{NULL} selects the first available default: \code{"VMAX_SUST_MS"},
-\code{"PRECIP_MM"}, or \code{"PROP_FLOODED_POP"} for exposure/count maps and
-\code{"USA_WIND"} for track maps. Track maps require exactly one of \code{"USA_WIND"}
-or \code{"USA_STATUS"}.}
+names to plot. The \code{metric}s are plotted in the order they are given.
+For \code{type = "exposure"}, \code{NULL} selects every available core metric in this
+order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_FLOODED_AREA"}.
+For \code{type = "count"}, it selects the first available count default;
+\code{type = "track"} selects \code{"USA_WIND"}. Track maps require exactly one of
+\code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_exposures]{gtropic_exposures()}} for all available
+\code{metric}s available for plotting.}
 
-\item{storm}{Optional character vector of storm IDs or names used to subset all
-applicable tables. Names require \code{storm_metadata} and are matched
-case-insensitively. \code{NULL} (the default) retains all storms.}
+\item{storm}{Optional character vector of \code{STORM_ID}s or \code{STORM_NAME}s used
+to subset all applicable tables in \code{data}. Specifying \code{storm}s requires that the \code{data}
+object passed in contains the \code{storm_metadata} table. \code{STORM_NAME}s are matched
+case-insensitively. \code{storm = NULL} (the default) retains all storms.}
 
-\item{adm2}{Optional character vector of ADM2 IDs used to subset all applicable
-tables. \code{NULL} (the default) retains all ADM2 units. For a track map, this
-retains tracks linked to the selected ADM2 units when linkage data are present.}
+\item{adm2}{Optional character vector of \code{ADM2_ID}s used to subset all applicable
+tables in \code{data}. \code{adm2 = NULL} (the default) retains all ADM2 units. For a track map, this
+retains tracks linked to the selected ADM2 units when the \code{links} table is present in \code{data}.}
 
 \item{aggregate}{Summary method for exposure maps: one of \code{"max"}, \code{"min"},
-\code{"sum"}, \code{"mean"}, or \code{"n"}. \code{NULL} (the default) uses the metric-specific
-published default. A single value is recycled over \code{metric}; multiple values
-must either be in metric order or be named for every selected metric. Count
-maps always use \code{"n"} and reject another value; this argument does not affect
-track maps.}
+\code{"sum"}, \code{"mean"}, or \code{"n"}. \code{aggregate = NULL} (the default) uses the metric-specific
+published default (see the \code{aggregate} column of the tables returned by
+\code{\link[=gtropic_exposures]{gtropic_exposures()}} for these defaults).
+A single value is recycled over \code{metric}; multiple values
+must either be in \code{metric} order or be named for every selected \code{metric}. Count
+maps always use \code{"n"} and reject another value; this argument is ignored when
+\code{type = "track"} is passed.}
 
 \item{threshold}{A named list of finite numeric thresholds, with names matching
-selected metrics. \code{NULL} (the default) uses a built-in threshold where one is
-defined. Thresholds determine which observations are counted for \code{type = "count"} and which areas are classified for \code{binary = TRUE}; an explicit
-threshold is required when no default exists. It does not affect continuous
-exposure maps or track maps.}
+selected \code{metric}s. \code{threshold = NULL} (the default) uses a built-in threshold where one is
+defined. Thresholds determine which observations are counted for
+\code{type = "count"} and which areas are classified for \code{binary = TRUE}; an explicit
+threshold is required when no default exists. This argument is ignored when
+\code{binary = FALSE} and \code{type = "exposure"} or \code{"track"}.}
 
 \item{binary}{Logical; if \code{TRUE}, show exposure/count maps as exposed or not
 exposed using \code{threshold}, rather than as a continuous value scale. Defaults
-to \code{FALSE}. It is not available for track maps.}
+to \code{FALSE}. Ignored when \code{type = "track"}.}
 
-\item{count_unit}{The unit counted by a count map: distinct qualifying
+\item{wind_categories}{Optional categorical exposure key or named list of
+keys. A key is a data frame with \code{category}, numeric upper \code{threshold},
+constant \code{unit}, and \code{color} columns. It classifies aggregated
+ADM2 values, retaining every key category in the static and interactive
+legends even when unobserved. With multiple selected metrics, supply a
+uniquely named list keyed by selected wind metric; a bare key is allowed
+only for one selected metric. Keys must use the source metric's unit;
+conventional spellings of meters per second, such as \code{"m/s"} and
+\code{"meters per second"}, are treated as compatible. The
+\code{\link[=saffir_simpson]{saffir_simpson()}} key is allowed only for \code{VMAX_SUST_MS} with
+\code{aggregate = "max"}, where it means a local sustained-wind equivalent,
+not a storm status. Other wind metrics or aggregates require an explicitly
+custom key. Applies only to non-binary exposure maps and wind metrics.}
+
+\item{count_unit}{The unit counted when \code{type = "count"}: distinct qualifying
 \code{"storms"} (the default) or \code{"days"}. It applies only when \code{type = "count"}
 and is otherwise ignored.}
 
@@ -90,28 +111,34 @@ default) overlays them when \code{data} contains a \code{tracks} table; \code{TR
 \code{FALSE} explicitly enables or suppresses the overlay. Track maps always draw
 tracks regardless of this value.}
 
-\item{track_map_key}{A data frame defining wind categories for track points,
-with \code{category}, increasing \code{threshold} ceilings ending in \code{Inf}, one \code{unit},
-and either \code{color} or \code{colour}. Defaults to \code{\link[=saffir_simpson]{saffir_simpson()}}. It controls
+\item{track_map_key}{A data frame defining the discrete color scale used when
+plotting track points. Defaults to the data frame returned by \code{\link[=saffir_simpson]{saffir_simpson()}}.
+The \code{track_map_key} must contain the following four columns: \code{category},
+\code{threshold}, \code{unit}, and \code{color}.
+The \code{unit} column must contain a single, constant value, and can be one of:
+\code{"m/s"}, \code{"knots"}, \code{"mph"}, \code{"km/h"}. This key controls
 \code{USA_WIND} track points and exposure/count track overlays, but not a
-\code{USA_STATUS} track map.}
+\code{USA_STATUS} track map. Static wind legends display every category in the
+supplied key, including categories absent from the plotted observations.}
 
 \item{track_labels}{Logical; if \code{TRUE} (the default), static maps label each
 storm with more than one valid observation at its first valid position when
 multiple storms are shown. It is ignored for interactive maps.}
 
 \item{track_interval}{Interval in UTC hours at which track intensity points are
-displayed: 3 or 6 (the default). Paths always retain every observation.
-\code{NULL} displays every point. It affects track maps and enabled track overlays.}
+displayed. Can be \code{3} or \code{6} (the default). Paths always retain every observation.
+\code{NULL} displays every point. This argument affects \code{type = "track"} maps
+and enabled track overlays.}
 
 \item{track_legend_position}{Position of per-panel metric scale strips on static
 exposure/count maps. \code{NULL} (the default) places horizontal strips below the
-panels. \code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}, \code{"top left"},
-\code{"top right"}, \code{"bottom left"}, and \code{"bottom right"} place them in each
-panel. It is ignored for track and interactive maps.}
+panels. Can be one of \code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}, \code{"top left"},
+\code{"top right"}, \code{"bottom left"}, or \code{"bottom right"}.
+This argument is ignored when \code{type = "track"} or \code{interactive = TRUE}.}
 
-\item{basemap}{Installed Natural Earth layer: \code{"countries"} (the default),
-\code{"admin1"}, or \code{"none"}. No layer is downloaded. \code{"admin1"} requires the
+\item{basemap}{The Installed Natural Earth layer to use for plotting.
+Must be one of \code{"countries"} (the default), \code{"admin1"}, or \code{"none"}.
+No layers are ever downloaded. \code{basemap = "admin1"} requires the
 optional \code{rnaturalearthhires} package.}
 
 \item{bbox}{Map extent as an sf/sfc object, an sf bbox with a known CRS, or
@@ -158,18 +185,24 @@ Track plots accept no additional arguments.}
 A ggplot for static output or a leaflet widget for interactive output.
 }
 \description{
-Creates exposure maps, exposure-count maps, and storm-track maps from tables
-already returned by \code{\link[=gtropic_data]{gtropic_data()}}. Plotting never retrieves data or
-recalculates published exposure values and storm distances.
+Creates exposure maps, exposure-day or exposure-storm count maps, and
+storm-track maps from data retrieved by \code{\link[=gtropic_data]{gtropic_data()}}. This function never
+retrieves data itself, nor does it recalculate published exposure values,
+storm distances, or metadata.
 }
 \details{
 Maps use the actual date range of contributing observations after storm, ADM2,
-and linkage filters. Metric panels use readable metric names. Automatic
-captions report the applicable radii, windows, aggregations, track interval,
-and plotting CRS in metric order.
+and linkage filters. Automatic subtitles begin with \code{"Aggregated across"} and
+show the displayed date range. Single-metric titles use readable aggregate
+labels; multi-metric titles describe the panel set. A single plotted storm
+prefixes the title, while multiple storms do not alter it. Metric strips use
+readable aggregate and active-threshold labels. Automatic captions use
+newline-separated source, retrieval, dataset-provenance, hazard-parameter,
+track-interval, and plotting-CRS lines. Hazard radii and windows are derived
+from rows that contributed to the plot.
 
 Track paths are drawn from every supplied observation. By default, constant-
 size points use \code{\link[=saffir_simpson]{saffir_simpson()}} categories derived from \code{USA_WIND}, which is
 published in knots and converted to the map key's unit before classification.
-An explicit \code{metric = "USA_STATUS"} retains the status-colour display.
+An explicit \code{metric = "USA_STATUS"} retains the status-color display.
 }

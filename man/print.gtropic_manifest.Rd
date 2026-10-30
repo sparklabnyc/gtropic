@@ -16,8 +16,8 @@ ignored.}
 \code{x}, invisibly.
 }
 \description{
-Displays the dataset server, DOI and version information, file count and
-total size, retrieval time, and package version recorded for a G-TROPIC
+Displays the dataset server, DOI and version information for datasets actually
+used, file count and total size, retrieval time, and package version recorded for a G-TROPIC
 retrieval. A manifest can be supplied to \code{gtropic_data()} to request the same
 published source files in a subsequent analysis.
 }

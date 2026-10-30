@@ -20,7 +20,7 @@ needing a package update.
    \code{gtropic.doi_historical} \tab \code{"doi:10.70122/FK2/SWEYST"} \tab DOI of the historical dataset. \cr
    \code{gtropic.doi_current} \tab \code{"doi:10.70122/FK2/DDSYYD"} \tab DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. \cr
    \code{gtropic.collection} \tab \code{"gtropic"} \tab Dataverse collection (alias) searched during discovery. \cr
-   \code{gtropic.cache_enabled} \tab \code{FALSE} \tab Whether downloaded files are kept on disk between sessions. \cr
+   \code{gtropic.cache_enabled} \tab \code{TRUE} \tab Whether downloaded files are kept on disk. \cr
    \code{gtropic.cache_dir} \tab \code{tools::R_user_dir("gtropic", "cache")} \tab Where cached files live. \cr
    \code{gtropic.confirm_threshold_gb} \tab \code{1} \tab Download size, in gigabytes, above which you are asked to confirm. \cr
    \code{gtropic.timeout} \tab \code{600} \tab Per-request timeout in seconds. \cr
@@ -29,8 +29,10 @@ needing a package update.
 
 
 A "cache" here means a folder of previously downloaded files on your own
-computer. It is switched off by default, and turning it on writes only to a
-standard per-user location chosen by R (see \code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}}).
+computer. It is enabled by default and uses a standard per-user location
+chosen by R. Use \code{\link[=gtropic_cache_disable]{gtropic_cache_disable()}} or \code{cache = FALSE} on a retrieval
+to bypass it. See \code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} to persist an enabled or disabled
+choice across R sessions.
 }
 \examples{
 # Point the package at a different installation:

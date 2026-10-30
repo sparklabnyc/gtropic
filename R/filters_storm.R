@@ -23,6 +23,9 @@
 #' @param date_spec Output of `parse_date_input()`.
 #' @param storm_filters Named list with `STORM_ID`, `STORM_NAME`,
 #'   `USA_ATCF_ID`.
+#' @param excluded_lookup Function returning excluded-storm records for the
+#'   candidate years, or `NULL`. It is called only after an ID or name fails to
+#'   match the available storm metadata.
 #' @param call Calling environment for error reporting.
 #'
 #' @return A character vector of `STORM_ID`.
@@ -31,6 +34,7 @@
 resolve_storms <- function(storm_metadata,
                            date_spec = list(type = "none"),
                            storm_filters = list(),
+                           excluded_lookup = NULL,
                            call = rlang::caller_env()) {
   storm_filters <- compact(storm_filters)
 
@@ -96,13 +100,18 @@ resolve_storms <- function(storm_metadata,
       )
     }
 
-    canonical <- match_values(
+    canonical <- match_storm_values(
       values,
       candidates = storm_metadata[[column]],
       arg = arg,
       exact = id_spec[[arg]]$exact,
       helper = "gtropic_storms()",
       what = "storm",
+      excluded_lookup = if (arg %in% c("STORM_ID", "STORM_NAME")) {
+        excluded_lookup
+      } else {
+        NULL
+      },
       call = call
     )
 
@@ -129,6 +138,138 @@ resolve_storms <- function(storm_metadata,
   }
 
   unique(as.character(storm_metadata$STORM_ID[keep]))
+}
+
+#' Match storm identity filters, diagnosing excluded storms when possible
+#'
+#' @param values Character filter values.
+#' @param candidates Available storm identifiers or names.
+#' @param arg Argument name.
+#' @param exact Whether matching is exact and case-sensitive.
+#' @param helper Discovery helper name for messages.
+#' @param what Noun used in fallback messages.
+#' @param excluded_lookup Function returning excluded-storm records, or `NULL`.
+#' @param call Calling environment for error reporting.
+#'
+#' @return Canonical matched values.
+#' @keywords internal
+#' @noRd
+match_storm_values <- function(values,
+                               candidates,
+                               arg,
+                               exact = FALSE,
+                               helper = "gtropic_storms()",
+                               what = "storm",
+                               excluded_lookup = NULL,
+                               call = rlang::caller_env()) {
+  candidates <- unique(as.character(candidates[!is.na(candidates)]))
+  hit <- if (exact) {
+    values %in% candidates
+  } else {
+    norm_key(values) %in% norm_key(candidates)
+  }
+
+  if (all(hit) || is.null(excluded_lookup)) {
+    return(match_values(
+      values, candidates, arg = arg, exact = exact, helper = helper,
+      what = what, call = call
+    ))
+  }
+
+  excluded <- excluded_lookup()
+  abort_unavailable_storms(
+    values[!hit], excluded, arg = arg, exact = exact, call = call
+  )
+}
+
+#' Abort for storm filters absent from available metadata
+#'
+#' @param values Unmatched filter values.
+#' @param excluded Excluded-storm records.
+#' @param arg Argument name.
+#' @param exact Whether matching is exact and case-sensitive.
+#' @param call Calling environment for error reporting.
+#'
+#' @return Never returns.
+#' @keywords internal
+#' @noRd
+abort_unavailable_storms <- function(values,
+                                     excluded,
+                                     arg,
+                                     exact,
+                                     call = rlang::caller_env()) {
+  column <- arg
+  excluded_values <- if (is.null(excluded) || !column %in% names(excluded)) {
+    character(0)
+  } else {
+    as.character(excluded[[column]])
+  }
+  excluded_values <- excluded_values[!is.na(excluded_values)]
+
+  is_excluded <- if (exact) {
+    values %in% excluded_values
+  } else {
+    norm_key(values) %in% norm_key(excluded_values)
+  }
+
+  excluded_matches <- values[is_excluded]
+  absent_matches <- values[!is_excluded]
+  bullets <- character(0)
+  if (length(excluded_matches) > 0L) {
+    bullets <- c(
+      bullets,
+      "x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data."
+    )
+  }
+  if (length(absent_matches) > 0L) {
+    bullets <- c(
+      bullets,
+      "x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists."
+    )
+  }
+
+  cli::cli_abort(
+    c(
+      "{length(values)} value{?s} in {.arg {arg}} did not match an available storm.",
+      bullets,
+      i = "Use {.code gtropic_excluded_storms()} to review excluded storm records."
+    ),
+    call = call
+  )
+}
+
+#' Extract genesis years encoded in storm names
+#'
+#' Published storm names are disambiguated with the genesis year, for example
+#' `Katrina-2005`. Reading that suffix before metadata retrieval avoids scanning
+#' every published storm-metadata file for a named query.
+#'
+#' @param values Normalized `STORM_NAME` filter values, or `NULL`.
+#' @param arg Argument name for errors.
+#' @param call Calling environment for error reporting.
+#'
+#' @return An integer vector of unique suffix years, or `NULL`.
+#' @keywords internal
+#' @noRd
+storm_name_years <- function(values,
+                             arg = "STORM_NAME",
+                             call = rlang::caller_env()) {
+  if (is.null(values)) {
+    return(NULL)
+  }
+
+  valid <- grepl("^.+-[0-9]{4}$", values)
+  if (any(!valid)) {
+    cli::cli_abort(
+      c("Every {.arg {arg}} value must end with {.val Name-YYYY}.",
+        x = "Invalid value{?s}: {.val {values[!valid]}}.",
+        i = "Use the published disambiguated storm name, for example {.val Katrina-2005}."
+      ),
+      call = call
+    )
+  }
+
+  unique(as.integer(sub("^.*-([0-9]{4})$", "\\1", values)))
 }
 
 #' Verify the genesis-year file convention on loaded metadata

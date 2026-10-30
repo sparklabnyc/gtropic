@@ -67,30 +67,45 @@ test_that("prepared counts carry count labels and threshold definitions", {
     info <- attr(data, "plot_info")
     expect_equal(info$metrics$legend, paste("Number of", unit))
     expect_equal(info$metrics$value_unit, unit)
-    expect_match(info$caption, "exposed PRECIP_MM: >= 75 mm", fixed = TRUE)
-    expect_match(info$caption, "precip window: -2/+1 days", fixed = TRUE)
-    expect_match(info$caption, "500 km", fixed = TRUE)
+    expect_match(
+      info$caption,
+      paste0("Precip parameters: radius=400 km, window=-2/+1 days, aggregate=n"),
+      fixed = TRUE
+    )
     expect_equal(data$value[data$ADM2_ID == "PLOT.1"], 0)
     expect_true(is.na(data$value[data$ADM2_ID == "PLOT.5"]))
     expected <- if (unit == "storms") 3 else 6
     expect_equal(data$value[data$ADM2_ID == "PLOT.3"], expected)
-    p <- build_count_plot(data, plot_cartography(data, basemap = "none"),
+    cartography <- plot_cartography(data, basemap = "none")
+    p <- build_count_plot(data, cartography,
       title = "Exposure counts", subtitle = unit
     )
     expect_s3_class(p, "ggplot")
     expect_s3_class(p$layers[[1]]$geom, "GeomSf")
-    expect_equal(rlang::as_label(p$layers[[1]]$mapping$fill), "value")
+    expect_equal(rlang::as_label(p$layers[[1]]$mapping$fill), "count_category")
     scale <- p$scales$get_scales("fill")
-    expect_false(scale$is_discrete())
+    expect_true(scale$is_discrete())
+    expect_identical(scale$get_limits(), plot_count_categories(data$value))
     expect_equal(scale$name, paste("Number of", unit))
     expect_equal(p$labels$title, "Exposure counts")
     expect_equal(p$labels$subtitle, unit)
-    expect_match(
-      gsub("\\s+", " ", p$labels$caption),
-      info$caption, fixed = TRUE
-    )
+    expect_identical(p$labels$caption, plot_caption(info, crs = cartography$crs))
     expect_no_error(ggplot2::ggplot_build(p))
   }
+})
+
+test_that("precipitation count labels omit the local-day source suffix", {
+  x <- plot_fixture()
+  x$codebook$variables$PRECIP_MM$label <- "Precipitation (mm) per local day"
+
+  count <- prepare_plot_data(x, "count", "PRECIP_MM", track = FALSE)
+  exposure <- prepare_plot_data(x, "exposure", "PRECIP_MM", track = FALSE)
+
+  expect_identical(attr(count, "plot_info")$metrics$label, "Precipitation (mm)")
+  expect_identical(
+    attr(exposure, "plot_info")$metrics$label,
+    "Precipitation (mm) per local day"
+  )
 })
 
 test_that("count maps share count limits across storm facets", {
@@ -102,7 +117,11 @@ test_that("count maps share count limits across storm facets", {
   )
   expect_s3_class(p$facet, "FacetWrap")
   expect_named(p$facet$params$facets, "STORM_ID")
-  expect_equal(p$scales$get_scales("fill")$limits, c(0, 4))
+  expect_true(p$scales$get_scales("fill")$is_discrete())
+  expect_identical(
+    p$scales$get_scales("fill")$get_limits(),
+    plot_count_categories(data$value)
+  )
   expect_equal(p$labels$caption, "A custom exposure definition")
   expect_equal(nrow(ggplot2::ggplot_build(p)$layout$layout), 3)
 })

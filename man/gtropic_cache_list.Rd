@@ -12,7 +12,8 @@ gtropic_cache_size()
 \value{
 \code{gtropic_cache_list()} returns a tibble with one row per indexed
 dataset file reference and columns \code{server}, \code{doi}, \code{version},
-\code{directory_label}, \code{label}, \code{md5}, \code{size_bytes}, and \code{fetched_at}.
+\code{directory_label}, \code{label}, \code{checksum}, \code{size_bytes}, and \code{fetched_at} (the
+original download time, retained when a cached file is reused).
 \code{gtropic_cache_size()} returns a numeric scalar giving the physical cache
 size in bytes, or \code{0} when the cache is empty.
 }

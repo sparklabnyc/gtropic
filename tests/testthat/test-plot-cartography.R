@@ -19,6 +19,6 @@ test_that("metric strips use readable labels", {
   p <- build_exposure_plot(data, plot_cartography(data, basemap = "none"))
   expect_s3_class(p$facet, "FacetWrap")
   expect_equal(attr(p$data, "plot_info")$metric_labels[["PRECIP_MM"]],
-    "Precipitation (millimeters per local day)"
+    "Cumulative precipitation (mm)"
   )
 })

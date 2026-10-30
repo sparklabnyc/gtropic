@@ -1,4 +1,4 @@
-#' Normalise a string for case-insensitive comparison
+#' Normalize a string for case-insensitive comparison
 #'
 #' Human-readable fields are matched case-insensitively and whitespace-trimmed,
 #' but the *canonical* spelling from the dataset is what we carry forward, so

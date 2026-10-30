@@ -18,124 +18,131 @@ knitr::opts_chunk$set(
 library(gtropic)
 ```
 
-Published datasets get revised. A correction is applied, a year is added, a
-column gains a better definition -- and an analysis you ran last spring no longer
-reproduces. This vignette covers how `gtropic` lets you pin a retrieval exactly,
-and how to manage the downloads it makes.
+The G-TROPIC dataset is published as two Dataverse datasets:
 
-## Two datasets, two version numbers
-
-The G-TROPIC collection is published as two Dataverse datasets rather than one:
-
-- a **historical** dataset, covering 1980 up to the end of the last complete
-  year, which also holds the only copy of the shared metadata (the
-  administrative unit lookup, the codebook, the boundary geometries);
-- a **current-year** dataset, republished as the ongoing season progresses.
+- a **historical** dataset, spanning 1980 through the previous calendar year,
+  which is updated once per year to include the most recent year's data along
+  with any corrections to the historical record (e.g.,
+  IBTRACS may update provisional data to final data); and
+- a **current-year** dataset, updated once per week to include the latest
+  storm data from the current calendar year.
 
 ```{r}
 gtropic_years()
 ```
 
-You do not normally need to think about this. The package works out which
-dataset holds which year by asking the server, so the annual changeover happens
-without any action from you -- and without a package update. Shared metadata is
-always read from the historical dataset, whatever years your query covers.
+The G-TROPIC collection is organized this way in order to save storage space on Dataverse.
 
-The consequence that does matter: the two datasets have **independent version
-numbers**. A query spanning both is not described by any single version string,
-which is why a single `version` argument would not be enough to reproduce it.
+Both the **historical** and **current-year** datasets are version controlled,
+enabling you to retrieve any published version of the datasets you may need, e.g.,
+to reproduce old analyses.
 
-## The manifest
+This vignette covers how to manage the dataset versions and downloads made by the `gtropic` package.
 
-A **manifest** is a record of exactly which published files went into a result:
-their paths, which dataset and version each came from, their sizes, and their
-MD5 checksums. Every result carries one.
+## The `gtropic` manifest
+
+Every time you call `gtropic_data()`, a **manifest** is attached to the
+result. It records the published source files retrieved for the query, along
+with their Dataverse paths, concrete dataset versions, sizes, and checksums.
+
+The manifest can be accessed via the `gtropic_manifest()` function:
 
 ```{r}
-phl <- gtropic_data(
-  WHO_ENTITY = "Philippines",
-  date_range = c(2015, 2016)
+usa_05 <- gtropic_data(
+  WHO_ENTITY = "United States",
+  date_range = c(2005, 2005)
 )
 
-gtropic_manifest(phl)
+mf <- gtropic_manifest(usa_05)
 ```
 
-The file-level detail is a tibble:
+The file-level detail is found in the `$files` tibble. Its `downloaded_at`
+column is the original time each source file was acquired from Dataverse; a
+later cache hit preserves that time rather than restamping it. `mf$retrieved_at`
+is the latest of those original per-file timestamps.
 
 ```{r}
-head(gtropic_manifest(phl)$files)
+mf$files
 ```
 
-You can see the dataset versions without digging, because `print()` on a result
-shows them:
-
+The manifest contains other metadata beyond the `$files` table for you to inspect:
 ```{r}
-phl
+names(mf)
 ```
 
-## The reproducibility round trip
+## Reproducible data retrievals using the manifest
 
-Save the manifest alongside your analysis:
+With the manifest, you can ensure that future `gtropic_data()` queries retrieve
+exactly the same data files you had been using from an older query.
+
+Save the manifest to a `.rds` file after a data query:
 
 ```{r, eval = FALSE}
-mf <- gtropic_manifest(phl)
-saveRDS(mf, "phl-2015-2016-manifest.rds")
+saveRDS(mf, "usa-2005-manifest.rds")
 ```
 
-Months later, on another machine, pass it back:
+Then replay it directly, even on another machine:
 
 ```{r, eval = FALSE}
-phl2 <- gtropic_data(
-  WHO_ENTITY = "Philippines",
-  date_range = c(2015, 2016),
-  manifest = readRDS("phl-2015-2016-manifest.rds")
-)
+mf <- readRDS("usa-2005-manifest.rds")
+usa_05 <- gtropic_data(manifest = mf)
 ```
 
-Exactly the files recorded in the manifest are retrieved, and their checksums
-verified. `version` and the DOI options are ignored -- honouring them would
-defeat the purpose.
-
-Two failure modes are deliberate errors rather than silent substitutions:
-
-- **A recorded file is no longer available.** You are told which one. Silently
-  falling back to the current version would mean your "reproduction" quietly
-  used different data.
-- **A recorded file's checksum has changed.** The file at that path is not the
-  file you used, whatever it is now called.
-
-Keep the filters when you re-run. The manifest pins *which files* are read, not
-which rows are selected; the filters still do their work. Supplying a manifest
-alongside different filters will error if it does not contain the files those
-filters need.
+The manifest replays both the recorded files (with checksum verification) and
+its canonical resolved query: resolved ADM2 and storm identifiers, filters,
+tables, windows, and metadata years. You should not repeat any data-shaping
+arguments, including `version`, `tables`, geography, storm filters, or radii.
+Doing so would potentially conflict with the manifest you are trying to recover and yield an error.
+The only controls you may change during replay are the operational arguments `cache`, `as`,
+`confirm`, `quiet`, and `offline` -- these arguments will not affect what data is
+returned but rather how the data is returned.
 
 ## Asking for a specific version
 
-If you want a particular published version without having a manifest to hand:
+You can also utilize the `version` argument to retrieve specific versions of the G-TROPIC datasets:
 
 ```{r, eval = FALSE}
-# The same version string for both datasets
-gtropic_data(WHO_ENTITY = "Cuba", date_range = 2019, version = "2.0")
-
-# Different versions per dataset
 gtropic_data(
   WHO_ENTITY = "Cuba",
   date_range = c(2019, 2026),
-  version = c(historical = "2.0", current = "1.3")
+  version = c(historical = "4.0", current = "16.0")
 )
 ```
 
-A manifest is still the better tool for reproducibility, because it records
-checksums as well as version numbers.
+A manifest is still the best tool for perfect reproducibility, as it records
+everything you need to reproduce a query exactly.
 
 ## Caching
 
 A **cache** is a folder of files you have already downloaded, kept so that
-repeating or extending a query does not fetch them again. It is switched off by
-default: a package should not write to your disk without being asked.
+repeating or extending a query does not fetch them again. It is enabled by
+default and is created only when a retrieval needs to store a file.
+
+You can see whether or not the cache is enabled with:
+
+```{r}
+getOption("gtropic.cache_enabled")
+```
+
+To disable it for the current session, use:
+
+```{r, eval = FALSE}
+gtropic_cache_disable()
+```
+
+You can re-enable it with:
 
 ```{r, eval = FALSE}
 gtropic_cache_enable()
+```
+
+The `persist` argument saves your cache preferences across future R sessions:
+```{r, eval = FALSE}
+# Turn off the cache for this and all future R sessions
+gtropic_cache_disable(persist = TRUE)
+
+# Turn the cache back on for this and all future R sessions
+gtropic_cache_enable(persist = TRUE)
 ```
 
 The cache lives in the standard per-user location R reserves for package data on
@@ -145,35 +152,71 @@ your operating system:
 gtropic_cache_dir()
 ```
 
-You can put it somewhere with more room:
+You can specify a different location for the cache
+(e.g. if you need to put it on a disk with more storage) using the `dir` argument:
 
 ```{r, eval = FALSE}
-gtropic_cache_enable(dir = "~/data/gtropic-cache")
+gtropic_cache_enable(dir = "~/path/to/my/desired/cache/location/gtropic-cache")
 ```
 
-Or enable it for a single call without changing your settings:
+To bypass the cache for one retrieval without changing your global cache settings,
+use `gtropic_data()`'s `cache` argument:
 
 ```{r, eval = FALSE}
-gtropic_data(WHO_ENTITY = "Viet Nam", date_range = 2020, cache = TRUE)
+gtropic_data(WHO_ENTITY = "United States", date_range = c(2025, 2025), cache = FALSE)
 ```
 
-### What gets cached, and why it helps
+### What gets cached
 
-The cache stores whole published year-files exactly as the repository serves
-them. It never stores filtered results.
+The G-TROPIC dataset is broadly made up of yearly exposure files, and it is these files
+that the cache retrieves from the remote Dataverse repository and writes to disk.
+The cache stores these published year-files in their entirety, exactly as the remote Dataverse repository serves
+them -- it does not use any of the filter arguments in your query before saving these files.
 
-That single decision is what makes it useful. Because the unit is a year-file
-rather than a query, overlapping work reuses downloads without any cleverness:
-
-- Asking for 2001-2003, then later for 2002-2005, downloads only 2004 and 2005.
-- A worldwide query, then a query for one country in a year you already have,
-  downloads nothing at all -- the filtering happens locally, from files you have.
+- For instance, if you have caching enabled, an initial query that asks for data from 2001-2003
+  followed by a later query requesting data for 2002-2005 would result in
+  `gtropic` only needing to download data for 2004 and 2005 in the second query,
+  since the first query cached the results for 2002 and 2003. Note that assumes there was no
+  published version update to the historical data between these two queries. If there was,
+  then the newer versions of 2002 and 2003 would need to be downloaded.
+- Because G-TROPIC exposure data are partitioned by year rather than by geography in the backend, this means
+  that if you ask for, e.g. data for the United States from 2025, and then later for Cuba from 2025,
+  both queries will rely on the same 2025 files saved to the cache (with caching enabled).
 
 Files are stored by checksum, which deduplicates across dataset versions
 automatically: a year-file that did not change between version 1.0 and version
 2.0 has one checksum and is kept once, even though two versions reference it.
-Checksums are verified when files are written and again when they are read, so a
-corrupted file is detected and re-downloaded rather than quietly analysed.
+
+### Current versions and offline retrieval
+
+By default, gtropic_data() uses version = ":latest". During a normal online retrieval,
+the package rediscovers the latest published Dataverse version on every call.
+With caching enabled, it records source files separately for each concrete dataset version.
+Changed files are retained as new checksum-addressed content; unchanged files share the existing
+cached content across versions.
+
+For intentionally disconnected work, use `offline = TRUE` with an enabled
+cache. A regular (non-manifest) retrieval uses only cached source files and the
+persisted discovery snapshot created by a prior online cached retrieval; no
+Dataverse update check is made, and the snapshot's saved time and age are
+reported. When `offline = TRUE` and a manifest is passed in,
+it will likewise use cached files only to fulfill the request.
+Offline retrievals error if a required
+cache item is unavailable.
+
+```{r, eval = FALSE}
+# You can use the offline argument provided that you have already called
+# an online cached query that has cached the necessary files to fulfill your
+# offline query:
+usa_05_offline <- gtropic_data(
+  WHO_ENTITY = "United States",
+  date_range = c(2005, 2005),
+  offline = TRUE
+)
+
+# A canonical manifest replay may also use cached files only:
+usa_05_replay_offline <- gtropic_data(manifest = mf, offline = TRUE)
+```
 
 ### Managing the cache
 
@@ -183,46 +226,42 @@ gtropic_cache_size()    # total bytes on disk
 ```
 
 ```{r, eval = FALSE}
-# Keep it under 20 GB, and drop anything older than six months
-gtropic_cache_prune(max_size_gb = 20, older_than_days = 180)
+# Keep it under 10 GB, and drop anything older than six months
+gtropic_cache_prune(max_size_gb = 10, older_than_days = 180)
 
 # Start over
 gtropic_cache_clear()
-
-# Stop caching; keeps what is already stored
-gtropic_cache_disable()
 ```
 
 Pruning removes least-recently-fetched files first.
 
 ## The download guardrail
 
-`gtropic_data()` with no arguments means roughly 47 years of global daily
-rainfall. Before downloading, the package estimates the transfer -- subtracting
-anything already cached -- and compares it against a threshold, one gigabyte by
-default.
+Calling `gtropic_data()` with no arguments requests all available data for the full
+global record, 1980 - present. Before downloading, the package estimates the total size of the data to be downloaded,
+subtracting anything already cached, and compares it against a threshold (one
+gigabyte by default).
+You can pass in a smaller `tables` vector to reduce the size of the request, or narrow your `date_range`.
 
-Under the threshold, it proceeds. Over it, in an interactive session, it tells
-you the size and asks. Over it in a **non-interactive** session, such as a
-scheduled job or a rendered report, it raises an error instead, naming the size
-and how to proceed. Waiting forever on a prompt nobody will answer is a worse
-outcome than failing immediately.
+If your request is under the threshold, the download proceeds.
+But if your query is estimated to go over the threshold, in an interactive session, `gtropic` will inform you
+of the estimated download size and confirm whether you'd like to continue with the download.
+In a **non-interactive** session, such as a
+scheduled job or a rendered report, `gtropic_data()` will raise an error instead.
 
-To proceed anyway:
+To ignore the threshold and skip confirmations, use `confirm = FALSE` for your queries:
 
 ```{r, eval = FALSE}
 gtropic_data(WHO_ENTITY = "India", date_range = c(1990, 2020), confirm = FALSE)
 ```
 
-Or raise the threshold for the session:
+Alternatively, you can raise the threshold for the current R session:
 
 ```{r, eval = FALSE}
-options(gtropic.confirm_threshold_gb = 10)
+options(gtropic.confirm_threshold_gb = 3)
 ```
 
-Usually the better response is to narrow the query. Bear in mind that any query
-including rainfall or flooding also downloads the zero-pairs files, so a
-full-history rainfall query is legitimately large.
+Usually the better response is to narrow the query (by requesting fewer years' worth of data, or fewer `tables`).
 
 ## Working with data larger than memory
 
@@ -250,43 +289,35 @@ heavy_days <- res$precip |>
   collect()
 ```
 
-To be honest about the limits: genuine out-of-memory processing needs caching
+Genuine out-of-memory processing needs caching
 switched on, because that is what puts the files on disk where they can be
 streamed. Without caching, `as = "arrow"` mainly saves conversion time rather
 than memory.
 
-## Pointing at a different repository
-
-The server and dataset identifiers are options, so moving to a different
-Dataverse installation requires no package update:
-
-```{r, eval = FALSE}
-options(
-  gtropic.server = "dataverse.harvard.edu",
-  gtropic.doi_historical = "doi:10.7910/DVN/EXAMPLE"
-)
-```
-
-See `?gtropic_options` for the full list.
-
 ## What to record in a paper
 
-At minimum: the package version, the dataset DOIs and their version numbers, and
-the window and radius settings if you changed them from the defaults. All of it
-is on the result:
+We recommend recording the metadata contained in your manifest object when documenting
+the G-TROPIC data you use in your research. Better yet, publish your saved `manifest.rds` file
+along with your code and coding environment for complete reproducibility.
 
-```{r, eval = FALSE}
-mf <- gtropic_manifest(phl)
+## Summary
 
-mf$historical_doi
-mf$historical_version
-mf$current_doi
-mf$current_version
-mf$gtropic_version
+- A manifest records the exact Dataverse files, versions, checksums, and
+  resolved query needed to replay a retrieval.
+- The cache stores source files by checksum, reducing repeated downloads while
+  preserving distinct dataset versions.
+- Use `offline = TRUE` only after the needed discovery metadata and source files
+  have been cached.
+- For best reproducibility practices, publish the manifest needed for your analysis
+  alongside your code & coding environment.
 
-gtropic_filters(phl)[c("precip_days_before", "precip_days_after",
-                       "precip_radius_km", "flood_match")]
-```
+## Where to go next
 
-Depositing the manifest itself alongside your analysis code is better still: it
-lets a reader reproduce your exact inputs rather than approximate them.
+- `vignette("getting-started")` introduces G-TROPIC data retrieval and query
+  metadata.
+- `vignette("filtering")` illustrates how the `gtropic_data()` arguments combine to filter
+  the retrieved data files.
+- `vignette("linkage")` covers connecting precipitation and flood observations
+  to storms without double counting.
+- `vignette("plotting")` shows how to visualize retrieved exposure and track
+  data.

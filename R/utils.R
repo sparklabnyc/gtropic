@@ -14,7 +14,7 @@
 #' @noRd
 compact <- function(x) x[!vapply(x, is.null, logical(1))]
 
-#' Normalise a character filter argument
+#' Normalize a character filter argument
 #'
 #' Filter arguments are user input and arrive in every shape imaginable. We
 #' accept `NULL` (no filter), reject empty vectors and `NA` (almost always a
