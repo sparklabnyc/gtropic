@@ -31,6 +31,7 @@ reference:
   - gtropic_data
   - gtropic_manifest
   - print.gtropic_data
+  - print.gtropic_filters
   - summary.gtropic_data
   - print.gtropic_manifest
 - title: Discovery
@@ -39,6 +40,7 @@ reference:
   contents:
   - gtropic_adm2
   - gtropic_storms
+  - gtropic_excluded_storms
   - gtropic_years
   - gtropic_codebook
 - title: Cache
