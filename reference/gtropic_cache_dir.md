@@ -1,8 +1,8 @@
 # Locate the G-TROPIC cache
 
-Returns the directory used to store downloaded G-TROPIC source files
-when persistent caching is enabled. Reusing these files can reduce data
-transfer and retrieval time for repeated or overlapping analyses.
+Returns the directory used to store downloaded G-TROPIC source files.
+Reusing these files can reduce data transfer and retrieval time for
+repeated or overlapping analyses.
 
 ## Usage
 
@@ -18,9 +18,8 @@ A character scalar containing the cache directory path.
 
 Unless changed through `options(gtropic.cache_dir = ...)` or
 [`gtropic_cache_enable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md),
-the path is the platform-specific user cache location returned by
-[`tools::R_user_dir()`](https://rdrr.io/r/tools/userdir.html). Calling
-this function reports the path but does not create it.
+the path is `tools::R_user_dir("gtropic", "cache")`. Calling this
+function reports the path but does not create it.
 
 ## See also
 

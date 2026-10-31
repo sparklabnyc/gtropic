@@ -98,12 +98,12 @@ data, GHSL population rasters, geoBoundaries ADM2 administrative units,
 Groundsource flood polygons, and ERA5-Land precipitation. G-TROPIC
 adheres to FAIR data principles and is publicly available via Harvard
 Dataverse, with versioned updates that incorporate recent storm and
-precipitation data once a week. At ADM2 resolution worldwide for
-compatibility with health outcome and other data, G-TROPIC provides
-population totals and population-weighted centroids, storm exposure
-metrics from both best-track and wind-radii methods, flood exposure
-metrics, and daily local precipitation totals, along with ADM2 metadata
-for region and WHO classifications.</p>
+precipitation data once a week. At second-level administrative unit
+(ADM2) resolution worldwide for compatibility with health outcome and
+other data, G-TROPIC provides population totals and population-weighted
+centroids, storm exposure metrics from both best-track and wind-radii
+methods, flood exposure metrics, and daily local precipitation totals,
+along with ADM2 metadata for region and WHO classifications.</p>
 <p>For enhanced accessibility, we developed this open-source R package,
 <code>gtropic</code>, for easy retrieval, exploration, and mapping of
 G-TROPIC data directly in R.</p>
@@ -122,13 +122,13 @@ R session as usual with:</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="data-availablity">Data availablity<a class="anchor" aria-label="anchor" href="#data-availablity"></a>
+<h2 id="data-availability">Data availability<a class="anchor" aria-label="anchor" href="#data-availability"></a>
 </h2>
-<p>First, let’s get oriented by running some of the <code>gtropic</code>
-helper functions that let us know what G-TROPIC data is available in the
-first place. Doing so will help us define the specific query we later
-send to the G-TROPIC database, so we can retrieve only the data we need,
-and nothing more (to save on memory and disk space).</p>
+<p>Let’s get oriented by running some of the <code>gtropic</code> helper
+functions that let us know what G-TROPIC data is available in the first
+place. Doing so will help us define the specific query we later send to
+the G-TROPIC database, so we can retrieve only the data we need, and
+nothing more (to save on memory and disk space).</p>
 <p>We can examine the available years of data using:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_years.html">gtropic_years</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -137,10 +137,10 @@ and nothing more (to save on memory and disk space).</p>
 <span><span class="co">#&gt; [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009</span></span>
 <span><span class="co">#&gt; [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024</span></span>
 <span><span class="co">#&gt; [46] 2025</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; $current</span></span>
 <span><span class="co">#&gt; [1] 2026</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; $all</span></span>
 <span><span class="co">#&gt;  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994</span></span>
 <span><span class="co">#&gt; [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009</span></span>
@@ -151,8 +151,8 @@ and nothing more (to save on memory and disk space).</p>
 <code class="sourceCode R"><span><span class="va">adm2s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_adm2.html">gtropic_adm2</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">adm2s</span></span>
 <span><span class="co">#&gt; # A tibble: 49,349 × 5</span></span>
-<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME    ADM2_GROUP WHO_ENTITY  WHO_REGION       </span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;        &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;            </span></span>
+<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME    ADM2_GROUP WHO_ENTITY  WHO_REGION</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;        &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;</span></span>
 <span><span class="co">#&gt;  1 17698898B67359070524975 Deh Bala     AFG        Afghanistan Eastern Mediterr…</span></span>
 <span><span class="co">#&gt;  2 17698898B98443198567384 Gulran       AFG        Afghanistan Eastern Mediterr…</span></span>
 <span><span class="co">#&gt;  3 17698898B82675281335003 Koshk        AFG        Afghanistan Eastern Mediterr…</span></span>
@@ -164,169 +164,241 @@ and nothing more (to save on memory and disk space).</p>
 <span><span class="co">#&gt;  9 17698898B9118080572878  Shirzad      AFG        Afghanistan Eastern Mediterr…</span></span>
 <span><span class="co">#&gt; 10 17698898B30811011988841 Ghoryan      AFG        Afghanistan Eastern Mediterr…</span></span>
 <span><span class="co">#&gt; # ℹ 49,339 more rows</span></span></code></pre></div>
-<p>Or, for example, the available administrative units in a specific
-country:</p>
+<p>For example, let’s look at a few available <code>WHO_ENTITY</code>s
+shipped in G-TROPIC:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">adm2s_usa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_adm2.html">gtropic_adm2</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span><span class="op">)</span></span>
-<span><span class="va">adm2s_usa</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">adm2s</span><span class="op">$</span><span class="va">WHO_ENTITY</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "Afghanistan"    "United Kingdom" "Albania"        "Algeria"</span></span>
+<span><span class="co">#&gt; [5] "United States"  NA</span></span></code></pre></div>
+<p>Or, for instance, the available administrative units in a specific
+country:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_adm2.html">gtropic_adm2</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 3,231 × 5</span></span>
 <span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME  ADM2_GROUP WHO_ENTITY    WHO_REGION</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;         &lt;chr&gt;     </span></span>
-<span><span class="co">#&gt;  1 52423323B51867153498623 Highland   USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  2 52423323B67588574079428 Alpine     USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  3 52423323B97123089850170 Escambia   USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  4 52423323B54167037237770 Lawrence   USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  5 52423323B18579387327768 Wayne      USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  6 52423323B71362276548625 Tishomingo USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  7 52423323B19966710463863 Sanders    USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  8 52423323B67077901806593 Albany     USA        United States Americas  </span></span>
-<span><span class="co">#&gt;  9 52423323B68632918387185 Potter     USA        United States Americas  </span></span>
-<span><span class="co">#&gt; 10 52423323B68605261841500 Greene     USA        United States Americas  </span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;         &lt;chr&gt;</span></span>
+<span><span class="co">#&gt;  1 52423323B51867153498623 Highland   USA        United States Americas</span></span>
+<span><span class="co">#&gt;  2 52423323B67588574079428 Alpine     USA        United States Americas</span></span>
+<span><span class="co">#&gt;  3 52423323B97123089850170 Escambia   USA        United States Americas</span></span>
+<span><span class="co">#&gt;  4 52423323B54167037237770 Lawrence   USA        United States Americas</span></span>
+<span><span class="co">#&gt;  5 52423323B18579387327768 Wayne      USA        United States Americas</span></span>
+<span><span class="co">#&gt;  6 52423323B71362276548625 Tishomingo USA        United States Americas</span></span>
+<span><span class="co">#&gt;  7 52423323B19966710463863 Sanders    USA        United States Americas</span></span>
+<span><span class="co">#&gt;  8 52423323B67077901806593 Albany     USA        United States Americas</span></span>
+<span><span class="co">#&gt;  9 52423323B68632918387185 Potter     USA        United States Americas</span></span>
+<span><span class="co">#&gt; 10 52423323B68605261841500 Greene     USA        United States Americas</span></span>
 <span><span class="co">#&gt; # ℹ 3,221 more rows</span></span></code></pre></div>
 <p>Similarly, we can also get a list of all the available storms in the
-dataset. By default the function returns all storms from 1980 onward,
-but if we pass in a <code>year</code>, then we can get the list of
-storms for that given <code>year</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">storms_25</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_storms.html">gtropic_storms</a></span><span class="op">(</span>year <span class="op">=</span> <span class="fl">2025</span><span class="op">)</span></span>
-<span><span class="va">storms_25</span></span>
+dataset. By default, <code><a href="../reference/gtropic_storms.html">gtropic_storms()</a></code> returns all storms
+from 1980 onward, but if we pass in a <code>year</code>, then we can get
+the list of storms for that given <code>year</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_storms.html">gtropic_storms</a></span><span class="op">(</span>year <span class="op">=</span> <span class="fl">2025</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 77 × 4</span></span>
 <span><span class="co">#&gt;    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;        &lt;chr&gt;       &lt;date&gt;                </span></span>
-<span><span class="co">#&gt;  1 2025017S18122 Sean-2025    SH102025    2025-01-17            </span></span>
-<span><span class="co">#&gt;  2 2025024S11082 Faida-2025   SH112025    2025-01-23            </span></span>
-<span><span class="co">#&gt;  3 2025029S25043 Elvis-2025   SH122025    2025-01-28            </span></span>
-<span><span class="co">#&gt;  4 2025034S19166 Unnamed-2025 SH152025    2025-02-02            </span></span>
-<span><span class="co">#&gt;  5 2025039S14125 Zelia-2025   SH172025    2025-02-08            </span></span>
-<span><span class="co">#&gt;  6 2025052S14148 Alfred-2025  SH182025    2025-02-21            </span></span>
-<span><span class="co">#&gt;  7 2025052S23038 Honde-2025   SH232025    2025-02-21            </span></span>
-<span><span class="co">#&gt;  8 2025054S13182 Rae-2025     SH192025    2025-02-22            </span></span>
-<span><span class="co">#&gt;  9 2025054S17051 Garance-2025 SH222025    2025-02-23            </span></span>
-<span><span class="co">#&gt; 10 2025056S16171 Seru-2025    SH212025    2025-02-24            </span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;        &lt;chr&gt;       &lt;date&gt;</span></span>
+<span><span class="co">#&gt;  1 2025017S18122 Sean-2025    SH102025    2025-01-17</span></span>
+<span><span class="co">#&gt;  2 2025024S11082 Faida-2025   SH112025    2025-01-23</span></span>
+<span><span class="co">#&gt;  3 2025029S25043 Elvis-2025   SH122025    2025-01-28</span></span>
+<span><span class="co">#&gt;  4 2025034S19166 Unnamed-2025 SH152025    2025-02-02</span></span>
+<span><span class="co">#&gt;  5 2025039S14125 Zelia-2025   SH172025    2025-02-08</span></span>
+<span><span class="co">#&gt;  6 2025052S14148 Alfred-2025  SH182025    2025-02-21</span></span>
+<span><span class="co">#&gt;  7 2025052S23038 Honde-2025   SH232025    2025-02-21</span></span>
+<span><span class="co">#&gt;  8 2025054S13182 Rae-2025     SH192025    2025-02-22</span></span>
+<span><span class="co">#&gt;  9 2025054S17051 Garance-2025 SH222025    2025-02-23</span></span>
+<span><span class="co">#&gt; 10 2025056S16171 Seru-2025    SH212025    2025-02-24</span></span>
 <span><span class="co">#&gt; # ℹ 67 more rows</span></span></code></pre></div>
 <p>The <code>STORM_GENESIS_DATE_UTC</code> column in that last result is
-the date used by every temporal filter in the package – see the
-“Selecting storms by date” section below, and the <code>filtering</code>
-vignette for the full treatment.</p>
+the date used by every temporal filter in the package. So, for example,
+if you inquire after storms from 2025, the package is designed to return
+storms whose genesis date (UTC) occurs within the 2025 calendar year.
+For more in depth discussion, see the “Selecting storms by date” section
+below, and the <code>filtering</code> vignette.</p>
 <p>One of the most important pieces of metadata is the G-TROPIC
 codebook, which can be obtained with:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_codebook.html">gtropic_codebook</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">cb</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "codebook_version" "format"           "created_for"      "read_in_r"       </span></span>
+<span><span class="co">#&gt; [1] "codebook_version" "format"           "created_for"      "read_in_r"</span></span>
 <span><span class="co">#&gt; [5] "notes"            "raw_sources"      "datasets"</span></span></code></pre></div>
 <p>The returned codebook object contains all the information needed to
 understand the retrieved datasets, including but not limited to their
 columns, what those columns measure, and the original provenance of the
 data, both in terms of the raw data sources, as well as the G-TROPIC
 backend pipeline scripts that generated that data.</p>
+<p>Related to the codebook is the <code><a href="../reference/gtropic_exposures.html">gtropic_exposures()</a></code>
+function, which lists the variable names associated with exposures
+available in G-TROPIC, their units of measurement, their default
+aggregation methods (for plotting exposure maps), and whether or not the
+<code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code> function supports plotting the exposure.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_exposures.html">gtropic_exposures</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $wind</span></span>
+<span><span class="co">#&gt; # A tibble: 6 × 5</span></span>
+<span><span class="co">#&gt;   metric                      label               unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;                       &lt;chr&gt;               &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 VMAX_SUST_MS                Maximum sustained … m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 2 VMAX_GUST_MS                Maximum wind gust … m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 3 SUST_DUR_MINUTES            Sustained wind dur… minu… max       TRUE</span></span>
+<span><span class="co">#&gt; 4 GUST_DUR_MINUTES            Wind gust duration… minu… max       TRUE</span></span>
+<span><span class="co">#&gt; 5 WIND_RADII_VMAX_SUST_MS     Wind radii sustain… m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 6 WIND_RADII_SUST_DUR_MINUTES Wind radii duratio… minu… max       TRUE</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; $precip</span></span>
+<span><span class="co">#&gt; # A tibble: 1 × 5</span></span>
+<span><span class="co">#&gt;   metric    label              unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;     &lt;chr&gt;              &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 PRECIP_MM Precipitation (mm) mm    sum       TRUE</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; $flood</span></span>
+<span><span class="co">#&gt; # A tibble: 3 × 5</span></span>
+<span><span class="co">#&gt;   metric               label                      unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;                &lt;chr&gt;                      &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 PROP_FLOODED_POP     Flooded population (propo… prop… max       TRUE</span></span>
+<span><span class="co">#&gt; 2 PROP_FLOODED_AREA    Flooded area (proportion,… prop… max       TRUE</span></span>
+<span><span class="co">#&gt; 3 FLOODED_POP_CENTROID Flooded population centro… logi… any       FALSE</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="a-first-query">A first query<a class="anchor" aria-label="anchor" href="#a-first-query"></a>
 </h2>
 <p>The cornerstone function of the <code>gtropic</code> package is the
 <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> function. Let’s start by using it to
-retrieve all available G-TROPIC data associated with storms that began
-in calendar year 2025, for only those ADM2s in the USA:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+retrieve all available G-TROPIC data impacting ADM2s inside the United
+States, for those storms forming in calendar year 2025:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">usa_25</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
 <span>  WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
 <span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2025</span>, <span class="fl">2025</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2025.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 8 files (156.9 MB) ; .</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Retrieving 7 files (166.0 MB) ; 3 already cached.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/exposures/2025.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2025.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '04_precip/2025.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '03_flood/2025.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '01_pop/2025.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '01_pop/2026.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/codebook.json'.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/storm_tracks/2025.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading 'metadata/adm2_geometry_simplified.parquet'.</span></span>
 <span></span>
 <span><span class="va">usa_25</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── G-TROPIC data ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; • Historical dataset: version "3.0"</span></span>
-<span><span class="co">#&gt; • Current-year dataset: version "4.0"</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── G-TROPIC data ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)</span></span>
 <span><span class="co">#&gt; • Genesis dates: "2025-01-01" to "2025-12-31"</span></span>
-<span><span class="co">#&gt; • Storms: 77</span></span>
-<span><span class="co">#&gt; • ADM2 units: 3231</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Tables </span></span>
-<span><span class="co">#&gt; • wind: 23605 rows x 12 columns</span></span>
+<span><span class="co">#&gt; • Storms: 10</span></span>
+<span><span class="co">#&gt; • ADM2 units: 803</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── Tables</span></span>
+<span><span class="co">#&gt; • wind: 1068 rows x 12 columns</span></span>
 <span><span class="co">#&gt; • precip: 4272 rows x 3 columns</span></span>
 <span><span class="co">#&gt; • flood: 661 rows x 7 columns</span></span>
-<span><span class="co">#&gt; • pop: 6462 rows x 6 columns</span></span>
-<span><span class="co">#&gt; • storm_metadata: 77 rows x 4 columns</span></span>
-<span><span class="co">#&gt; • adm2: 3231 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • zero_pairs: 225182 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • tracks: 682 rows x 10 columns</span></span>
+<span><span class="co">#&gt; • pop: 803 rows x 6 columns</span></span>
+<span><span class="co">#&gt; • storm_metadata: 10 rows x 4 columns</span></span>
+<span><span class="co">#&gt; • adm2: 803 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • geometry: 803 rows x 2 columns</span></span>
 <span><span class="co">#&gt; • codebook: 7 entries (list)</span></span>
-<span><span class="co">#&gt; • links: 248787 rows x 11 columns</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • links: 1068 rows x 12 columns</span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; ℹ Use `summary()` for detail.</span></span></code></pre></div>
 <p>Printing the result gives a compact summary: which version of the
 data you retrieved, the span of storm genesis dates, how many storms and
-administrative units were selected, and the size of each table
-returned.</p>
+administrative units were selected based on your filters, and the size
+of each table returned.</p>
 <p>But, for more detail, including resolved filter settings and any
 warnings raised, we can use:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── G-TROPIC data summary ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── G-TROPIC data summary ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; ── Sources ──</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; • Server: "demo.dataverse.org"</span></span>
-<span><span class="co">#&gt; • Historical: "doi:10.70122/FK2/SWEYST" v3.0</span></span>
-<span><span class="co">#&gt; • Current-year: "doi:10.70122/FK2/DDSYYD" v4.0</span></span>
-<span><span class="co">#&gt; • Files retrieved: 9 (158.5 MB)</span></span>
-<span><span class="co">#&gt; • Retrieved at: 2026-09-08 16:40:15 EDT</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • Historical dataset: doi:10.70122/FK2/SWEYST v4.0</span></span>
+<span><span class="co">#&gt; • Files retrieved: 10 (166.8 MB)</span></span>
+<span><span class="co">#&gt; • Retrieved at: 2026-10-30 22:50:44 UTC</span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; ── Tables ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; • wind: 23605 rows x 12 columns</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; • wind: 1068 rows x 12 columns</span></span>
 <span><span class="co">#&gt; • precip: 4272 rows x 3 columns</span></span>
 <span><span class="co">#&gt; • flood: 661 rows x 7 columns</span></span>
-<span><span class="co">#&gt; • pop: 6462 rows x 6 columns</span></span>
-<span><span class="co">#&gt; • storm_metadata: 77 rows x 4 columns</span></span>
-<span><span class="co">#&gt; • adm2: 3231 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • zero_pairs: 225182 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • tracks: 682 rows x 10 columns</span></span>
+<span><span class="co">#&gt; • pop: 803 rows x 6 columns</span></span>
+<span><span class="co">#&gt; • storm_metadata: 10 rows x 4 columns</span></span>
+<span><span class="co">#&gt; • adm2: 803 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • geometry: 803 rows x 2 columns</span></span>
 <span><span class="co">#&gt; • codebook: 7 entries (list)</span></span>
-<span><span class="co">#&gt; • links: 248787 rows x 11 columns</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • links: 1068 rows x 12 columns</span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; ── Resolved filters ──</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; • ADM2 units: 3231</span></span>
-<span><span class="co">#&gt; • Storms: 77</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; • ADM2 units: 803</span></span>
+<span><span class="co">#&gt; • Storms: 10</span></span>
 <span><span class="co">#&gt; • Genesis window: 2025-01-01 to 2025-12-31</span></span>
+<span><span class="co">#&gt; • Wind radius: 500 km</span></span>
 <span><span class="co">#&gt; • Precipitation window: -2/ +1 days within 500 km</span></span>
 <span><span class="co">#&gt; • Flood window: -2/+1 days within 500 km (match: "start")</span></span></code></pre></div>
+<p>The <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> function here shows the important resolved
+filters used by the data query we just sent, revealing some default
+argument values used by the <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> function:</p>
+<ol style="list-style-type: decimal">
+<li><p>The <code>wind_radius_km</code> argument, which by default is
+500km, defining a spatial wind field of interest. This restricts the
+function to return wind exposure data associated with storm tracks that
+come within 500km of any ADM2. Combined with our passed in values for
+<code>WHO_ENTITY</code> and <code>date_range</code>, this means we are
+asking for wind exposure data for storms formed in the calendar year
+2025 that come within 500km of any ADM2 in the United States.</p></li>
+<li><p>Similarly, separate <code>precip_radius_km</code> and
+<code>flood_radius_km</code> arguments define <em>spatial</em>
+precipitation and flood fields, in order to link precipitation and flood
+data to storm tracks. By default, these are both also 500km.</p></li>
+<li><p>The <code>precip_days_before</code> and
+<code>precip_days_after</code> arguments (along with
+<code>flood_days_before</code> and <code>flood_days_after</code>) define
+the <em>temporal</em> windows linking precipitation and flood data to
+storm tracks. By default, G-TROPIC will assume you want daily
+precipitation and flood data starting 2 days before and ending up to 1
+day after a storm track makes its closest approach with an
+ADM2.</p></li>
+</ol>
+<p>Note that the <code>radius_km</code> arguments can be any integer in
+the range (0, “Inf”], or <code>NULL</code>. Passing in “Inf” or
+<code>NULL</code> does not impose a spatial field on any storm track,
+and returns all available wind/precip/flood data.</p>
+<p>The <code>precip/flood_days_before/after</code> arguments can be any
+whole number in the range [0, “Inf”).</p>
 </div>
 <div class="section level2">
 <h2 id="the-gtropic_data-object">The <code>gtropic_data</code> object<a class="anchor" aria-label="anchor" href="#the-gtropic_data-object"></a>
 </h2>
 <p>A <code>gtropic_data</code> object is just a named list of data
 frames, behaving like any other named list:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "wind"           "precip"         "flood"          "pop"           </span></span>
-<span><span class="co">#&gt; [5] "storm_metadata" "adm2"           "codebook"       "links"</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt;  [1] "wind"           "precip"         "flood"          "zero_pairs"</span></span>
+<span><span class="co">#&gt;  [5] "tracks"         "pop"            "storm_metadata" "adm2"</span></span>
+<span><span class="co">#&gt;  [9] "geometry"       "codebook"       "links"</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">usa_25</span><span class="op">$</span><span class="va">wind</span></span>
-<span><span class="co">#&gt; # A tibble: 23,605 × 12</span></span>
+<span><span class="co">#&gt; # A tibble: 1,068 × 12</span></span>
 <span><span class="co">#&gt;    ADM2_ID  STORM_ID LOCAL_DATETIME_STORM…¹ LOCAL_DATETIME_MAX_W…² STORM_DIST_KM</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;                  &lt;chr&gt;                          &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 5242332… 2025180… 2025-06-28T14:00:00-0… 2025-06-29T20:15:00-0…         2158.</span></span>
-<span><span class="co">#&gt;  2 5242332… 2025185… 2025-07-06T14:00:00-0… 2025-07-06T05:00:00-0…          152.</span></span>
-<span><span class="co">#&gt;  3 5242332… 2025215… 2025-08-02T14:00:00-0… 2025-08-02T14:00:00-0…          506.</span></span>
-<span><span class="co">#&gt;  4 5242332… 2025223… 2025-08-20T22:30:00-0… 2025-08-21T00:30:00-0…          745.</span></span>
-<span><span class="co">#&gt;  5 5242332… 2025261… 2025-09-22T11:00:00-0… 2025-09-23T14:00:00-0…         1771.</span></span>
-<span><span class="co">#&gt;  6 5242332… 2025270… 2025-09-30T09:45:00-0… 2025-09-30T06:15:00-0…          743.</span></span>
-<span><span class="co">#&gt;  7 5242332… 2025280… 2025-10-11T08:00:00-0… 2025-10-10T20:30:00-0…         1985.</span></span>
-<span><span class="co">#&gt;  8 5242332… 2025294… 2025-10-30T14:00:00-0… 2025-10-31T00:45:00-0…         1135.</span></span>
-<span><span class="co">#&gt;  9 5242332… 2025185… 2025-07-04T02:00:00-0… 2025-07-05T22:00:00-0…         1943.</span></span>
-<span><span class="co">#&gt; 10 5242332… 2025215… 2025-08-03T17:00:00-0… 2025-08-03T06:30:00-0…         1789.</span></span>
-<span><span class="co">#&gt; # ℹ 23,595 more rows</span></span>
+<span><span class="co">#&gt;  1 5242332… 2025185… 2025-07-06T14:00:00-0… 2025-07-06T05:00:00-0…         152.</span></span>
+<span><span class="co">#&gt;  2 5242332… 2025223… 2025-08-16T22:00:00-0… 2025-08-16T22:15:00-0…         196.</span></span>
+<span><span class="co">#&gt;  3 5242332… 2025280… 2025-10-10T07:15:00-0… 2025-10-10T09:45:00-0…         277.</span></span>
+<span><span class="co">#&gt;  4 5242332… 2025185… 2025-07-07T09:45:00-0… 2025-07-07T13:45:00-0…          11.4</span></span>
+<span><span class="co">#&gt;  5 5242332… 2025215… 2025-08-02T14:00:00-0… 2025-08-02T15:00:00-0…         471.</span></span>
+<span><span class="co">#&gt;  6 5242332… 2025243… 2025-09-09T19:30:00-1… 2025-09-09T20:45:00-1…         311.</span></span>
+<span><span class="co">#&gt;  7 5242332… 2025185… 2025-07-07T14:00:00-0… 2025-07-07T12:45:00-0…          75.1</span></span>
+<span><span class="co">#&gt;  8 5242332… 2025185… 2025-07-07T14:00:00-0… 2025-07-07T12:30:00-0…         108.</span></span>
+<span><span class="co">#&gt;  9 5242332… 2025185… 2025-07-04T08:15:00-0… 2025-07-06T04:00:00-0…         358.</span></span>
+<span><span class="co">#&gt; 10 5242332… 2025185… 2025-07-07T00:15:00-0… 2025-07-07T03:00:00-0…          77.9</span></span>
+<span><span class="co">#&gt; # ℹ 1,058 more rows</span></span>
 <span><span class="co">#&gt; # ℹ abbreviated names: ¹​LOCAL_DATETIME_STORM_CLOSEST, ²​LOCAL_DATETIME_MAX_WIND</span></span>
 <span><span class="co">#&gt; # ℹ 7 more variables: VMAX_SUST_MS &lt;dbl&gt;, SUST_DUR_MINUTES &lt;dbl&gt;,</span></span>
 <span><span class="co">#&gt; #   VMAX_GUST_MS &lt;dbl&gt;, GUST_DUR_MINUTES &lt;dbl&gt;, WIND_RADII_VMAX_SUST_MS &lt;dbl&gt;,</span></span>
@@ -334,60 +406,83 @@ frames, behaving like any other named list:</p>
 <p>By default, the <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> function returns:</p>
 <ul>
 <li>
-<strong><code>wind</code></strong> – one row per administrative unit
-per storm, for pairs where wind exposure was non-zero. This is the core
-exposure table.</li>
+<strong><code>wind</code></strong>: one row per ADM2 per storm, for
+those ADM2s within the specified <code>wind_radius_km</code> of a storm
+track, for those ADM2-storm pairs where wind exposure was non-zero. This
+is the core exposure table.</li>
 <li>
-<strong><code>precip</code></strong> – one row per administrative
-unit per local calendar date, for dates falling near a storm’s passage
-for that ADM2.</li>
+<strong><code>precip</code></strong> – one row per ADM2 per local
+calendar date, for those ADM2s within the specified
+<code>precip_radius_km</code> of a storm track, and for dates falling
+within <code>precip_days_before</code> and
+<code>precip_days_after</code> the local date of a storm track’s closest
+approach to that ADM2 (i.e., for the temporal window defined by
+<code>LOCAL_DATETIME_STORM_CLOSEST</code> -
+<code>precip_days_before</code> through
+<code>LOCAL_DATETIME_STORM_CLOSEST</code> +
+<code>precip_days_after</code>).</li>
 <li>
 <strong><code>flood</code></strong> – one row per observed flood
-event.</li>
+event, for flood events whose <code>FLOOD_START_DATE</code> falls within
+<code>flood_days_before</code> and <code>flood_days_after</code> the
+<code>LOCAL_DATETIME_STORM_CLOSEST</code>, for those ADM2s within
+<code>flood_radius_km</code> of a storm track.</li>
 <li>
 <strong><code>pop</code></strong> – population and
 population-weighted centroid data, per ADM2 per year.</li>
 <li>
-<strong><code>adm2</code></strong> – the lookup table of
-administrative units.</li>
+<strong><code>adm2</code></strong> – the lookup table of ADM2s.</li>
 <li>
 <strong><code>codebook</code></strong> – the dataset’s own
 documentation, as a nested list.</li>
 <li>
+<strong><code>zero_pairs</code></strong> – ADM2-storm pairs with no
+measurable wind.</li>
+<li>
+<strong><code>tracks</code></strong> – raw storm-track observations
+for those storms coming within
+<code>max(c(wind_radius_km, precip_radius_km, flood_radius_km))</code>
+of any of the requested ADM2s.</li>
+<li>
+<strong><code>geometry</code></strong> – ADM2 boundaries, as an
+<code>sf</code> object.</li>
+<li>
+<strong><code>storm_metadata</code></strong> – storm names,
+identifiers, and genesis dates.</li>
+<li>
 <strong><code>links</code></strong> – see below.</li>
 </ul>
-<p>Three further tables are available on request via the
-<code>tables</code> argument: <code>zero_pairs</code> (unit-storm pairs
-with no measurable wind), <code>tracks</code> (raw storm track
-observations, for plotting purposes), and <code>geometry</code>
-(administrative boundaries, again for plotting purposes, and requiring
-the <code>sf</code> package).</p>
+<p>If you are on a tighter computational budget and would like to reduce
+file transfer and storage requirements, pass only the tables required
+for your analysis through the <code>tables</code> argument.</p>
 </div>
 <div class="section level2">
 <h2 id="the-links-table">The links table<a class="anchor" aria-label="anchor" href="#the-links-table"></a>
 </h2>
 <p><code>links</code> is returned whenever any storm-linked table is. It
-has one row per ADM2-storm pair:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+has one row per ADM2-storm pair retained by the union of the fields for
+the requested hazard tables (or all selected pairs when every requested
+field is unbounded):</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">usa_25</span><span class="op">$</span><span class="va">links</span></span>
-<span><span class="co">#&gt; # A tibble: 248,787 × 11</span></span>
+<span><span class="co">#&gt; # A tibble: 1,068 × 12</span></span>
 <span><span class="co">#&gt;    STORM_ID      ADM2_ID      LOCAL_DATE_STORM_CLO…¹ STORM_DIST_KM WIND_EXPOSURE</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;        &lt;date&gt;                         &lt;dbl&gt; &lt;lgl&gt;        </span></span>
-<span><span class="co">#&gt;  1 2025017S18122 52423323B10… 2025-01-17                    17418. FALSE        </span></span>
-<span><span class="co">#&gt;  2 2025024S11082 52423323B10… 2025-02-04                    14774. FALSE        </span></span>
-<span><span class="co">#&gt;  3 2025029S25043 52423323B10… 2025-01-29                    14506. FALSE        </span></span>
-<span><span class="co">#&gt;  4 2025034S19166 52423323B10… 2025-02-04                    12678. FALSE        </span></span>
-<span><span class="co">#&gt;  5 2025039S14125 52423323B10… 2025-02-11                    17173. FALSE        </span></span>
-<span><span class="co">#&gt;  6 2025052S14148 52423323B10… 2025-02-25                    14013. FALSE        </span></span>
-<span><span class="co">#&gt;  7 2025052S23038 52423323B10… 2025-02-25                    13996. FALSE        </span></span>
-<span><span class="co">#&gt;  8 2025054S13182 52423323B10… 2025-02-22                    11485. FALSE        </span></span>
-<span><span class="co">#&gt;  9 2025054S17051 52423323B10… 2025-02-25                    15020. FALSE        </span></span>
-<span><span class="co">#&gt; 10 2025056S16171 52423323B10… 2025-02-24                    12713. FALSE        </span></span>
-<span><span class="co">#&gt; # ℹ 248,777 more rows</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;        &lt;date&gt;                         &lt;dbl&gt; &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt;  1 2025185N30280 52423323B10… 2025-07-06                     152.  TRUE</span></span>
+<span><span class="co">#&gt;  2 2025223N17337 52423323B10… 2025-08-16                     196.  TRUE</span></span>
+<span><span class="co">#&gt;  3 2025280N11319 52423323B10… 2025-10-10                     277.  TRUE</span></span>
+<span><span class="co">#&gt;  4 2025185N30280 52423323B10… 2025-07-07                      11.4 TRUE</span></span>
+<span><span class="co">#&gt;  5 2025215N33284 52423323B10… 2025-08-02                     471.  TRUE</span></span>
+<span><span class="co">#&gt;  6 2025243N14239 52423323B10… 2025-09-09                     311.  TRUE</span></span>
+<span><span class="co">#&gt;  7 2025185N30280 52423323B10… 2025-07-07                      75.1 TRUE</span></span>
+<span><span class="co">#&gt;  8 2025185N30280 52423323B10… 2025-07-07                     108.  TRUE</span></span>
+<span><span class="co">#&gt;  9 2025185N30280 52423323B10… 2025-07-04                     358.  TRUE</span></span>
+<span><span class="co">#&gt; 10 2025185N30280 52423323B10… 2025-07-07                      77.9 TRUE</span></span>
+<span><span class="co">#&gt; # ℹ 1,058 more rows</span></span>
 <span><span class="co">#&gt; # ℹ abbreviated name: ¹​LOCAL_DATE_STORM_CLOSEST</span></span>
-<span><span class="co">#&gt; # ℹ 6 more variables: PRECIP_IN_FIELD &lt;lgl&gt;, PRECIP_WINDOW_START &lt;date&gt;,</span></span>
-<span><span class="co">#&gt; #   PRECIP_WINDOW_END &lt;date&gt;, FLOOD_IN_FIELD &lt;lgl&gt;, FLOOD_WINDOW_START &lt;date&gt;,</span></span>
-<span><span class="co">#&gt; #   FLOOD_WINDOW_END &lt;date&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; # ℹ 7 more variables: WIND_IN_FIELD &lt;lgl&gt;, PRECIP_IN_FIELD &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   PRECIP_WINDOW_START &lt;date&gt;, PRECIP_WINDOW_END &lt;date&gt;, FLOOD_IN_FIELD &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   FLOOD_WINDOW_START &lt;date&gt;, FLOOD_WINDOW_END &lt;date&gt;</span></span></code></pre></div>
 <p>A few important columns include:</p>
 <ul>
 <li>
@@ -398,14 +493,15 @@ data for an ADM2 on the 2 days before and 2 days after a given storm,
 then the temporal window is calculated with respect to this date).</li>
 <li>
 <code>STORM_DIST_KM</code>: how close the corresponding storm came
-to the corresponding ADM2 (in kilometres).</li>
+to the corresponding ADM2 (in kilometers).</li>
 <li>
 <code>WIND_EXPOSURE</code>: whether the pair had measurable wind
 (<code>TRUE</code>) or not (<code>FALSE</code>).</li>
 <li>
-<code>PRECIP_IN_FIELD</code> and <code>FLOOD_IN_FIELD</code>:
-whether the ADM2 was close enough to the storm track to be considered
-for precipitation and flooding respectively.</li>
+<code>WIND_IN_FIELD</code>, <code>PRECIP_IN_FIELD</code>, and
+<code>FLOOD_IN_FIELD</code>: whether the ADM2 was close enough to the
+storm track to be considered for wind, precipitation and flooding data
+inclusion, respectively.</li>
 </ul>
 <p>The <code>links</code> table helps avoid duplicating
 precipitation/flooding rows for every storm returned in a query. For
@@ -422,49 +518,65 @@ details this in full.</p>
 </h2>
 <p>Three functions provide access to the metadata pertaining to your
 <code>gtropic_data</code> object:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Exactly which files were retrieved, at which version</span></span>
 <span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── gtropic version manifest ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── gtropic version manifest ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
 <span><span class="co">#&gt; • Server: "demo.dataverse.org"</span></span>
-<span><span class="co">#&gt; • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")</span></span>
-<span><span class="co">#&gt; • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")</span></span>
-<span><span class="co">#&gt; • Files recorded: 9</span></span>
-<span><span class="co">#&gt; • Total size: 158.5 MB</span></span>
-<span><span class="co">#&gt; • Retrieved: 2026-09-08 16:40:15 EDT</span></span>
+<span><span class="co">#&gt; • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)</span></span>
+<span><span class="co">#&gt; • Files recorded: 10</span></span>
+<span><span class="co">#&gt; • Total size: 166.8 MB</span></span>
+<span><span class="co">#&gt; • Retrieved: 2026-10-30 22:50:44 UTC</span></span>
 <span><span class="co">#&gt; • Package version: "0.0.0.9000"</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; ℹ Pass this object as `manifest` to `gtropic_data()` to</span></span>
 <span><span class="co">#&gt; reproduce the same retrieval.</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># The filters as the package resolved them</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_filters</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span>, max.level <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 14</span></span>
-<span><span class="co">#&gt;  $ adm2_ids             : chr [1:3231] "52423323B51867153498623" "52423323B67588574079428" "52423323B97123089850170" "52423323B54167037237770" ...</span></span>
-<span><span class="co">#&gt;  $ storm_ids            : chr [1:77] "2025017S18122" "2025024S11082" "2025029S25043" "2025034S19166" ...</span></span>
-<span><span class="co">#&gt;  $ date_start           : Date[1:1], format: "2025-01-01"</span></span>
-<span><span class="co">#&gt;  $ date_end             : Date[1:1], format: "2025-12-31"</span></span>
-<span><span class="co">#&gt;  $ date_order           : chr "ymd"</span></span>
-<span><span class="co">#&gt;  $ years_scanned        : int 2025</span></span>
-<span><span class="co">#&gt;  $ precip_days_before   : num 2</span></span>
-<span><span class="co">#&gt;  $ precip_days_after    : num 1</span></span>
-<span><span class="co">#&gt;  $ precip_radius_km     : num 500</span></span>
-<span><span class="co">#&gt;  $ flood_days_before    : num 2</span></span>
-<span><span class="co">#&gt;  $ flood_days_after     : num 1</span></span>
-<span><span class="co">#&gt;  $ flood_radius_km      : num 500</span></span>
-<span><span class="co">#&gt;  $ flood_match          : chr "start"</span></span>
-<span><span class="co">#&gt;  $ inconsistent_adm2_ids: chr(0)</span></span></code></pre></div>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_filters</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; ── G-TROPIC resolved filters ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; • adm2_ids (803 values): ["52423323B10055621117527", "52423323B10065184809144", "52423323B10302998803932", "52423323B10350916691509", "52423323B10442929932087", "52423323B10584672826222",</span></span>
+<span><span class="co">#&gt; "52423323B10770912620871", "52423323B10780727675908", "52423323B11034045930208", "52423323B11153152222342"] (793 values omitted)</span></span>
+<span><span class="co">#&gt; • storm_ids (10 values): ["2025185N30280", "2025223N17337", "2025280N11319", "2025215N33284", "2025243N14239", "2025270N21285", "2025180N19266", "2025205N13145", "2025218N19149",</span></span>
+<span><span class="co">#&gt; "2025308N09145"]</span></span>
+<span><span class="co">#&gt; • date_start (1 value): [2025-01-01]</span></span>
+<span><span class="co">#&gt; • date_end (1 value): [2025-12-31]</span></span>
+<span><span class="co">#&gt; • date_order (1 value): ["ymd"]</span></span>
+<span><span class="co">#&gt; • years_scanned (1 value): [2025]</span></span>
+<span><span class="co">#&gt; • wind_radius_km (1 value): [500]</span></span>
+<span><span class="co">#&gt; • precip_days_before (1 value): [2]</span></span>
+<span><span class="co">#&gt; • precip_days_after (1 value): [1]</span></span>
+<span><span class="co">#&gt; • precip_radius_km (1 value): [500]</span></span>
+<span><span class="co">#&gt; • flood_days_before (1 value): [2]</span></span>
+<span><span class="co">#&gt; • flood_days_after (1 value): [1]</span></span>
+<span><span class="co">#&gt; • flood_radius_km (1 value): [500]</span></span>
+<span><span class="co">#&gt; • flood_match (1 value): ["start"]</span></span>
+<span><span class="co">#&gt; • inconsistent_adm2_ids (0 values): &lt;empty&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Anything the query warned about</span></span>
 <span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_warnings</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span>
 <span><span class="co">#&gt; list()</span></span></code></pre></div>
-<p>The <strong>manifest</strong> provides a record of which published
-files went into the result, including their paths, dataset versions,
-sizes and checksums. Saving it lets you reproduce the same retrieval
-months later, even if the dataset has since been revised. The
-<code>versions-and-caching</code> vignette illustrates this in more
-detail.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Structured schedules, known source coverage, and the assessed request period</span></span>
+<span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_availability</a></span><span class="op">(</span><span class="va">usa_25</span><span class="op">)</span></span></code></pre></div>
+<p>The <strong>manifest</strong> records the published files actually
+used, including paths, concrete dataset versions, checksums, and each
+file’s original download time. Saving it lets you reproduce the same
+retrieval with <code>gtropic_data(manifest = mf)</code>, even if
+<code>:latest</code> has since changed. The
+<code>versions-and-caching</code> vignette explains canonical replay and
+cache behavior.</p>
+<p><code><a href="../reference/gtropic_manifest.html">gtropic_availability()</a></code> records source update schedules,
+known coverage, and the requested period used for diagnostics.
+Availability warnings are conditional: for example, a recent wind
+request can warn about provisional IBTrACS data, a recent precipitation
+request about the typical ERA5-Land lag, and a flood request reaching or
+extending beyond <strong>2026-01-22</strong> about the known
+Groundsource flood endpoint. Inspect <code><a href="../reference/gtropic_manifest.html">gtropic_warnings()</a></code> to
+retain these diagnostics with an analysis; availability is metadata, not
+a guarantee that every record exists.</p>
 </div>
 <div class="section level2">
 <h2 id="larger-queries-caching-and-size-guardrails">Larger queries, caching, and size guardrails<a class="anchor" aria-label="anchor" href="#larger-queries-caching-and-size-guardrails"></a>
@@ -473,22 +585,37 @@ detail.</p>
 larger portions of the G-TROPIC dataset, it’s worth getting to know how
 file caching and size guardrails work in <code>gtropic</code>:</p>
 <p><em>The file cache</em>: To save repeated downloads of the same
-queried data, downloads can be kept between sessions using the file
-cache. By default, caching is disabled, but you can enable caching for
-the current R session using:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_enable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Or simply by passing <code>cache = TRUE</code> when making
-queries.</p>
+queried data, downloads are kept between sessions using the file cache
+by default. You can disable caching for the current R session using:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_disable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Or bypass it for one query by passing <code>cache = FALSE</code>. To
+retain a disabled choice across R sessions, use
+<code>gtropic_cache_disable(persist = TRUE)</code>.</p>
 <p><em>The size guardrail</em>: Calling <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> with
-no arguments means (as of writing) retrieving roughly 47 years worth of
-global storm exposure data (~6GB). Before downloading anything estimated
-to be larger than 1GB, <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> will prompt you to
-confirm going ahead with the download. In a non-interactive session, for
-instance a scheduled/scripted job, it will raise an error instead,
-unless you pass the <code>confirm = FALSE</code> argument.</p>
+no arguments requests all available tables for the full global record.
+This can require a substantial download. Before downloading anything
+estimated to be larger than 1GB, <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> will prompt
+you to confirm going ahead with the download. In a non-interactive
+session, for instance a scheduled/scripted job, it will raise an error
+instead, unless you pass the <code>confirm = FALSE</code> argument.</p>
 <p>Both topics are covered extensively in
 <code><a href="../articles/versions-and-caching.html">vignette("versions-and-caching")</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h2>
+<ul>
+<li>Use the discovery helpers to identify available years, places,
+storms, and exposure metrics before making a query.</li>
+<li>
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> returns a named collection of exposure
+tables plus metadata that documents the selected records and source
+files.</li>
+<li>Use the <code>links</code> table to connect precipitation and
+flooding records to storms without duplicating observations, and retain
+the manifest for reproducibility.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
@@ -496,8 +623,8 @@ unless you pass the <code>confirm = FALSE</code> argument.</p>
 <ul>
 <li>
 <code><a href="../articles/filtering.html">vignette("filtering")</a></code> covers how all the
-spatio-temporal/storm filters in <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> combine,
-with a worked example.</li>
+spatio-temporal/storm filters in <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code>
+combine.</li>
 <li>
 <code><a href="../articles/linkage.html">vignette("linkage")</a></code> documents how to link
 precipitation/flood data to storm data and using the <code>links</code>
@@ -506,6 +633,10 @@ table to perform joins without double-counting exposure rows.</li>
 <code><a href="../articles/versions-and-caching.html">vignette("versions-and-caching")</a></code> walks through
 reproducibility and download management best practices in
 <code>gtropic</code>.</li>
+<li>
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> examines how to quickly visualize
+exposure maps of G-TROPIC data using the <code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code>
+plotting function.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

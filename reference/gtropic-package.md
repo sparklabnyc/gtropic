@@ -9,7 +9,7 @@ for Climate Stewardship (IBTrACS) recorded storm globally, from 1980 to
 the present. Provides a single cornerstone query function, discovery
 helpers for exploring the available vocabulary of administrative units
 and storms, version manifests for reproducible re-retrieval, and an
-optional opt-in on-disk cache. The package performs no scientific
+on-disk cache enabled by default. The package performs no scientific
 recomputation, published exposure columns are authoritative.
 
 ## See also

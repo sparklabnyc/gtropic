@@ -27,7 +27,9 @@ gtropic_data(
   STORM_ID = NULL,
   STORM_NAME = NULL,
   USA_ATCF_ID = NULL,
-  tables = c("wind", "precip", "flood", "pop", "adm2", "codebook"),
+  wind_radius_km = 500,
+  tables = c("wind", "precip", "flood", "pop", "adm2", "codebook", "zero_pairs",
+    "tracks", "geometry", "storm_metadata"),
   precip_days_before = 2,
   precip_days_after = 1,
   precip_radius_km = 500,
@@ -41,7 +43,8 @@ gtropic_data(
   cache = NULL,
   as = c("tibble", "arrow"),
   confirm = NULL,
-  quiet = FALSE
+  quiet = FALSE,
+  offline = FALSE
 )
 ```
 
@@ -86,8 +89,9 @@ gtropic_data(
 
 - date_range:
 
-  Optional vector of length two defining an inclusive period of storm
-  genesis dates. Cannot be combined with `date_list`.
+  Optional vector of one or two endpoints defining an inclusive period
+  of storm genesis dates. A single value is used for both endpoints.
+  Cannot be combined with `date_list`.
 
 - date_list:
 
@@ -107,21 +111,35 @@ gtropic_data(
 
 - STORM_NAME:
 
-  Optional character vector of storm names, matched case-insensitively.
+  Optional character vector of published, disambiguated storm names in
+  `Name-YYYY` form, such as `Katrina-2005`, matched case-insensitively.
+  The suffix year limits the metadata files scanned; storm and date
+  filters are still combined with AND.
 
 - USA_ATCF_ID:
 
   Optional character vector of US Automated Tropical Cyclone Forecasting
   System identifiers. Matching is exact and case-sensitive.
 
+- wind_radius_km:
+
+  Maximum published storm-track distance, in kilometers, for returned
+  wind records; defaults to 500. A finite positive value restricts them
+  inclusively. It also contributes to the union-boundary of `links` when
+  wind is requested. `Inf` or `NULL` is unbounded; with an unbounded
+  wind radius, wind records with missing published distances are
+  retained. This argument does not filter returned `zero_pairs` records.
+
 - tables:
 
-  Character vector specifying tables to return. Available values are
-  `"wind"`, `"precip"`, `"flood"`, `"pop"`, `"adm2"`, `"codebook"`,
-  `"zero_pairs"`, `"tracks"`, `"geometry"`, and `"storm_metadata"`.
+  Character vector specifying tables to return. By default, all
+  available tables are returned: `"wind"`, `"precip"`, `"flood"`,
+  `"pop"`, `"adm2"`, `"codebook"`, `"zero_pairs"`, `"tracks"`,
+  `"geometry"`, and `"storm_metadata"`. Supply a smaller vector to
+  reduce transfer and storage requirements. Because the default includes
+  `"geometry"`, it requires the suggested `sf` and `sfarrow` packages.
   `storm_metadata` is added whenever a storm-linked table is requested.
-  A `links` table describing evaluated ADM2-storm pairs is also
-  returned.
+  A `links` table describing retained ADM2-storm pairs is also returned.
 
 - precip_days_before, precip_days_after:
 
@@ -131,7 +149,8 @@ gtropic_data(
 - precip_radius_km:
 
   Positive numeric value giving the maximum storm-track distance, in
-  kilometres, for inclusion in precipitation linkages.
+  kilometers, for inclusion in precipitation linkages. `Inf` or `NULL`
+  leaves this radius unbounded.
 
 - flood_days_before, flood_days_after:
 
@@ -141,7 +160,8 @@ gtropic_data(
 - flood_radius_km:
 
   Positive numeric value giving the maximum storm-track distance, in
-  kilometres, for inclusion in flood linkages.
+  kilometers, for inclusion in flood linkages. `Inf` or `NULL` leaves
+  this radius unbounded.
 
 - flood_match:
 
@@ -165,8 +185,10 @@ gtropic_data(
 
   Optional `gtropic_manifest` from
   [`gtropic_manifest()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md).
-  When supplied, the recorded source files are used and `version` and
-  configured DOI options are ignored.
+  When supplied, its recorded source files and canonical resolved query
+  are used. Data-shaping arguments cannot also be supplied; only
+  `cache`, `as`, `confirm`, `quiet`, and `offline` may differ during
+  replay.
 
 - cache:
 
@@ -193,22 +215,33 @@ gtropic_data(
   Logical. If `TRUE`, progress and informational messages are
   suppressed. Warnings and errors are still reported.
 
+- offline:
+
+  Logical. If `TRUE`, use only cached source files and a persisted
+  discovery snapshot; no Dataverse update check is made and the snapshot
+  age is reported. Requires an enabled cache. Defaults to `FALSE`.
+
 ## Value
 
 An object of class `gtropic_data`, implemented as a named list. It
 contains the requested data tables and a `links` tibble with one row per
-evaluated ADM2-storm pair. `links` includes `ADM2_ID`, `STORM_ID`, the
-published local date and distance at closest approach, logical
-`WIND_EXPOSURE` status (`TRUE` for nonzero wind exposure and `FALSE` for
-zero), indicators for whether the pair falls within the precipitation
-and flood radii, and the start and end of each hazard-specific temporal
-window. The `pop` table includes a `YEAR` column derived from each
-yearly source filename. By default, tabular elements are tibbles,
-`codebook` is a nested list, and `geometry` is an `sf` object.
+ADM2-storm pair retained by the union of requested hazard radii (or all
+available selected pairs when that union is unbounded). `links` includes
+`ADM2_ID`, `STORM_ID`, the published local date and distance at closest
+approach, logical `WIND_EXPOSURE` status (`TRUE` for nonzero wind
+exposure and `FALSE` for zero), `WIND_IN_FIELD` and indicators for
+whether the pair falls within the precipitation and flood radii, and the
+start and end of each hazard-specific temporal window. With a finite
+requested hazard radius, `tracks` contains only storms with at least one
+qualifying link; otherwise it retains all selected storms. The `pop`
+table includes a `YEAR` column derived from each yearly source filename.
+By default, all available tables are returned. Tabular elements are
+tibbles, `codebook` is a nested list, and `geometry` is an `sf` object.
 
 The object also stores the source-file manifest, original query,
 resolved filters, recorded diagnostics, retrieval time, and package
-version as attributes. Use
+version as attributes, including structured availability and coverage
+metadata. Use
 [`gtropic_manifest()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md),
 [`gtropic_filters()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md),
 and
@@ -229,11 +262,13 @@ both conditions to be met.
 identifiers. Names and geographic classifications are matched
 case-insensitively after whitespace normalization. Every supplied value
 must match the published metadata, and the intersection of all filters
-must be nonempty. Use
-[`gtropic_adm2()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_adm2.md)
+must be nonempty. An unmatched `STORM_ID` or `STORM_NAME` is checked
+against the published exclusion records; use
+[`gtropic_adm2()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_adm2.md),
+[`gtropic_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.md),
 and
-[`gtropic_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.md)
-to review valid values.
+[`gtropic_excluded_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.md)
+to review valid or excluded values.
 
 A spatial filter supplied through `polygon` is combined with other
 geographic filters using AND. An ADM2 unit is selected when its
@@ -278,6 +313,22 @@ use the hazard-specific day and radius arguments. Geographic filters
 define the eligible study area; radius arguments can narrow that area
 but do not add units outside it.
 
+`wind_radius_km` defaults to 500 km and inclusively limits returned wind
+records to pairs at or below their published `STORM_DIST_KM`. `links`
+contains every published pair needed by the union of requested hazard
+fields: a larger precipitation or flood radius can therefore retain
+pairs beyond the wind radius. Its `WIND_IN_FIELD` flag identifies
+whether each retained pair falls inside the configured wind field. For
+every `*_IN_FIELD` flag, a finite radius excludes pairs with missing
+published distance, while `Inf` or `NULL` includes them. An unbounded
+radius does not constrain this union. When no finite requested hazard
+field bounds a query, `links` retains all available pairs within the
+selected geography and storms, and returned ADM2, population, geometry,
+and tracks retain their original selected scope. When a requested hazard
+table has a finite radius, returned ADM2, population, and geometry rows
+are limited to units in its qualifying links; the union is used for
+several such hazards.
+
 Precipitation and flood tables contain unique source records and are not
 duplicated when one record falls within the windows of multiple storms.
 To assign records to storms, join them to `links` using `ADM2_ID` and
@@ -299,8 +350,9 @@ session and produce an error in a non-interactive session unless
 
 Each result includes a manifest containing the source dataset versions,
 files, and checksums used. Supplying that manifest to a later call
-requests the same published source files. The same analytic filters must
-also be supplied to reproduce the query.
+requests the same published source files and replays its canonical
+resolved query, including resolved ADM2 and storm identifiers and the
+metadata-file years originally scanned.
 
 ## See also
 
@@ -316,36 +368,41 @@ also be supplied to reproduce the query.
 
 ``` r
 # \donttest{
-# Wind, precipitation, flood, and population data for storms that formed
-# during the 2005 season and were evaluated in Jamaica
+# All available tables for storms that formed during the 2005 season and
+# were evaluated in Jamaica
 jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
+#> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Retrieving 8 files (133.0 MB) ; .
+#> Retrieving 10 files (143.0 MB) ; .
 #> Downloading 02_wind/exposures/2005.parquet.
 #> Downloading 02_wind/zero_pairs/2005.parquet.
 #> Downloading 04_precip/2005.parquet.
 #> Downloading 03_flood/2005.parquet.
 #> Downloading 01_pop/2005.parquet.
+#> Downloading 02_wind/storm_tracks/2005.parquet.
 #> Downloading metadata/codebook.json.
+#> Downloading metadata/adm2_geometry_simplified.parquet.
 jamaica
 #> 
 #> ── G-TROPIC data ───────────────────────────────────────────────────────────────
-#> • Historical dataset: version "3.0"
-#> • Current-year dataset: version "11.0"
+#> • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)
 #> • Genesis dates: "2005-01-01" to "2005-12-31"
-#> • Storms: 75
+#> • Storms: 5
 #> • ADM2 units: 827
 #> 
 #> ── Tables 
-#> • wind: 17828 rows x 12 columns
+#> • wind: 3719 rows x 12 columns
 #> • precip: 14876 rows x 3 columns
 #> • flood: 176 rows x 7 columns
+#> • zero_pairs: 43370 rows x 5 columns
+#> • tracks: 376 rows x 10 columns
 #> • pop: 827 rows x 6 columns
-#> • storm_metadata: 75 rows x 4 columns
+#> • storm_metadata: 5 rows x 4 columns
 #> • adm2: 827 rows x 5 columns
+#> • geometry: 827 rows x 2 columns
 #> • codebook: 7 entries (list)
-#> • links: 61198 rows x 11 columns
+#> • links: 3719 rows x 12 columns
 #> 
 #> ℹ Use `summary()` for detail.
 
@@ -354,54 +411,9 @@ katrina <- gtropic_data(
   STORM_NAME = "Katrina-2005",
   tables = c("wind", "adm2")
 )
+#> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
-#> Downloading 02_wind/storm_metadata/1980.parquet.
-#> Downloading 02_wind/storm_metadata/1981.parquet.
-#> Downloading 02_wind/storm_metadata/1982.parquet.
-#> Downloading 02_wind/storm_metadata/1983.parquet.
-#> Downloading 02_wind/storm_metadata/1984.parquet.
-#> Downloading 02_wind/storm_metadata/1985.parquet.
-#> Downloading 02_wind/storm_metadata/1986.parquet.
-#> Downloading 02_wind/storm_metadata/1987.parquet.
-#> Downloading 02_wind/storm_metadata/1988.parquet.
-#> Downloading 02_wind/storm_metadata/1989.parquet.
-#> Downloading 02_wind/storm_metadata/1990.parquet.
-#> Downloading 02_wind/storm_metadata/1991.parquet.
-#> Downloading 02_wind/storm_metadata/1992.parquet.
-#> Downloading 02_wind/storm_metadata/1993.parquet.
-#> Downloading 02_wind/storm_metadata/1994.parquet.
-#> Downloading 02_wind/storm_metadata/1995.parquet.
-#> Downloading 02_wind/storm_metadata/1996.parquet.
-#> Downloading 02_wind/storm_metadata/1997.parquet.
-#> Downloading 02_wind/storm_metadata/1998.parquet.
-#> Downloading 02_wind/storm_metadata/1999.parquet.
-#> Downloading 02_wind/storm_metadata/2000.parquet.
-#> Downloading 02_wind/storm_metadata/2001.parquet.
-#> Downloading 02_wind/storm_metadata/2002.parquet.
-#> Downloading 02_wind/storm_metadata/2003.parquet.
-#> Downloading 02_wind/storm_metadata/2004.parquet.
 #> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Downloading 02_wind/storm_metadata/2006.parquet.
-#> Downloading 02_wind/storm_metadata/2007.parquet.
-#> Downloading 02_wind/storm_metadata/2008.parquet.
-#> Downloading 02_wind/storm_metadata/2009.parquet.
-#> Downloading 02_wind/storm_metadata/2010.parquet.
-#> Downloading 02_wind/storm_metadata/2011.parquet.
-#> Downloading 02_wind/storm_metadata/2012.parquet.
-#> Downloading 02_wind/storm_metadata/2013.parquet.
-#> Downloading 02_wind/storm_metadata/2014.parquet.
-#> Downloading 02_wind/storm_metadata/2015.parquet.
-#> Downloading 02_wind/storm_metadata/2016.parquet.
-#> Downloading 02_wind/storm_metadata/2017.parquet.
-#> Downloading 02_wind/storm_metadata/2018.parquet.
-#> Downloading 02_wind/storm_metadata/2019.parquet.
-#> Downloading 02_wind/storm_metadata/2020.parquet.
-#> Downloading 02_wind/storm_metadata/2021.parquet.
-#> Downloading 02_wind/storm_metadata/2022.parquet.
-#> Downloading 02_wind/storm_metadata/2023.parquet.
-#> Downloading 02_wind/storm_metadata/2024.parquet.
-#> Downloading 02_wind/storm_metadata/2025.parquet.
-#> Downloading 02_wind/storm_metadata/2026.parquet.
 #> Retrieving 3 files (10.2 MB) ; .
 #> Downloading 02_wind/exposures/2005.parquet.
 
@@ -415,28 +427,6 @@ philippines <- gtropic_data(
   precip_radius_km = 300,
   tables = c("precip", "pop", "adm2")
 )
-#> Downloading metadata/adm2.parquet.
-#> Downloading 02_wind/storm_metadata/2015.parquet.
-#> Retrieving 5 files (120.0 MB) ; .
-#> Downloading 02_wind/exposures/2015.parquet.
-#> Downloading 02_wind/zero_pairs/2015.parquet.
-#> Downloading 04_precip/2015.parquet.
-#> Downloading 01_pop/2015.parquet.
-#> Downloading 01_pop/2016.parquet.
-
-# Retain source-file provenance for a subsequent retrieval
-source_manifest <- gtropic_manifest(philippines)
-philippines_retrieved_again <- gtropic_data(
-  WHO_ENTITY = "Philippines",
-  date_range = c("2015-06-01", "2015-12-31"),
-  precip_days_before = 3,
-  precip_days_after = 3,
-  precip_radius_km = 300,
-  tables = c("precip", "pop", "adm2"),
-  manifest = source_manifest
-)
-#> Reproducing a previous retrieval from `manifest`.
-#> ℹ `version` and the DOI options are ignored.
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2015.parquet.
@@ -445,6 +435,18 @@ philippines_retrieved_again <- gtropic_data(
 #> Downloading 02_wind/zero_pairs/2015.parquet.
 #> Downloading 04_precip/2015.parquet.
 #> Downloading 01_pop/2015.parquet.
-#> Downloading 01_pop/2016.parquet.
+
+# Retain source-file provenance for a subsequent retrieval
+source_manifest <- gtropic_manifest(philippines)
+philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
+#> Reproducing a previous retrieval from `manifest`.
+#> ℹ `version` and the DOI options are ignored.
+#> Downloading metadata/adm2.parquet.
+#> Downloading 02_wind/storm_metadata/2015.parquet.
+#> Retrieving 5 files (120.0 MB) ; .
+#> Downloading 02_wind/exposures/2015.parquet.
+#> Downloading 02_wind/zero_pairs/2015.parquet.
+#> Downloading 04_precip/2015.parquet.
+#> Downloading 01_pop/2015.parquet.
 # }
 ```

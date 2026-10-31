@@ -88,23 +88,15 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span></code></pre></div>
-<p>Published datasets get revised. A correction is applied, a year is
-added, a column gains a better definition – and an analysis you ran last
-spring no longer reproduces. This vignette covers how
-<code>gtropic</code> lets you pin a retrieval exactly, and how to manage
-the downloads it makes.</p>
-<div class="section level2">
-<h2 id="two-datasets-two-version-numbers">Two datasets, two version numbers<a class="anchor" aria-label="anchor" href="#two-datasets-two-version-numbers"></a>
-</h2>
-<p>The G-TROPIC collection is published as two Dataverse datasets rather
-than one:</p>
+<p>The G-TROPIC dataset is published as two Dataverse datasets:</p>
 <ul>
-<li>a <strong>historical</strong> dataset, covering 1980 up to the end
-of the last complete year, which also holds the only copy of the shared
-metadata (the administrative unit lookup, the codebook, the boundary
-geometries);</li>
-<li>a <strong>current-year</strong> dataset, republished as the ongoing
-season progresses.</li>
+<li>a <strong>historical</strong> dataset, spanning 1980 through the
+previous calendar year, which is updated once per year to include the
+most recent year’s data along with any corrections to the historical
+record (e.g., IBTRACS may update provisional data to final data);
+and</li>
+<li>a <strong>current-year</strong> dataset, updated once per week to
+include the latest storm data from the current calendar year.</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_years.html">gtropic_years</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -113,235 +105,250 @@ season progresses.</li>
 <span><span class="co">#&gt; [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009</span></span>
 <span><span class="co">#&gt; [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024</span></span>
 <span><span class="co">#&gt; [46] 2025</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; $current</span></span>
 <span><span class="co">#&gt; [1] 2026</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; $all</span></span>
 <span><span class="co">#&gt;  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994</span></span>
 <span><span class="co">#&gt; [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009</span></span>
 <span><span class="co">#&gt; [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024</span></span>
 <span><span class="co">#&gt; [46] 2025 2026</span></span></code></pre></div>
-<p>You do not normally need to think about this. The package works out
-which dataset holds which year by asking the server, so the annual
-changeover happens without any action from you – and without a package
-update. Shared metadata is always read from the historical dataset,
-whatever years your query covers.</p>
-<p>The consequence that does matter: the two datasets have
-<strong>independent version numbers</strong>. A query spanning both is
-not described by any single version string, which is why a single
-<code>version</code> argument would not be enough to reproduce it.</p>
-</div>
+<p>The G-TROPIC collection is organized this way in order to save
+storage space on Dataverse.</p>
+<p>Both the <strong>historical</strong> and
+<strong>current-year</strong> datasets are version controlled, enabling
+you to retrieve any published version of the datasets you may need,
+e.g., to reproduce old analyses.</p>
+<p>This vignette covers how to manage the dataset versions and downloads
+made by the <code>gtropic</code> package.</p>
 <div class="section level2">
-<h2 id="the-manifest">The manifest<a class="anchor" aria-label="anchor" href="#the-manifest"></a>
+<h2 id="the-gtropic-manifest">The <code>gtropic</code> manifest<a class="anchor" aria-label="anchor" href="#the-gtropic-manifest"></a>
 </h2>
-<p>A <strong>manifest</strong> is a record of exactly which published
-files went into a result: their paths, which dataset and version each
-came from, their sizes, and their MD5 checksums. Every result carries
-one.</p>
+<p>Every time you call <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code>, a
+<strong>manifest</strong> is attached to the result. It records the
+published source files retrieved for the query, along with their
+Dataverse paths, concrete dataset versions, sizes, and checksums.</p>
+<p>The manifest can be accessed via the <code><a href="../reference/gtropic_manifest.html">gtropic_manifest()</a></code>
+function:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">phl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
-<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"Philippines"</span>,</span>
-<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2015</span>, <span class="fl">2016</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">usa_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
+<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 14 files (256.5 MB) ; .</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/exposures/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/exposures/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '04_precip/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '04_precip/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '03_flood/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '03_flood/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '01_pop/2015.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '01_pop/2016.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/codebook.json'.</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Retrieving 0 files (0.0 B) ; 10 already cached.</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">phl</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── gtropic version manifest ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; • Server: "demo.dataverse.org"</span></span>
-<span><span class="co">#&gt; • Historical: "doi:10.70122/FK2/SWEYST" (version "3.0")</span></span>
-<span><span class="co">#&gt; • Current-year: "doi:10.70122/FK2/DDSYYD" (version "4.0")</span></span>
-<span><span class="co">#&gt; • Files recorded: 14</span></span>
-<span><span class="co">#&gt; • Total size: 256.5 MB</span></span>
-<span><span class="co">#&gt; • Retrieved: 2026-09-08 16:41:03 EDT</span></span>
-<span><span class="co">#&gt; • Package version: "0.0.0.9000"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ℹ Pass this object as `manifest` to `gtropic_data()` to</span></span>
-<span><span class="co">#&gt; reproduce the same retrieval.</span></span></code></pre></div>
-<p>The file-level detail is a tibble:</p>
+<span><span class="va">mf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span></span></code></pre></div>
+<p>The file-level detail is found in the <code>$files</code> tibble. Its
+<code>downloaded_at</code> column is the original time each source file
+was acquired from Dataverse; a later cache hit preserves that time
+rather than restamping it. <code>mf$retrieved_at</code> is the latest of
+those original per-file timestamps.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">phl</span><span class="op">)</span><span class="op">$</span><span class="va">files</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # A tibble: 6 × 7</span></span>
-<span><span class="co">#&gt;   dataset_doi     dataset_version directory_label label file_id md5   size_bytes</span></span>
-<span><span class="co">#&gt;   &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;   &lt;int&gt; &lt;chr&gt;      &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1 doi:10.70122/F… 3.0             metadata        adm2… 2702301 7b85…     869564</span></span>
-<span><span class="co">#&gt; 2 doi:10.70122/F… 3.0             02_wind/storm_… 2015… 2703906 9c44…       4776</span></span>
-<span><span class="co">#&gt; 3 doi:10.70122/F… 3.0             02_wind/storm_… 2016… 2703907 f1b7…       4647</span></span>
-<span><span class="co">#&gt; 4 doi:10.70122/F… 3.0             02_wind/exposu… 2015… 2706345 8c09…    6754848</span></span>
-<span><span class="co">#&gt; 5 doi:10.70122/F… 3.0             02_wind/exposu… 2016… 2706346 562b…    7613264</span></span>
-<span><span class="co">#&gt; 6 doi:10.70122/F… 3.0             02_wind/zero_p… 2015… 2706396 9aff…   49588960</span></span></code></pre></div>
-<p>You can see the dataset versions without digging, because
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> on a result shows them:</p>
+<code class="sourceCode R"><span><span class="va">mf</span><span class="op">$</span><span class="va">files</span></span>
+<span><span class="co">#&gt; # A tibble: 10 × 10</span></span>
+<span><span class="co">#&gt;    source_role dataset_doi         dataset_version directory_label label file_id</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;       &lt;chr&gt;               &lt;chr&gt;           &lt;chr&gt;           &lt;chr&gt;   &lt;int&gt;</span></span>
+<span><span class="co">#&gt;  1 Historical  doi:10.70122/FK2/S… 4.0             metadata        adm2… 2702301</span></span>
+<span><span class="co">#&gt;  2 Historical  doi:10.70122/FK2/S… 4.0             02_wind/storm_… 2005… 2706357</span></span>
+<span><span class="co">#&gt;  3 Historical  doi:10.70122/FK2/S… 4.0             02_wind/exposu… 2005… 2721015</span></span>
+<span><span class="co">#&gt;  4 Historical  doi:10.70122/FK2/S… 4.0             02_wind/zero_p… 2005… 2721067</span></span>
+<span><span class="co">#&gt;  5 Historical  doi:10.70122/FK2/S… 4.0             04_precip       2005… 2721119</span></span>
+<span><span class="co">#&gt;  6 Historical  doi:10.70122/FK2/S… 4.0             03_flood        2005… 2704009</span></span>
+<span><span class="co">#&gt;  7 Historical  doi:10.70122/FK2/S… 4.0             01_pop          2005… 2720969</span></span>
+<span><span class="co">#&gt;  8 Historical  doi:10.70122/FK2/S… 4.0             02_wind/storm_… 2005… 2703942</span></span>
+<span><span class="co">#&gt;  9 Historical  doi:10.70122/FK2/S… 4.0             metadata        code… 2704082</span></span>
+<span><span class="co">#&gt; 10 Historical  doi:10.70122/FK2/S… 4.0             metadata        adm2… 2721140</span></span>
+<span><span class="co">#&gt; # ℹ 4 more variables: checksum &lt;chr&gt;, checksum_type &lt;chr&gt;, size_bytes &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   downloaded_at &lt;dttm&gt;</span></span></code></pre></div>
+<p>The manifest contains other metadata beyond the <code>$files</code>
+table for you to inspect:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">phl</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── G-TROPIC data ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span><span class="co">#&gt; • Historical dataset: version "3.0"</span></span>
-<span><span class="co">#&gt; • Current-year dataset: version "4.0"</span></span>
-<span><span class="co">#&gt; • Genesis dates: "2015-01-01" to "2016-12-31"</span></span>
-<span><span class="co">#&gt; • Storms: 129</span></span>
-<span><span class="co">#&gt; • ADM2 units: 86</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── Tables</span></span>
-<span><span class="co">#&gt; • wind: 3602 rows x 12 columns</span></span>
-<span><span class="co">#&gt; • precip: 3296 rows x 3 columns</span></span>
-<span><span class="co">#&gt; • flood: 789 rows x 7 columns</span></span>
-<span><span class="co">#&gt; • pop: 172 rows x 6 columns</span></span>
-<span><span class="co">#&gt; • storm_metadata: 129 rows x 4 columns</span></span>
-<span><span class="co">#&gt; • adm2: 86 rows x 5 columns</span></span>
-<span><span class="co">#&gt; • codebook: 7 entries (list)</span></span>
-<span><span class="co">#&gt; • links: 11094 rows x 11 columns</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ℹ Use `summary()` for detail.</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">mf</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "files"           "server"          "datasets"        "resolved_query"</span></span>
+<span><span class="co">#&gt; [5] "availability"    "retrieved_at"    "schema_version"  "gtropic_version"</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="the-reproducibility-round-trip">The reproducibility round trip<a class="anchor" aria-label="anchor" href="#the-reproducibility-round-trip"></a>
+<h2 id="reproducible-data-retrievals-using-the-manifest">Reproducible data retrievals using the manifest<a class="anchor" aria-label="anchor" href="#reproducible-data-retrievals-using-the-manifest"></a>
 </h2>
-<p>Save the manifest alongside your analysis:</p>
+<p>With the manifest, you can ensure that future
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> queries retrieve exactly the same data files
+you had been using from an older query.</p>
+<p>Save the manifest to a <code>.rds</code> file after a data query:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">phl</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">mf</span>, <span class="st">"phl-2015-2016-manifest.rds"</span><span class="op">)</span></span></code></pre></div>
-<p>Months later, on another machine, pass it back:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">mf</span>, <span class="st">"usa-2005-manifest.rds"</span><span class="op">)</span></span></code></pre></div>
+<p>Then replay it directly, even on another machine:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">phl2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
-<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"Philippines"</span>,</span>
-<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2015</span>, <span class="fl">2016</span><span class="op">)</span>,</span>
-<span>  manifest <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">"phl-2015-2016-manifest.rds"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Exactly the files recorded in the manifest are retrieved, and their
-checksums verified. <code>version</code> and the DOI options are ignored
-– honouring them would defeat the purpose.</p>
-<p>Two failure modes are deliberate errors rather than silent
-substitutions:</p>
-<ul>
-<li>
-<strong>A recorded file is no longer available.</strong> You are
-told which one. Silently falling back to the current version would mean
-your “reproduction” quietly used different data.</li>
-<li>
-<strong>A recorded file’s checksum has changed.</strong> The file at
-that path is not the file you used, whatever it is now called.</li>
-</ul>
-<p>Keep the filters when you re-run. The manifest pins <em>which
-files</em> are read, not which rows are selected; the filters still do
-their work. Supplying a manifest alongside different filters will error
-if it does not contain the files those filters need.</p>
+<code class="sourceCode R"><span><span class="va">mf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">"usa-2005-manifest.rds"</span><span class="op">)</span></span>
+<span><span class="va">usa_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>manifest <span class="op">=</span> <span class="va">mf</span><span class="op">)</span></span></code></pre></div>
+<p>The manifest replays both the recorded files (with checksum
+verification) and its canonical resolved query: resolved ADM2 and storm
+identifiers, filters, tables, windows, and metadata years. You should
+not repeat any data-shaping arguments, including <code>version</code>,
+<code>tables</code>, geography, storm filters, or radii. Doing so would
+potentially conflict with the manifest you are trying to recover and
+yield an error. The only controls you may change during replay are the
+operational arguments <code>cache</code>, <code>as</code>,
+<code>confirm</code>, <code>quiet</code>, and <code>offline</code> –
+these arguments will not affect what data is returned but rather how the
+data is returned.</p>
 </div>
 <div class="section level2">
 <h2 id="asking-for-a-specific-version">Asking for a specific version<a class="anchor" aria-label="anchor" href="#asking-for-a-specific-version"></a>
 </h2>
-<p>If you want a particular published version without having a manifest
-to hand:</p>
+<p>You can also utilize the <code>version</code> argument to retrieve
+specific versions of the G-TROPIC datasets:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># The same version string for both datasets</span></span>
-<span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Cuba"</span>, date_range <span class="op">=</span> <span class="fl">2019</span>, version <span class="op">=</span> <span class="st">"2.0"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Different versions per dataset</span></span>
-<span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
 <span>  WHO_ENTITY <span class="op">=</span> <span class="st">"Cuba"</span>,</span>
 <span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2026</span><span class="op">)</span>,</span>
-<span>  version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>historical <span class="op">=</span> <span class="st">"2.0"</span>, current <span class="op">=</span> <span class="st">"1.3"</span><span class="op">)</span></span>
+<span>  version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>historical <span class="op">=</span> <span class="st">"4.0"</span>, current <span class="op">=</span> <span class="st">"16.0"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>A manifest is still the better tool for reproducibility, because it
-records checksums as well as version numbers.</p>
+<p>A manifest is still the best tool for perfect reproducibility, as it
+records everything you need to reproduce a query exactly.</p>
 </div>
 <div class="section level2">
 <h2 id="caching">Caching<a class="anchor" aria-label="anchor" href="#caching"></a>
 </h2>
 <p>A <strong>cache</strong> is a folder of files you have already
 downloaded, kept so that repeating or extending a query does not fetch
-them again. It is switched off by default: a package should not write to
-your disk without being asked.</p>
+them again. It is enabled by default and is created only when a
+retrieval needs to store a file.</p>
+<p>You can see whether or not the cache is enabled with:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"gtropic.cache_enabled"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>To disable it for the current session, use:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_disable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>You can re-enable it with:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_enable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The <code>persist</code> argument saves your cache preferences across
+future R sessions:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Turn off the cache for this and all future R sessions</span></span>
+<span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_disable</a></span><span class="op">(</span>persist <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Turn the cache back on for this and all future R sessions</span></span>
+<span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_enable</a></span><span class="op">(</span>persist <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>The cache lives in the standard per-user location R reserves for
 package data on your operating system:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_dir.html">gtropic_cache_dir</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "/Users/lgc2035/Library/Caches/org.R-project.R/R/gtropic"</span></span></code></pre></div>
-<p>You can put it somewhere with more room:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_enable</a></span><span class="op">(</span>dir <span class="op">=</span> <span class="st">"~/data/gtropic-cache"</span><span class="op">)</span></span></code></pre></div>
-<p>Or enable it for a single call without changing your settings:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Viet Nam"</span>, date_range <span class="op">=</span> <span class="fl">2020</span>, cache <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>You can specify a different location for the cache (e.g. if you need
+to put it on a disk with more storage) using the <code>dir</code>
+argument:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_enable</a></span><span class="op">(</span>dir <span class="op">=</span> <span class="st">"~/path/to/my/desired/cache/location/gtropic-cache"</span><span class="op">)</span></span></code></pre></div>
+<p>To bypass the cache for one retrieval without changing your global
+cache settings, use <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code>’s <code>cache</code>
+argument:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2025</span>, <span class="fl">2025</span><span class="op">)</span>, cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
-<h3 id="what-gets-cached-and-why-it-helps">What gets cached, and why it helps<a class="anchor" aria-label="anchor" href="#what-gets-cached-and-why-it-helps"></a>
+<h3 id="what-gets-cached">What gets cached<a class="anchor" aria-label="anchor" href="#what-gets-cached"></a>
 </h3>
-<p>The cache stores whole published year-files exactly as the repository
-serves them. It never stores filtered results.</p>
-<p>That single decision is what makes it useful. Because the unit is a
-year-file rather than a query, overlapping work reuses downloads without
-any cleverness:</p>
+<p>The G-TROPIC dataset is broadly made up of yearly exposure files, and
+it is these files that the cache retrieves from the remote Dataverse
+repository and writes to disk. The cache stores these published
+year-files in their entirety, exactly as the remote Dataverse repository
+serves them – it does not use any of the filter arguments in your query
+before saving these files.</p>
 <ul>
-<li>Asking for 2001-2003, then later for 2002-2005, downloads only 2004
-and 2005.</li>
-<li>A worldwide query, then a query for one country in a year you
-already have, downloads nothing at all – the filtering happens locally,
-from files you have.</li>
+<li>For instance, if you have caching enabled, an initial query that
+asks for data from 2001-2003 followed by a later query requesting data
+for 2002-2005 would result in <code>gtropic</code> only needing to
+download data for 2004 and 2005 in the second query, since the first
+query cached the results for 2002 and 2003. Note that assumes there was
+no published version update to the historical data between these two
+queries. If there was, then the newer versions of 2002 and 2003 would
+need to be downloaded.</li>
+<li>Because G-TROPIC exposure data are partitioned by year rather than
+by geography in the backend, this means that if you ask for, e.g. data
+for the United States from 2025, and then later for Cuba from 2025, both
+queries will rely on the same 2025 files saved to the cache (with
+caching enabled).</li>
 </ul>
 <p>Files are stored by checksum, which deduplicates across dataset
 versions automatically: a year-file that did not change between version
 1.0 and version 2.0 has one checksum and is kept once, even though two
-versions reference it. Checksums are verified when files are written and
-again when they are read, so a corrupted file is detected and
-re-downloaded rather than quietly analysed.</p>
+versions reference it.</p>
+</div>
+<div class="section level3">
+<h3 id="current-versions-and-offline-retrieval">Current versions and offline retrieval<a class="anchor" aria-label="anchor" href="#current-versions-and-offline-retrieval"></a>
+</h3>
+<p>By default, gtropic_data() uses version = “:latest”. During a normal
+online retrieval, the package rediscovers the latest published Dataverse
+version on every call. With caching enabled, it records source files
+separately for each concrete dataset version. Changed files are retained
+as new checksum-addressed content; unchanged files share the existing
+cached content across versions.</p>
+<p>For intentionally disconnected work, use <code>offline = TRUE</code>
+with an enabled cache. A regular (non-manifest) retrieval uses only
+cached source files and the persisted discovery snapshot created by a
+prior online cached retrieval; no Dataverse update check is made, and
+the snapshot’s saved time and age are reported. When
+<code>offline = TRUE</code> and a manifest is passed in, it will
+likewise use cached files only to fulfill the request. Offline
+retrievals error if a required cache item is unavailable.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># You can use the offline argument provided that you have already called</span></span>
+<span><span class="co"># an online cached query that has cached the necessary files to fulfill your</span></span>
+<span><span class="co"># offline query:</span></span>
+<span><span class="va">usa_05_offline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
+<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span>,</span>
+<span>  offline <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># A canonical manifest replay may also use cached files only:</span></span>
+<span><span class="va">usa_05_replay_offline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>manifest <span class="op">=</span> <span class="va">mf</span>, offline <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="managing-the-cache">Managing the cache<a class="anchor" aria-label="anchor" href="#managing-the-cache"></a>
 </h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_cache_list.html">gtropic_cache_list</a></span><span class="op">(</span><span class="op">)</span>    <span class="co"># one row per cached file</span></span>
 <span><span class="fu"><a href="../reference/gtropic_cache_list.html">gtropic_cache_size</a></span><span class="op">(</span><span class="op">)</span>    <span class="co"># total bytes on disk</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Keep it under 20 GB, and drop anything older than six months</span></span>
-<span><span class="fu"><a href="../reference/gtropic_cache_prune.html">gtropic_cache_prune</a></span><span class="op">(</span>max_size_gb <span class="op">=</span> <span class="fl">20</span>, older_than_days <span class="op">=</span> <span class="fl">180</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Keep it under 10 GB, and drop anything older than six months</span></span>
+<span><span class="fu"><a href="../reference/gtropic_cache_prune.html">gtropic_cache_prune</a></span><span class="op">(</span>max_size_gb <span class="op">=</span> <span class="fl">10</span>, older_than_days <span class="op">=</span> <span class="fl">180</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Start over</span></span>
-<span><span class="fu"><a href="../reference/gtropic_cache_clear.html">gtropic_cache_clear</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Stop caching; keeps what is already stored</span></span>
-<span><span class="fu"><a href="../reference/gtropic_cache_enable.html">gtropic_cache_disable</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/gtropic_cache_clear.html">gtropic_cache_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Pruning removes least-recently-fetched files first.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="the-download-guardrail">The download guardrail<a class="anchor" aria-label="anchor" href="#the-download-guardrail"></a>
 </h2>
-<p><code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> with no arguments means roughly 47 years
-of global daily rainfall. Before downloading, the package estimates the
-transfer – subtracting anything already cached – and compares it against
-a threshold, one gigabyte by default.</p>
-<p>Under the threshold, it proceeds. Over it, in an interactive session,
-it tells you the size and asks. Over it in a
+<p>Calling <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> with no arguments requests all
+available data for the full global record, 1980 - present. Before
+downloading, the package estimates the total size of the data to be
+downloaded, subtracting anything already cached, and compares it against
+a threshold (one gigabyte by default). You can pass in a smaller
+<code>tables</code> vector to reduce the size of the request, or narrow
+your <code>date_range</code>.</p>
+<p>If your request is under the threshold, the download proceeds. But if
+your query is estimated to go over the threshold, in an interactive
+session, <code>gtropic</code> will inform you of the estimated download
+size and confirm whether you’d like to continue with the download. In a
 <strong>non-interactive</strong> session, such as a scheduled job or a
-rendered report, it raises an error instead, naming the size and how to
-proceed. Waiting forever on a prompt nobody will answer is a worse
-outcome than failing immediately.</p>
-<p>To proceed anyway:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+rendered report, <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> will raise an error
+instead.</p>
+<p>To ignore the threshold and skip confirmations, use
+<code>confirm = FALSE</code> for your queries:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"India"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1990</span>, <span class="fl">2020</span><span class="op">)</span>, confirm <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p>Or raise the threshold for the session:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>gtropic.confirm_threshold_gb <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
-<p>Usually the better response is to narrow the query. Bear in mind that
-any query including rainfall or flooding also downloads the zero-pairs
-files, so a full-history rainfall query is legitimately large.</p>
+<p>Alternatively, you can raise the threshold for the current R
+session:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>gtropic.confirm_threshold_gb <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p>Usually the better response is to narrow the query (by requesting
+fewer years’ worth of data, or fewer <code>tables</code>).</p>
 </div>
 <div class="section level2">
 <h2 id="working-with-data-larger-than-memory">Working with data larger than memory<a class="anchor" aria-label="anchor" href="#working-with-data-larger-than-memory"></a>
@@ -353,7 +360,7 @@ in a compact in-memory representation until you ask for it.</p>
 efficiently and reading only the columns and rows you need. In practice
 you use the same <code>dplyr</code> verbs, and add
 <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect()</a></code> when you want ordinary data frames back:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
@@ -367,43 +374,51 @@ you use the same <code>dplyr</code> verbs, and add
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">ADM2_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>days <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>To be honest about the limits: genuine out-of-memory processing needs
-caching switched on, because that is what puts the files on disk where
-they can be streamed. Without caching, <code>as = "arrow"</code> mainly
-saves conversion time rather than memory.</p>
-</div>
-<div class="section level2">
-<h2 id="pointing-at-a-different-repository">Pointing at a different repository<a class="anchor" aria-label="anchor" href="#pointing-at-a-different-repository"></a>
-</h2>
-<p>The server and dataset identifiers are options, so moving to a
-different Dataverse installation requires no package update:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span></span>
-<span>  gtropic.server <span class="op">=</span> <span class="st">"dataverse.harvard.edu"</span>,</span>
-<span>  gtropic.doi_historical <span class="op">=</span> <span class="st">"doi:10.7910/DVN/EXAMPLE"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>See <code><a href="../reference/gtropic_options.html">?gtropic_options</a></code> for the full list.</p>
+<p>Genuine out-of-memory processing needs caching switched on, because
+that is what puts the files on disk where they can be streamed. Without
+caching, <code>as = "arrow"</code> mainly saves conversion time rather
+than memory.</p>
 </div>
 <div class="section level2">
 <h2 id="what-to-record-in-a-paper">What to record in a paper<a class="anchor" aria-label="anchor" href="#what-to-record-in-a-paper"></a>
 </h2>
-<p>At minimum: the package version, the dataset DOIs and their version
-numbers, and the window and radius settings if you changed them from the
-defaults. All of it is on the result:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">phl</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">mf</span><span class="op">$</span><span class="va">historical_doi</span></span>
-<span><span class="va">mf</span><span class="op">$</span><span class="va">historical_version</span></span>
-<span><span class="va">mf</span><span class="op">$</span><span class="va">current_doi</span></span>
-<span><span class="va">mf</span><span class="op">$</span><span class="va">current_version</span></span>
-<span><span class="va">mf</span><span class="op">$</span><span class="va">gtropic_version</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_filters</a></span><span class="op">(</span><span class="va">phl</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"precip_days_before"</span>, <span class="st">"precip_days_after"</span>,</span>
-<span>                       <span class="st">"precip_radius_km"</span>, <span class="st">"flood_match"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>Depositing the manifest itself alongside your analysis code is better
-still: it lets a reader reproduce your exact inputs rather than
-approximate them.</p>
+<p>We recommend recording the metadata contained in your manifest object
+when documenting the G-TROPIC data you use in your research. Better yet,
+publish your saved <code>manifest.rds</code> file along with your code
+and coding environment for complete reproducibility.</p>
+</div>
+<div class="section level2">
+<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h2>
+<ul>
+<li>A manifest records the exact Dataverse files, versions, checksums,
+and resolved query needed to replay a retrieval.</li>
+<li>The cache stores source files by checksum, reducing repeated
+downloads while preserving distinct dataset versions.</li>
+<li>Use <code>offline = TRUE</code> only after the needed discovery
+metadata and source files have been cached.</li>
+<li>For best reproducibility practices, publish the manifest needed for
+your analysis alongside your code &amp; coding environment.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/getting-started.html">vignette("getting-started")</a></code> introduces G-TROPIC data
+retrieval and query metadata.</li>
+<li>
+<code><a href="../articles/filtering.html">vignette("filtering")</a></code> illustrates how the
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> arguments combine to filter the retrieved
+data files.</li>
+<li>
+<code><a href="../articles/linkage.html">vignette("linkage")</a></code> covers connecting precipitation and
+flood observations to storms without double counting.</li>
+<li>
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> shows how to visualize retrieved
+exposure and track data.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

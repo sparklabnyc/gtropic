@@ -1,10 +1,10 @@
-# Plot locally available G-TROPIC data
+# Plot G-TROPIC data as static or interactive maps
 
-Creates exposure maps, exposure-count maps, and storm-track maps from
-tables already returned by
+Creates exposure maps, exposure-day or exposure-storm count maps, and
+storm-track maps from data retrieved by
 [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md).
-Plotting never retrieves data or recalculates published exposure values
-and storm distances.
+This function never retrieves data itself, nor does it recalculate
+published exposure values, storm distances, or metadata.
 
 ## Usage
 
@@ -18,6 +18,7 @@ gtropic_plot(
   aggregate = NULL,
   threshold = NULL,
   binary = FALSE,
+  wind_categories = NULL,
   count_unit = c("storms", "days"),
   facet_by = NULL,
   track = NULL,
@@ -47,68 +48,92 @@ gtropic_plot(
 
   A `gtropic_data` object returned by
   [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md),
-  or a uniquely named list of equivalent local tables. Data are never
-  downloaded and published exposure values, distances, and tracks are
-  not recalculated.
+  or a named list of equivalent tables.
 
 - type:
 
   The output type. One of `"exposure"` (the default), `"count"`, or
-  `"track"`. Exposure maps summarize the selected metric; count maps
-  count observations meeting its exposure threshold; track maps draw
-  storm positions.
+  `"track"`. Exposure maps summarize the specified `metric` argument;
+  count maps plot exposure-day or exposure-storm counts that meet
+  exposure-specific `threshold`s; and track maps draw storm track paths.
 
 - metric:
 
   A supported published metric name, or a character vector of metric
-  names for exposure or count maps. Its order determines panel, scale,
-  and caption order. `NULL` selects the first available default:
-  `"VMAX_SUST_MS"`, `"PRECIP_MM"`, or `"PROP_FLOODED_POP"` for
-  exposure/count maps and `"USA_WIND"` for track maps. Track maps
-  require exactly one of `"USA_WIND"` or `"USA_STATUS"`.
+  names to plot. The `metric`s are plotted in the order they are given.
+  For `type = "exposure"`, `NULL` selects every available core metric in
+  this order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and
+  `"PROP_FLOODED_AREA"`. For `type = "count"`, it selects the first
+  available count default; `type = "track"` selects `"USA_WIND"`. Track
+  maps require exactly one of `"USA_WIND"` or `"USA_STATUS"`. See
+  [`gtropic_exposures()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.md)
+  for all available `metric`s available for plotting.
 
 - storm:
 
-  Optional character vector of storm IDs or names used to subset all
-  applicable tables. Names require `storm_metadata` and are matched
-  case-insensitively. `NULL` (the default) retains all storms.
+  Optional character vector of `STORM_ID`s or `STORM_NAME`s used to
+  subset all applicable tables in `data`. Specifying `storm`s requires
+  that the `data` object passed in contains the `storm_metadata` table.
+  `STORM_NAME`s are matched case-insensitively. `storm = NULL` (the
+  default) retains all storms.
 
 - adm2:
 
-  Optional character vector of ADM2 IDs used to subset all applicable
-  tables. `NULL` (the default) retains all ADM2 units. For a track map,
-  this retains tracks linked to the selected ADM2 units when linkage
-  data are present.
+  Optional character vector of `ADM2_ID`s used to subset all applicable
+  tables in `data`. `adm2 = NULL` (the default) retains all ADM2 units.
+  For a track map, this retains tracks linked to the selected ADM2 units
+  when the `links` table is present in `data`.
 
 - aggregate:
 
   Summary method for exposure maps: one of `"max"`, `"min"`, `"sum"`,
-  `"mean"`, or `"n"`. `NULL` (the default) uses the metric-specific
-  published default. A single value is recycled over `metric`; multiple
-  values must either be in metric order or be named for every selected
-  metric. Count maps always use `"n"` and reject another value; this
-  argument does not affect track maps.
+  `"mean"`, or `"n"`. `aggregate = NULL` (the default) uses the
+  metric-specific published default (see the `aggregate` column of the
+  tables returned by
+  [`gtropic_exposures()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.md)
+  for these defaults). A single value is recycled over `metric`;
+  multiple values must either be in `metric` order or be named for every
+  selected `metric`. Count maps always use `"n"` and reject another
+  value; this argument is ignored when `type = "track"` is passed.
 
 - threshold:
 
   A named list of finite numeric thresholds, with names matching
-  selected metrics. `NULL` (the default) uses a built-in threshold where
-  one is defined. Thresholds determine which observations are counted
-  for `type = "count"` and which areas are classified for
-  `binary = TRUE`; an explicit threshold is required when no default
-  exists. It does not affect continuous exposure maps or track maps.
+  selected `metric`s. `threshold = NULL` (the default) uses a built-in
+  threshold where one is defined. Thresholds determine which
+  observations are counted for `type = "count"` and which areas are
+  classified for `binary = TRUE`; an explicit threshold is required when
+  no default exists. This argument is ignored when `binary = FALSE` and
+  `type = "exposure"` or `"track"`.
 
 - binary:
 
   Logical; if `TRUE`, show exposure/count maps as exposed or not exposed
   using `threshold`, rather than as a continuous value scale. Defaults
-  to `FALSE`. It is not available for track maps.
+  to `FALSE`. Ignored when `type = "track"`.
+
+- wind_categories:
+
+  Optional categorical exposure key or named list of keys. A key is a
+  data frame with `category`, numeric upper `threshold`, constant
+  `unit`, and `color` columns. It classifies aggregated ADM2 values,
+  retaining every key category in the static and interactive legends
+  even when unobserved. With multiple selected metrics, supply a
+  uniquely named list keyed by selected wind metric; a bare key is
+  allowed only for one selected metric. Keys must use the source
+  metric's unit; conventional spellings of meters per second, such as
+  `"m/s"` and `"meters per second"`, are treated as compatible. The
+  [`saffir_simpson()`](https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.md)
+  key is allowed only for `VMAX_SUST_MS` with `aggregate = "max"`, where
+  it means a local sustained-wind equivalent, not a storm status. Other
+  wind metrics or aggregates require an explicitly custom key. Applies
+  only to non-binary exposure maps and wind metrics.
 
 - count_unit:
 
-  The unit counted by a count map: distinct qualifying `"storms"` (the
-  default) or `"days"`. It applies only when `type = "count"` and is
-  otherwise ignored.
+  The unit counted when `type = "count"`: distinct qualifying `"storms"`
+  (the default) or `"days"`. It applies only when `type = "count"` and
+  is otherwise ignored.
 
 - facet_by:
 
@@ -126,12 +151,16 @@ gtropic_plot(
 
 - track_map_key:
 
-  A data frame defining wind categories for track points, with
-  `category`, increasing `threshold` ceilings ending in `Inf`, one
-  `unit`, and either `color` or `colour`. Defaults to
+  A data frame defining the discrete color scale used when plotting
+  track points. Defaults to the data frame returned by
   [`saffir_simpson()`](https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.md).
-  It controls `USA_WIND` track points and exposure/count track overlays,
-  but not a `USA_STATUS` track map.
+  The `track_map_key` must contain the following four columns:
+  `category`, `threshold`, `unit`, and `color`. The `unit` column must
+  contain a single, constant value, and can be one of: `"m/s"`,
+  `"knots"`, `"mph"`, `"km/h"`. This key controls `USA_WIND` track
+  points and exposure/count track overlays, but not a `USA_STATUS` track
+  map. Static wind legends display every category in the supplied key,
+  including categories absent from the plotted observations.
 
 - track_labels:
 
@@ -141,24 +170,25 @@ gtropic_plot(
 
 - track_interval:
 
-  Interval in UTC hours at which track intensity points are displayed: 3
-  or 6 (the default). Paths always retain every observation. `NULL`
-  displays every point. It affects track maps and enabled track
-  overlays.
+  Interval in UTC hours at which track intensity points are displayed.
+  Can be `3` or `6` (the default). Paths always retain every
+  observation. `NULL` displays every point. This argument affects
+  `type = "track"` maps and enabled track overlays.
 
 - track_legend_position:
 
   Position of per-panel metric scale strips on static exposure/count
   maps. `NULL` (the default) places horizontal strips below the panels.
-  `"top"`, `"bottom"`, `"left"`, `"right"`, `"top left"`, `"top right"`,
-  `"bottom left"`, and `"bottom right"` place them in each panel. It is
-  ignored for track and interactive maps.
+  Can be one of `"top"`, `"bottom"`, `"left"`, `"right"`, `"top left"`,
+  `"top right"`, `"bottom left"`, or `"bottom right"`. This argument is
+  ignored when `type = "track"` or `interactive = TRUE`.
 
 - basemap:
 
-  Installed Natural Earth layer: `"countries"` (the default),
-  `"admin1"`, or `"none"`. No layer is downloaded. `"admin1"` requires
-  the optional `rnaturalearthhires` package.
+  The Installed Natural Earth layer to use for plotting. Must be one of
+  `"countries"` (the default), `"admin1"`, or `"none"`. No layers are
+  ever downloaded. `basemap = "admin1"` requires the optional
+  `rnaturalearthhires` package.
 
 - bbox:
 
@@ -232,13 +262,19 @@ A ggplot for static output or a leaflet widget for interactive output.
 ## Details
 
 Maps use the actual date range of contributing observations after storm,
-ADM2, and linkage filters. Metric panels use readable metric names.
-Automatic captions report the applicable radii, windows, aggregations,
-track interval, and plotting CRS in metric order.
+ADM2, and linkage filters. Automatic subtitles begin with
+`"Aggregated across"` and show the displayed date range. Single-metric
+titles use readable aggregate labels; multi-metric titles describe the
+panel set. A single plotted storm prefixes the title, while multiple
+storms do not alter it. Metric strips use readable aggregate and
+active-threshold labels. Automatic captions use newline-separated
+source, retrieval, dataset-provenance, hazard-parameter, track-interval,
+and plotting-CRS lines. Hazard radii and windows are derived from rows
+that contributed to the plot.
 
 Track paths are drawn from every supplied observation. By default,
 constant- size points use
 [`saffir_simpson()`](https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.md)
 categories derived from `USA_WIND`, which is published in knots and
 converted to the map key's unit before classification. An explicit
-`metric = "USA_STATUS"` retains the status-colour display.
+`metric = "USA_STATUS"` retains the status-color display.

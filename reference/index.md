@@ -10,9 +10,12 @@ accessing query metadata.
 - [`gtropic_manifest()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md)
   [`gtropic_filters()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md)
   [`gtropic_warnings()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md)
+  [`gtropic_availability()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.md)
   : Extract metadata from a G-TROPIC result
 - [`print(`*`<gtropic_data>`*`)`](https://sparklabnyc.github.io/gtropic/reference/print.gtropic_data.md)
   : Print a G-TROPIC data result
+- [`print(`*`<gtropic_filters>`*`)`](https://sparklabnyc.github.io/gtropic/reference/print.gtropic_filters.md)
+  : Print resolved G-TROPIC filters
 - [`summary(`*`<gtropic_data>`*`)`](https://sparklabnyc.github.io/gtropic/reference/summary.gtropic_data.md)
   : Summarize a G-TROPIC data result
 - [`print(`*`<gtropic_manifest>`*`)`](https://sparklabnyc.github.io/gtropic/reference/print.gtropic_manifest.md)
@@ -27,6 +30,8 @@ and column definitions.
   : List available second-level administrative units
 - [`gtropic_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.md)
   : List available tropical cyclones
+- [`gtropic_excluded_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.md)
+  : List excluded tropical cyclones
 - [`gtropic_years()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_years.md)
   : Report the temporal coverage of G-TROPIC
 - [`gtropic_codebook()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_codebook.md)
@@ -40,7 +45,7 @@ Optional, opt-in storage of downloaded files between R sessions.
   : Locate the G-TROPIC cache
 - [`gtropic_cache_enable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md)
   [`gtropic_cache_disable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md)
-  : Enable or disable persistent caching
+  : Enable or disable caching
 - [`gtropic_cache_list()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_list.md)
   [`gtropic_cache_size()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_list.md)
   : Inspect cached G-TROPIC files
@@ -55,7 +60,7 @@ Publication-ready static and interactive visualizations of locally
 available G-TROPIC tables.
 
 - [`gtropic_plot()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_plot.md)
-  : Plot locally available G-TROPIC data
+  : Plot G-TROPIC data as static or interactive maps
 - [`plot(`*`<gtropic_data>`*`)`](https://sparklabnyc.github.io/gtropic/reference/plot.gtropic_data.md)
   : Plot a G-TROPIC retrieval result
 - [`saffir_simpson()`](https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.md)

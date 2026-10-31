@@ -1,8 +1,8 @@
 # List G-TROPIC exposure metrics
 
-Summarises the published wind, precipitation, and flooding exposure
+Summarizes the published wind, precipitation, and flooding exposure
 metrics available in G-TROPIC. The returned aggregation is the default
-used when a metric is summarised across its published records; it does
+used when a metric is summarized across its published records; it does
 not recompute a published exposure value.
 
 ## Usage

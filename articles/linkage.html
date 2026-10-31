@@ -89,71 +89,131 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt;     filter, lag</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
-<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
-<p>Wind exposure is straightforward: the dataset records, for each
-administrative unit and storm, what winds were experienced. Rainfall and
-flooding are harder, because rain falls on dates and floods span
-intervals, and deciding which of them “belong” to a storm is a modelling
-choice rather than a fact.</p>
-<p>This vignette explains the choice <code>gtropic</code> makes, how to
-change it, and how to join the results without double-counting.</p>
-<div class="section level2">
-<h2 id="the-pairing-model">The pairing model<a class="anchor" aria-label="anchor" href="#the-pairing-model"></a>
-</h2>
-<p>Rainfall and flood rows are selected per administrative unit-storm
-pair. A pair qualifies on two criteria, both of which must hold.</p>
-<p><strong>A temporal window.</strong> Centred on
-<code>LOCAL_DATE_STORM_CLOSEST</code>, the local calendar date on which
-the storm passed closest to that unit:</p>
-<pre><code>[ closest - days_before , closest + days_after ]</code></pre>
-<p>The defaults are two days before and one day after. The window is
-computed independently for rainfall and flooding, so you can widen one
-without touching the other.</p>
-<p><strong>A spatial field.</strong> Every unit-storm pair the dataset
-evaluated with <code>STORM_DIST_KM</code> at or below the radius, 500 km
-by default. Crucially this includes pairs with <em>no measurable
-wind</em>: a unit two hundred kilometres inland that received torrential
-rain but never felt the storm’s wind field is part of the rainfall
-field, and excluding it would drop exactly the compound-hazard cases the
-dataset exists to support.</p>
-<p>Your geographic filter is an <strong>outer bound</strong> on all of
-this. The radius narrows within it; it never widens beyond it. Asking
-for Florida will not return Georgia because a storm’s 500 km field
-happened to reach there.</p>
-</div>
-<div class="section level2">
-<h2 id="a-note-on-downloads">A note on downloads<a class="anchor" aria-label="anchor" href="#a-note-on-downloads"></a>
-</h2>
-<p>Because far-field distances are recorded only in the zero-pairs
-table, asking for <code>precip</code> or <code>flood</code> causes those
-files to be downloaded internally, whether or not you asked for the
-<code>zero_pairs</code> table. Including <code>"zero_pairs"</code> in
-<code>tables</code> controls only whether it is <em>returned to
-you</em>, never whether it is fetched. It adds roughly 30 MB per year to
-a query, which is worth knowing when you plan a long time span.</p>
-</div>
-<div class="section level2">
-<h2 id="reading-the-links-table">Reading the links table<a class="anchor" aria-label="anchor" href="#reading-the-links-table"></a>
-</h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">jam</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Jamaica"</span>, date_range <span class="op">=</span> <span class="fl">2005</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2.parquet'.</span></span>
-<span><span class="co">#&gt; Error in `assemble_gtropic_data()` at gtropic/R/gtropic_data.R:307:3:</span></span>
-<span><span class="co">#&gt; ! `date_range` must have exactly 2 elements.</span></span>
-<span><span class="co">#&gt; ✖ Got 1.</span></span>
-<span><span class="co">#&gt; ℹ For example `date_range = c("2005-08-01", "2005-09-30")` or `date_range = c(2005, 2010)`.</span></span>
+<p>This vignette covers how to link precipitation and flood exposure
+data to specific <code>STORM_ID</code>s, and how to avoid
+double-counting exposure data in your analyses.</p>
+<p>We’ll start by noting that the wind exposures come already linked to
+<code>STORM_ID</code>s, the <code>$wind</code> table contains rows for
+every <code>ADM2_ID</code>-<code>STORM_ID</code> pairing:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">jam_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Jamaica"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Retrieving 6 files (132.2 MB) ; 4 already cached.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/exposures/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '04_precip/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '03_flood/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '01_pop/2005.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/storm_tracks/2005.parquet'.</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">jam</span><span class="op">$</span><span class="va">links</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Error:</span></span>
-<span><span class="co">#&gt; ! object 'jam' not found</span></span></code></pre></div>
-<p>Each row is one unit-storm pair:</p>
+<span><span class="va">jam_05</span><span class="op">$</span><span class="va">wind</span></span>
+<span><span class="co">#&gt; # A tibble: 3,719 × 12</span></span>
+<span><span class="co">#&gt;    ADM2_ID  STORM_ID LOCAL_DATETIME_STORM…¹ LOCAL_DATETIME_MAX_W…² STORM_DIST_KM</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;                  &lt;chr&gt;                          &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 3516216… 2005186… 2005-07-07T17:45:00-0… 2005-07-07T18:30:00-0…         146.</span></span>
+<span><span class="co">#&gt;  2 3516216… 2005192… 2005-07-16T16:00:00-0… 2005-07-16T16:45:00-0…         191.</span></span>
+<span><span class="co">#&gt;  3 3516216… 2005289… 2005-10-15T13:00:00-0… 2005-10-15T13:00:00-0…          94.7</span></span>
+<span><span class="co">#&gt;  4 3516216… 2005318… 2005-11-16T20:45:00-0… 2005-11-16T21:30:00-0…         356.</span></span>
+<span><span class="co">#&gt;  5 3516216… 2005186… 2005-07-07T17:45:00-0… 2005-07-07T18:15:00-0…         130.</span></span>
+<span><span class="co">#&gt;  6 3516216… 2005192… 2005-07-16T15:45:00-0… 2005-07-16T16:15:00-0…         205.</span></span>
+<span><span class="co">#&gt;  7 3516216… 2005289… 2005-10-15T13:00:00-0… 2005-10-15T13:00:00-0…         111.</span></span>
+<span><span class="co">#&gt;  8 3516216… 2005318… 2005-11-16T20:15:00-0… 2005-11-16T21:15:00-0…         367.</span></span>
+<span><span class="co">#&gt;  9 3516216… 2005186… 2005-07-07T17:00:00-0… 2005-07-07T17:45:00-0…         127.</span></span>
+<span><span class="co">#&gt; 10 3516216… 2005192… 2005-07-16T14:15:00-0… 2005-07-16T14:45:00-0…         198.</span></span>
+<span><span class="co">#&gt; # ℹ 3,709 more rows</span></span>
+<span><span class="co">#&gt; # ℹ abbreviated names: ¹​LOCAL_DATETIME_STORM_CLOSEST, ²​LOCAL_DATETIME_MAX_WIND</span></span>
+<span><span class="co">#&gt; # ℹ 7 more variables: VMAX_SUST_MS &lt;dbl&gt;, SUST_DUR_MINUTES &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   VMAX_GUST_MS &lt;dbl&gt;, GUST_DUR_MINUTES &lt;dbl&gt;, WIND_RADII_VMAX_SUST_MS &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   WIND_RADII_SUST_DUR_MINUTES &lt;dbl&gt;, LOCAL_DATE_STORM_CLOSEST &lt;chr&gt;</span></span></code></pre></div>
+<p>Linking precipitation and flooding data to specific storms is a task
+left up to you, the user, since different use cases may require
+different spatial and temporal fields, and these fields may even be
+hazard-specific. Deciding which precipitation/flooding data “belong” to
+a given storm is therefore a modeling choice you need to make.</p>
+<div class="section level2">
+<h2 id="hazard-specific-spatial-fields-and-temporal-windows">Hazard-specific spatial fields and temporal windows<a class="anchor" aria-label="anchor" href="#hazard-specific-spatial-fields-and-temporal-windows"></a>
+</h2>
+<p>When calling <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> to retrieve exposure data,
+you need to be aware of the following hazard-specific arguments that
+determine the wind/precip/flood spatial fields and temporal windows:</p>
+<div class="section level3">
+<h3 id="the-wind-precip-and-flood-radius-filters">The wind, precip, and flood radius filters<a class="anchor" aria-label="anchor" href="#the-wind-precip-and-flood-radius-filters"></a>
+</h3>
+<p>The <code>[wind/precip/flood]_radius_km</code> arguments (all
+<code>500</code> by default) specify the maximum distance (in km) an
+ADM2 must be from the closest approach made by a storm track for that
+ADM2’s corresponding wind/precip/flood data to be returned. These
+filters are applied directly to the <code>STORM_DIST_KM</code> data
+column in the <code>$links</code> table. Set these
+<code>[wind/precip/flood]_radius_km</code> arguments to <code>Inf</code>
+or <code>NULL</code> to retrieve wind/precip/flood data for all ADM2s
+regardless of their distance to the selected storm tracks.</p>
+<p>These filters also restric the set of storms returned in your query.
+For example, using the defaults mean that storms failing to come within
+500km of any ADM2 in your search will be excluded from your resulting
+<code>gtropic_data</code> object.</p>
+<p><strong>Note that these defaults of <code>500</code>km are not
+prescriptive, and we do not claim to define an “exposure” with these
+default values. We leave this configurable per data retrieval query so
+that you the user can define your specific wind/precipitation/flood
+fields of interest. Smaller values for these arguments will also result
+in smaller data tables being returned, which can help save on memory
+consumption.</strong></p>
+</div>
+<div class="section level3">
+<h3 id="the-precip-and-flood-temporal-window-filters">The precip and flood temporal window filters<a class="anchor" aria-label="anchor" href="#the-precip-and-flood-temporal-window-filters"></a>
+</h3>
+<p>Both the precipitation and flooding data use a <strong>temporal
+window</strong> centered on the <code>LOCAL_DATE_STORM_CLOSEST</code>
+value for an <code>ADM2_ID</code>-<code>STORM_ID</code> pair, which
+captures the local datetime when that <code>STORM_ID</code>’s storm
+track came nearest to that <code>ADM2_ID</code>’s population-weighted
+centroid:</p>
+<pre><code>[ LOCAL_DATE_STORM_CLOSEST - days_before , LOCAL_DATE_STORM_CLOSEST + days_after ]</code></pre>
+<p>The <code>[precip/flood]_days_[before/after]</code> arguments in
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> are used to define this temporal window. By
+default, <code>[precip/flood]_days_before = 2</code>, and
+<code>[precip/flood]_days_after = 1</code>, meaning precipitation/flood
+data is obtained for an <code>ADM2_ID</code> for all days inside the
+window given by the 2 days before and 1 day after a
+<code>STORM_ID</code>’s <code>LOCAL_DATETIME_STORM_CLOSEST</code> date.
+These windows are computed independently for rainfall and flooding, so
+you can widen or narrow one without adjusting the other.</p>
+</div>
+<div class="section level3">
+<h3 id="the-returned-links-table">The returned <code>$links</code> table<a class="anchor" aria-label="anchor" href="#the-returned-links-table"></a>
+</h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">jam_05</span><span class="op">$</span><span class="va">links</span></span>
+<span><span class="co">#&gt; # A tibble: 3,719 × 12</span></span>
+<span><span class="co">#&gt;    STORM_ID      ADM2_ID      LOCAL_DATE_STORM_CLO…¹ STORM_DIST_KM WIND_EXPOSURE</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;        &lt;date&gt;                         &lt;dbl&gt; &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt;  1 2005186N12299 35162164B10… 2005-07-07                     146.  TRUE</span></span>
+<span><span class="co">#&gt;  2 2005192N11318 35162164B10… 2005-07-16                     191.  TRUE</span></span>
+<span><span class="co">#&gt;  3 2005289N18282 35162164B10… 2005-10-15                      94.7 TRUE</span></span>
+<span><span class="co">#&gt;  4 2005318N13298 35162164B10… 2005-11-16                     356.  TRUE</span></span>
+<span><span class="co">#&gt;  5 2005186N12299 35162164B10… 2005-07-07                     130.  TRUE</span></span>
+<span><span class="co">#&gt;  6 2005192N11318 35162164B10… 2005-07-16                     205.  TRUE</span></span>
+<span><span class="co">#&gt;  7 2005289N18282 35162164B10… 2005-10-15                     111.  TRUE</span></span>
+<span><span class="co">#&gt;  8 2005318N13298 35162164B10… 2005-11-16                     367.  TRUE</span></span>
+<span><span class="co">#&gt;  9 2005186N12299 35162164B10… 2005-07-07                     127.  TRUE</span></span>
+<span><span class="co">#&gt; 10 2005192N11318 35162164B10… 2005-07-16                     198.  TRUE</span></span>
+<span><span class="co">#&gt; # ℹ 3,709 more rows</span></span>
+<span><span class="co">#&gt; # ℹ abbreviated name: ¹​LOCAL_DATE_STORM_CLOSEST</span></span>
+<span><span class="co">#&gt; # ℹ 7 more variables: WIND_IN_FIELD &lt;lgl&gt;, PRECIP_IN_FIELD &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   PRECIP_WINDOW_START &lt;date&gt;, PRECIP_WINDOW_END &lt;date&gt;, FLOOD_IN_FIELD &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   FLOOD_WINDOW_START &lt;date&gt;, FLOOD_WINDOW_END &lt;date&gt;</span></span></code></pre></div>
+<p>Each row in the <code>$links</code> table is one unit-storm pair
+retained by the union of the requested hazard spatial fields:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -176,7 +236,7 @@ a query, which is worth knowing when you plan a long time span.</p>
 </tr>
 <tr class="odd">
 <td><code>STORM_DIST_KM</code></td>
-<td>how close the track came</td>
+<td>how close the storm track came to the ADM2</td>
 </tr>
 <tr class="even">
 <td><code>WIND_EXPOSURE</code></td>
@@ -185,21 +245,25 @@ a query, which is worth knowing when you plan a long time span.</p>
 zero</td>
 </tr>
 <tr class="odd">
+<td><code>WIND_IN_FIELD</code></td>
+<td>was this pair inside the requested wind radius?</td>
+</tr>
+<tr class="even">
 <td><code>PRECIP_IN_FIELD</code></td>
 <td>was this pair inside the rainfall radius?</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>PRECIP_WINDOW_START</code>,
 <code>PRECIP_WINDOW_END</code>
 </td>
 <td>the computed rainfall window</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>FLOOD_IN_FIELD</code></td>
 <td>was this pair inside the flood radius?</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>
 <code>FLOOD_WINDOW_START</code>, <code>FLOOD_WINDOW_END</code>
 </td>
@@ -207,142 +271,182 @@ zero</td>
 </tr>
 </tbody>
 </table>
-<p>The <code>*_IN_FIELD</code> flags answer a question that would
-otherwise be unanswerable: when a pair has no rainfall rows, was it too
-far from the track to be considered, or was it considered and genuinely
-had no data? Those mean very different things in an analysis.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">jam</span><span class="op">$</span><span class="va">links</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">WIND_EXPOSURE</span>, <span class="va">PRECIP_IN_FIELD</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Error:</span></span>
-<span><span class="co">#&gt; ! object 'jam' not found</span></span></code></pre></div>
+<p>A larger <code>precip_radius_km</code> or
+<code>flood_radius_km</code> can therefore retain an
+<code>ADM2_ID</code>-<code>STORM_ID</code> pair that falls outside of
+the specified <code>wind_radius_km</code>. The
+<code>WIND_IN_FIELD</code>, <code>PRECIP_IN_FIELD</code>, and
+<code>FLOOD_IN_FIELD</code> columns of the <code>$links</code> table
+state which exposures contain each retained pair.</p>
+<p>Note that any geographic filters you supply to
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> (such as
+<code>WHO_ENTITY = "United States"</code>) act as outer bounds. The
+supplied radii arguments <code>wind/precip/flood_radius_km</code>
+narrows the selected <code>ADM2_ID</code>s within the context of the
+geographic filters, but they never widen beyond it. In this way, asking
+for only ADM2s within the “United States”, but with a large
+<code>wind_radius_km</code>, will not return <code>ADM2_ID</code>s
+within to “Mexico” even if the a storm’s wind field happens to reach
+Mexico from the U.S.</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="do-not-double-count">Do not double-count<a class="anchor" aria-label="anchor" href="#do-not-double-count"></a>
+<h2 id="how-to-avoid-double-counting-exposure-data">How to avoid double-counting exposure data<a class="anchor" aria-label="anchor" href="#how-to-avoid-double-counting-exposure-data"></a>
 </h2>
-<p><strong>Rainfall and flood rows are not duplicated per
-storm.</strong> This is the single most important thing in this
-vignette.</p>
-<p>One unit’s rainy day can fall inside two storms’ windows – a common
-occurrence in an active season, when systems follow one another within
-days. If the package returned that day once per storm, then this:</p>
+<p>Depending on how you define your precipitation data’s temporal
+window, one ADM2’s rainy day can fall inside two distinct storms’
+temporal windows (E.g. two storms hit the same region within days of one
+another). If the package returned that day once per storm, then
+calculating something like:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">precip</span><span class="op">$</span><span class="va">PRECIP_MM</span><span class="op">)</span>   <span class="co"># WRONG if rows were duplicated</span></span></code></pre></div>
-<p>would silently overstate total rainfall, and nothing about the result
-would look wrong. So <code>precip</code> and <code>flood</code> come
-back as tidy tables at their natural grain – one row per unit per date,
-one row per flood event – and you join through <code>links</code>
-deliberately.</p>
+<p>would silently overstate total rainfall. So <code>precip</code> and
+<code>flood</code> come back as tidy tables at their natural grain – one
+row per unit per date, one row per flood event – and you join through
+<code>links</code> deliberately.</p>
 <div class="section level3">
 <h3 id="joining-rainfall-to-storms">Joining rainfall to storms<a class="anchor" aria-label="anchor" href="#joining-rainfall-to-storms"></a>
 </h3>
-<p>Use a non-equi join, matching on unit and on the date falling inside
-the window:</p>
+<p>Let’s take a look at all storms whose genesis date fell in 2019 that
+came within 500km of any ADM2 within India. We’ll examine precipitation
+data 1 week either side of the storm’s
+<code>LOCAL_DATE_STORM_CLOSEST</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">storm_rain</span> <span class="op">&lt;-</span> <span class="va">jam</span><span class="op">$</span><span class="va">precip</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">india_19</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"India"</span>,</span>
+<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2019</span><span class="op">)</span>,</span>
+<span>  precip_days_before <span class="op">=</span> <span class="fl">7</span>,</span>
+<span>  precip_days_after <span class="op">=</span> <span class="fl">7</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Retrieving 6 files (143.5 MB) ; 4 already cached.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/exposures/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '04_precip/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '03_flood/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '01_pop/2019.parquet'.</span></span>
+<span><span class="co">#&gt; Downloading '02_wind/storm_tracks/2019.parquet'.</span></span></code></pre></div>
+<p>Let’s say we want to calculate <strong>total rainfall per
+ADM2</strong> within the temporal window defined during our
+<code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> call. Then we simply aggregate the returned
+<code>$precip</code> table:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">india_19</span><span class="op">$</span><span class="va">precip</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">ADM2_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>total_mm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">PRECIP_MM</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 397 × 2</span></span>
+<span><span class="co">#&gt;    ADM2_ID                 total_mm</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;                      &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 76128533B10270619600482  426.</span></span>
+<span><span class="co">#&gt;  2 76128533B11082155919544   64.6</span></span>
+<span><span class="co">#&gt;  3 76128533B11421856387892  114.</span></span>
+<span><span class="co">#&gt;  4 76128533B12079567451207   72.4</span></span>
+<span><span class="co">#&gt;  5 76128533B12144400448811    0.985</span></span>
+<span><span class="co">#&gt;  6 76128533B1222571856670    10.7</span></span>
+<span><span class="co">#&gt;  7 76128533B12294379827032    0.855</span></span>
+<span><span class="co">#&gt;  8 76128533B12380735325851   27.1</span></span>
+<span><span class="co">#&gt;  9 76128533B12519626815499  211.</span></span>
+<span><span class="co">#&gt; 10 76128533B12694285477701   12.6</span></span>
+<span><span class="co">#&gt; # ℹ 387 more rows</span></span></code></pre></div>
+<p>But let’s say instead we want to calculate the <strong>rainfall per
+storm</strong> within the spatial &amp; temporal window we defined. Use
+a non-equi join, matching on unit and on the date falling inside the
+window:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">storm_rain</span> <span class="op">&lt;-</span> <span class="va">india_19</span><span class="op">$</span><span class="va">precip</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">inner_join</a></span><span class="op">(</span></span>
-<span>    <span class="va">jam</span><span class="op">$</span><span class="va">links</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">PRECIP_IN_FIELD</span><span class="op">)</span>,</span>
+<span>    <span class="va">india_19</span><span class="op">$</span><span class="va">links</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">PRECIP_IN_FIELD</span><span class="op">)</span>,</span>
 <span>    by <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/join_by.html" class="external-link">join_by</a></span><span class="op">(</span></span>
 <span>      <span class="va">ADM2_ID</span>,</span>
 <span>      <span class="fu"><a href="https://dplyr.tidyverse.org/reference/between.html" class="external-link">between</a></span><span class="op">(</span><span class="va">LOCAL_DATE</span>, <span class="va">PRECIP_WINDOW_START</span>, <span class="va">PRECIP_WINDOW_END</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p>This expands the data: a day inside two windows now appears twice,
-once per storm. That is correct and intended – you asked for
-storm-attributed rainfall, and that day is attributable to both. What
-matters is that you know it happened, so you can decide what to do about
-it.</p>
-<p><strong>If you want total rainfall per unit</strong>, do not sum the
-joined table. Aggregate the un-joined one:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">total_rain</span> <span class="op">&lt;-</span> <span class="va">jam</span><span class="op">$</span><span class="va">precip</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">ADM2_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>total_mm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">PRECIP_MM</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><strong>If you want rainfall per storm</strong>, sum the joined
-table, accepting that a shared day contributes to both storms:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rain_by_storm</span> <span class="op">&lt;-</span> <span class="va">storm_rain</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">STORM_ID</span>, <span class="va">ADM2_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>storm_mm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">PRECIP_MM</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span></code></pre></div>
-<p><strong>If you want each day attributed to exactly one
-storm</strong>, choose a rule and apply it explicitly. Nearest approach
-is a defensible one:</p>
+<p>This expands the data: a day inside two windows would now appears
+twice, once per storm, as intended. We can use the
+<code>storm_rain</code> table to first check whether overlap affects our
+data at all:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">one_storm_per_day</span> <span class="op">&lt;-</span> <span class="va">storm_rain</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">ADM2_ID</span>, <span class="va">LOCAL_DATE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice_min</a></span><span class="op">(</span><span class="va">STORM_DIST_KM</span>, n <span class="op">=</span> <span class="fl">1</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">ungroup</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Checking whether overlap affects your data at all is worth a
-moment:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">storm_rain</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">ADM2_ID</span>, <span class="va">LOCAL_DATE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">n</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="adjusting-the-windows">Adjusting the windows<a class="anchor" aria-label="anchor" href="#adjusting-the-windows"></a>
-</h2>
-<p>All six window parameters are independent:</p>
+<p>Then, sum the joined table, knowing that a shared day contributes to
+both storms:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">storm_rain</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">STORM_ID</span>, <span class="va">ADM2_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>storm_adm2_mm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">PRECIP_MM</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 764 × 3</span></span>
+<span><span class="co">#&gt;    STORM_ID      ADM2_ID                 storm_adm2_mm</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;                           &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 2019116N02090 76128533B10270619600482       426.</span></span>
+<span><span class="co">#&gt;  2 2019116N02090 76128533B11421856387892        78.2</span></span>
+<span><span class="co">#&gt;  3 2019116N02090 76128533B12144400448811         0.985</span></span>
+<span><span class="co">#&gt;  4 2019116N02090 76128533B1222571856670          9.38</span></span>
+<span><span class="co">#&gt;  5 2019116N02090 76128533B12294379827032         0.855</span></span>
+<span><span class="co">#&gt;  6 2019116N02090 76128533B12694285477701        12.6</span></span>
+<span><span class="co">#&gt;  7 2019116N02090 76128533B13437137070957       181.</span></span>
+<span><span class="co">#&gt;  8 2019116N02090 76128533B13733639953372        82.7</span></span>
+<span><span class="co">#&gt;  9 2019116N02090 76128533B14292125820380         1.28</span></span>
+<span><span class="co">#&gt; 10 2019116N02090 76128533B14403163214152        42.0</span></span>
+<span><span class="co">#&gt; # ℹ 754 more rows</span></span></code></pre></div>
+<p>Or alternatively:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
-<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"Philippines"</span>,</span>
-<span>  date_range <span class="op">=</span> <span class="fl">2013</span>,</span>
-<span>  precip_days_before <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  precip_days_after <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  precip_radius_km <span class="op">=</span> <span class="fl">300</span>,</span>
-<span>  flood_days_before <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  flood_days_after <span class="op">=</span> <span class="fl">14</span>,</span>
-<span>  flood_radius_km <span class="op">=</span> <span class="fl">500</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The asymmetry above is a realistic choice: rainfall arrives with the
-storm and stops soon after, while flooding may not begin until days
-later and can persist for weeks. A narrower rainfall radius attributes
-rain more conservatively.</p>
-<p>There is no universally correct setting. Whatever you choose is
-recorded on the result, so it can be reported:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_manifest.html">gtropic_filters</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"precip_days_before"</span>, <span class="st">"precip_days_after"</span>,</span>
-<span>                       <span class="st">"precip_radius_km"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">storm_rain</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">STORM_ID</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span>storm_mm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">PRECIP_MM</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 7 × 2</span></span>
+<span><span class="co">#&gt;   STORM_ID      storm_mm</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;            &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1 2019116N02090   20502.</span></span>
+<span><span class="co">#&gt; 2 2019160N11073    8488.</span></span>
+<span><span class="co">#&gt; 3 2019264N19071    8241.</span></span>
+<span><span class="co">#&gt; 4 2019296N15066    6102.</span></span>
+<span><span class="co">#&gt; 5 2019301N05081   10394.</span></span>
+<span><span class="co">#&gt; 6 2019302N11118    4779.</span></span>
+<span><span class="co">#&gt; 7 2019337N11072     953.</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="flood-matching">Flood matching<a class="anchor" aria-label="anchor" href="#flood-matching"></a>
 </h2>
-<p>Floods span intervals, so “inside the window” needs defining. Two
-rules are available through <code>flood_match</code>.</p>
-<p><strong><code>"start"</code></strong> (the default) matches floods
-whose <code>FLOOD_START_DATE</code> falls inside the window – floods the
-storm plausibly caused.</p>
-<p><strong><code>"overlap"</code></strong> also matches floods already
-under way when the storm arrived: a flood beginning on or before the
-window’s end and finishing on or after its start.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">caused</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Philippines"</span>, date_range <span class="op">=</span> <span class="fl">2013</span>,</span>
-<span>                       flood_match <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">any_overlap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Philippines"</span>, date_range <span class="op">=</span> <span class="fl">2013</span>,</span>
-<span>                            flood_match <span class="op">=</span> <span class="st">"overlap"</span><span class="op">)</span></span></code></pre></div>
-<p>Which you want depends on the question. For attributing flooding to a
-storm, <code>"start"</code> is the conservative choice. For studying
-compound events – a storm striking an already-flooded region, where the
-consequences are worse than either hazard alone – <code>"overlap"</code>
-is the one that will find them.</p>
-<p>A consequence worth knowing: <code>"overlap"</code> reaches back one
-calendar year further when fetching data, because a flood in progress
-may have begun in the previous December. That happens automatically.</p>
-</div>
-<div class="section level2">
-<h2 id="distances-come-from-the-dataset">Distances come from the dataset<a class="anchor" aria-label="anchor" href="#distances-come-from-the-dataset"></a>
-</h2>
-<p><code>STORM_DIST_KM</code> is authoritative and should never be
-recomputed from the <code>tracks</code> table. The published distance
-derives from a track interpolated to fifteen-minute steps, while
-<code>tracks</code> ships the raw best-track observations at roughly
-three-hourly intervals. Recomputing from those would give systematically
-different numbers, and your results would then disagree with the
-published dataset for no good reason.</p>
-<p>The <code>tracks</code> table is there for mapping and for describing
-a storm’s path, not for redoing the exposure calculation.</p>
+<p>The flood event data shipped in G-TROPIC span intervals defined by
+the <code>FLOOD_START_DATE</code> and <code>FLOOD_END_DATE</code>
+columns:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">india_19</span><span class="op">$</span><span class="va">flood</span></span>
+<span><span class="co">#&gt; # A tibble: 340 × 7</span></span>
+<span><span class="co">#&gt;    ADM2_ID            FLOOD_ID FLOOD_START_DATE FLOOD_END_DATE PROP_FLOODED_AREA</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;              &lt;chr&gt;    &lt;chr&gt;            &lt;chr&gt;                      &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 76128533B72541188… 5393f9b… 2019-05-01       2019-05-01             0.00197</span></span>
+<span><span class="co">#&gt;  2 76128533B79750857… f76129e… 2019-05-03       2019-05-04             0.00329</span></span>
+<span><span class="co">#&gt;  3 76128533B52802748… ec9ea5e… 2019-05-03       2019-05-04             0.0899</span></span>
+<span><span class="co">#&gt;  4 76128533B70842759… ec9ea5e… 2019-05-03       2019-05-04             0.0000322</span></span>
+<span><span class="co">#&gt;  5 76128533B98951704… e938903… 2019-05-03       2019-05-03             0.0283</span></span>
+<span><span class="co">#&gt;  6 76128533B28605354… 8d35cc4… 2019-05-03       2019-05-04             0.0116</span></span>
+<span><span class="co">#&gt;  7 76128533B22077262… 8d35cc4… 2019-05-03       2019-05-04             0.00355</span></span>
+<span><span class="co">#&gt;  8 76128533B72507508… 8d35cc4… 2019-05-03       2019-05-04             0.944</span></span>
+<span><span class="co">#&gt;  9 76128533B93453964… 8d35cc4… 2019-05-03       2019-05-04             0.00338</span></span>
+<span><span class="co">#&gt; 10 76128533B77719785… 7f9bde2… 2019-05-03       2019-05-03             0.00233</span></span>
+<span><span class="co">#&gt; # ℹ 330 more rows</span></span>
+<span><span class="co">#&gt; # ℹ 2 more variables: PROP_FLOODED_POP &lt;dbl&gt;, FLOODED_POP_CENTROID &lt;lgl&gt;</span></span></code></pre></div>
+<p>This gives rise to two possible ways of matching flood events to
+storm data via <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code>’s <code>flood_match</code>
+argument:</p>
+<p><strong><code>flood_match = "start"</code></strong> (the default)
+matches floods whose <code>FLOOD_START_DATE</code> falls inside the
+temporal window defined by <code>flood_days_before</code> and
+<code>flood_days_after</code> arguments (again with the temporal window
+anchored by the <code>LOCAL_DATE_STORM_CLOSEST</code>). Using this
+option retrieves those flood events the storm may have initiated.</p>
+<p><strong><code>flood_match = "overlap"</code></strong> includes any
+flood interval that overlaps the window, including events already in
+progress at the beginning of the window.</p>
+<p>Which option is more appropriate for your analysis depends on your
+research question. For attributing flooding to a storm,
+<code>"start"</code> is the conservative choice. For studying compound
+events, e.g. a storm striking an already-flooded region,
+<code>"overlap"</code> may be the better choice.</p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
@@ -352,12 +456,30 @@ a storm’s path, not for redoing the exposure calculation.</p>
 temporal window and a distance radius.</li>
 <li>Your geographic filter bounds everything; the radius only narrows
 within it.</li>
-<li>Pairs with no wind are included – that is the point.</li>
-<li>Tables are returned at their natural grain and never duplicated.
-Join through <code>links</code> yourself, and be deliberate about
-aggregation afterwards.</li>
-<li>Window and radius settings are recorded on the result, so report
-them.</li>
+<li>Tables are returned at their natural grain. You must join using the
+<code>$links</code> yourself, and be careful about aggregation
+afterwards.</li>
+<li>Window and radius settings are recorded in the resulting metadata.
+Make sure these arguments are set appropriately for your analysis!</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/getting-started.html">vignette("getting-started")</a></code> introduces G-TROPIC data
+retrieval and result metadata.</li>
+<li>
+<code><a href="../articles/filtering.html">vignette("filtering")</a></code> explains how geographic,
+temporal, and storm filters define the records available for
+linking.</li>
+<li>
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> shows how to visualize linked
+exposure data and storm tracks.</li>
+<li>
+<code><a href="../articles/versions-and-caching.html">vignette("versions-and-caching")</a></code> covers manifests and
+cache settings for reproducible data retrieval.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

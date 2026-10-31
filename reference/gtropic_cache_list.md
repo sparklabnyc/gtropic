@@ -20,7 +20,8 @@ gtropic_cache_size()
 
 `gtropic_cache_list()` returns a tibble with one row per indexed dataset
 file reference and columns `server`, `doi`, `version`,
-`directory_label`, `label`, `md5`, `size_bytes`, and `fetched_at`.
+`directory_label`, `label`, `checksum`, `size_bytes`, and `fetched_at`
+(the original download time, retained when a cached file is reused).
 `gtropic_cache_size()` returns a numeric scalar giving the physical
 cache size in bytes, or `0` when the cache is empty.
 
@@ -30,7 +31,7 @@ cache size in bytes, or `0` when the cache is empty.
 gtropic_cache_list()
 #> # A tibble: 0 × 8
 #> # ℹ 8 variables: server <chr>, doi <chr>, version <chr>, directory_label <chr>,
-#> #   label <chr>, md5 <chr>, size_bytes <dbl>, fetched_at <dttm>
+#> #   label <chr>, checksum <chr>, size_bytes <dbl>, fetched_at <dttm>
 gtropic_cache_size()
 #> [1] 0
 ```

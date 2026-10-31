@@ -87,89 +87,130 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     filter, lag</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
-<p><code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code> turns tables already returned by
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span></code></pre></div>
+<p>This vignette covers how to use the <code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code>
+function to turn the exposure data tables returned by
 <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code> into static exposure maps, exposure-count
-maps, and storm-track maps. It also creates interactive exposure and
-count maps. Plotting never retrieves missing tables or recomputes
-published exposure values and storm distances.</p>
+maps, and storm-track maps, as well as interactive exposure and count
+maps.</p>
 <div class="section level2">
-<h2 id="katrina-2005">Katrina, 2005<a class="anchor" aria-label="anchor" href="#katrina-2005"></a>
+<h2 id="plotting-a-single-storm">Plotting a single storm<a class="anchor" aria-label="anchor" href="#plotting-a-single-storm"></a>
 </h2>
-<p>This vignette uses the United States records for Hurricane Katrina.
-Request the geometry and track tables with the exposure data because
-plotting only uses tables already present in the retrieval result.</p>
+<p>Let’s begin by plotting Hurricane Katrina (2005):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">katrina</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
-<span>  STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span>,</span>
-<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
-<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span>,</span>
-<span>  tables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wind"</span>, <span class="st">"precip"</span>, <span class="st">"flood"</span>, <span class="st">"adm2"</span>, <span class="st">"geometry"</span>, <span class="st">"tracks"</span><span class="op">)</span></span>
+<span>  STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 8 files (141.3 MB) ; .</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/exposures/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '04_precip/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '03_flood/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading '02_wind/storm_tracks/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Downloading 'metadata/adm2_geometry_simplified.parquet'.</span></span></code></pre></div>
+<span><span class="co">#&gt; Retrieving 0 files (0.0 B) ; 10 already cached.</span></span></code></pre></div>
+<p>With the default 500 km radii applied to the wind, precipitation, and
+flood fields, the data we get back will only include those ADM2s within
+500km of Katrina’s storm track. We’re also implicitly using the default
+precipitation and flood temporal windows (-2/+1 days).</p>
+<div class="section level3">
+<h3 id="exposure-maps">Exposure maps<a class="anchor" aria-label="anchor" href="#exposure-maps"></a>
+</h3>
+<p>When we call the <code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code> function and pass in
+<code>katrina</code>, the default caption that gets rendered reminds us
+of this by examining the data present in <code>katrina</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">katrina</span><span class="op">$</span><span class="va">wind</span> <span class="op">&lt;-</span> <span class="va">katrina</span><span class="op">$</span><span class="va">wind</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">STORM_DIST_KM</span> <span class="op">&lt;=</span> <span class="fl">500</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/gtropic_exposures.html">gtropic_exposures()</a></code> lists published metrics, units, and
-default aggregations. Use it to select metrics appropriate to an
-analysis rather than inferring their meaning from column names
-alone.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu"><a href="../reference/gtropic_exposures.html">gtropic_exposures</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">nrow</span>, <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 6 1 3</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">katrina</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/katrina%20plot-1.png" alt="plot of chunk katrina plot"><div class="figcaption">plot of chunk katrina plot</div>
 </div>
-<div class="section level2">
-<h2 id="static-maps">Static maps<a class="anchor" aria-label="anchor" href="#static-maps"></a>
-</h2>
-<p>An exposure map summarizes a selected published metric for each
-ADM2.</p>
+<p>Specifying none of the optional arguments by default renders an
+exposure map (implicitly, <code>type = "exposure"</code>), summarizing a
+selected published metric for each ADM2. With
+<code>type = "exposure"</code> and no provided <code>metric</code>, the
+default is every available core metric in this order: maximum sustained
+wind (<code>VMAX_SUST_MS</code>), cumulative precipitation
+(<code>PRECIP_MM</code>), and maximum flooded area
+(<code>PROP_FLOODED_AREA</code>). This makes the default plot a
+multi-panel overview rather than a single-metric map. To see a list of
+all the available exposure metrics and how they are summarized for
+plotting, we can call:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_exposures.html">gtropic_exposures</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $wind</span></span>
+<span><span class="co">#&gt; # A tibble: 6 × 5</span></span>
+<span><span class="co">#&gt;   metric                      label               unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;                       &lt;chr&gt;               &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 VMAX_SUST_MS                Maximum sustained … m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 2 VMAX_GUST_MS                Maximum wind gust … m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 3 SUST_DUR_MINUTES            Sustained wind dur… minu… max       TRUE</span></span>
+<span><span class="co">#&gt; 4 GUST_DUR_MINUTES            Wind gust duration… minu… max       TRUE</span></span>
+<span><span class="co">#&gt; 5 WIND_RADII_VMAX_SUST_MS     Wind radii sustain… m/s   max       TRUE</span></span>
+<span><span class="co">#&gt; 6 WIND_RADII_SUST_DUR_MINUTES Wind radii duratio… minu… max       TRUE</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; $precip</span></span>
+<span><span class="co">#&gt; # A tibble: 1 × 5</span></span>
+<span><span class="co">#&gt;   metric    label              unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;     &lt;chr&gt;              &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 PRECIP_MM Precipitation (mm) mm    sum       TRUE</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; $flood</span></span>
+<span><span class="co">#&gt; # A tibble: 3 × 5</span></span>
+<span><span class="co">#&gt;   metric               label                      unit  aggregate plot_supported</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;                &lt;chr&gt;                      &lt;chr&gt; &lt;chr&gt;     &lt;lgl&gt;</span></span>
+<span><span class="co">#&gt; 1 PROP_FLOODED_POP     Flooded population (propo… prop… max       TRUE</span></span>
+<span><span class="co">#&gt; 2 PROP_FLOODED_AREA    Flooded area (proportion,… prop… max       TRUE</span></span>
+<span><span class="co">#&gt; 3 FLOODED_POP_CENTROID Flooded population centro… logi… any       FALSE</span></span></code></pre></div>
+<p>The <code>metric</code> column let’s us know the available exposures,
+and the <code>aggregate</code> column informs us how that metric is
+summarized when plotted. For example, the <code>PRECIP_MM</code> metric
+has a default aggregate value of <code>sum</code>, meaning our plot
+visualizes the sum of each ADM2’s precipitation data over the temporal
+window present the <code>$precip</code> data table we passed in to the
+plotting function as part of <code>katrina</code>.</p>
+<p>We can override how exposures are summarized using the
+<code>aggregate</code> argument of the plotting function. For instance,
+let’s compare plots showing each ADM2’s total precipitation recorded in
+our temporal window,</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"exposure"</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"VMAX_SUST_MS"</span>, <span class="st">"PRECIP_MM"</span>, <span class="st">"PROP_FLOODED_AREA"</span><span class="op">)</span>,</span>
+<span>  metric <span class="op">=</span> <span class="st">"PRECIP_MM"</span>,</span>
+<span>  aggregate <span class="op">=</span> <span class="st">"sum"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figs/exposure-map-1.png" alt="plot of chunk exposure-map"><div class="figcaption">plot of chunk exposure-map</div>
+<img src="figs/unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"><div class="figcaption">plot of chunk unnamed-chunk-2</div>
 </div>
-<p>Count maps apply metric thresholds before counting distinct storms or
-local exposure days. The automatic caption records the selected
-definitions.</p>
+<p>versus their maximum daily precipitation:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"count"</span>,</span>
-<span>  metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
-<span>  count_unit <span class="op">=</span> <span class="st">"days"</span>,</span>
-<span>  storm <span class="op">=</span> <span class="st">"Katrina-2005"</span>,</span>
-<span>  basemap <span class="op">=</span> <span class="st">"none"</span>,</span>
-<span>  gridlines <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  metric <span class="op">=</span> <span class="st">"PRECIP_MM"</span>,</span>
+<span>  aggregate <span class="op">=</span> <span class="st">"max"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figs/count-map-1.png" alt="plot of chunk count-map"><div class="figcaption">plot of chunk count-map</div>
+<img src="figs/unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3"><div class="figcaption">plot of chunk unnamed-chunk-3</div>
 </div>
-<p><code>metric</code>, <code>aggregate</code>, <code>palette</code>,
-and <code>direction</code> accept vectors aligned by position. This
-makes a panel for each selected metric while preserving a separate,
-hazard-appropriate scale for every panel.</p>
+<p>We can also swap out which exposure metrics we want to visualize:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">katrina</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"VMAX_SUST_MS"</span>, <span class="st">"VMAX_GUST_MS"</span>, <span class="st">"WIND_RADII_VMAX_SUST_MS"</span><span class="op">)</span>,</span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"><div class="figcaption">plot of chunk unnamed-chunk-4</div>
+</div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">katrina</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"SUST_DUR_MINUTES"</span>, <span class="st">"GUST_DUR_MINUTES"</span>, <span class="st">"WIND_RADII_SUST_DUR_MINUTES"</span><span class="op">)</span>,</span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5"><div class="figcaption">plot of chunk unnamed-chunk-5</div>
+</div>
+<p>Take a look at the help page for the plotting function with
+<code><a href="../reference/gtropic_plot.html">?gtropic_plot</a></code> to examine other elements of the map you can
+manipulate, for example, the <code>basemap</code>, or color
+<code>palette</code>.</p>
+<p>The <code>metric</code>, <code>aggregate</code>,
+<code>palette</code>, and <code>direction</code> accept vectors aligned
+by position. This makes a panel for each selected metric while
+preserving a separate, hazard-appropriate scale for every panel.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"exposure"</span>,</span>
@@ -177,53 +218,213 @@ hazard-appropriate scale for every panel.</p>
 <span>  aggregate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"max"</span>, <span class="st">"sum"</span><span class="op">)</span>,</span>
 <span>  palette <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"inferno"</span>, <span class="st">"mako"</span><span class="op">)</span>,</span>
 <span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>  storm <span class="op">=</span> <span class="st">"Katrina-2005"</span>,</span>
 <span>  track <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  basemap <span class="op">=</span> <span class="st">"none"</span></span>
+<span>  basemap <span class="op">=</span> <span class="st">"admin1"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="float">
 <img src="figs/multi-metric-map-1.png" alt="plot of chunk multi-metric-map"><div class="figcaption">plot of chunk multi-metric-map</div>
 </div>
 </div>
-<div class="section level2">
-<h2 id="storm-tracks">Storm tracks<a class="anchor" aria-label="anchor" href="#storm-tracks"></a>
-</h2>
-<p>Track maps use the published <code>USA_WIND</code> observations. By
-default, their points are classified with <code><a href="../reference/saffir_simpson.html">saffir_simpson()</a></code>,
-which returns the conventional Saffir-Simpson category key in metres per
-second. Supply a compatible data frame to <code>track_map_key</code> to
-use a different classification, and use <code>track_interval</code> to
-sample displayed points at three- or six-hour UTC intervals while
-retaining the complete path.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="section level3">
+<h3 id="track-maps">Track maps<a class="anchor" aria-label="anchor" href="#track-maps"></a>
+</h3>
+<p>If we’re only interested in visualizing the storm track, then we can
+set <code>type = "track"</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"track"</span>,</span>
-<span>  storm <span class="op">=</span> <span class="st">"Katrina-2005"</span>,</span>
+<span>  basemap <span class="op">=</span> <span class="st">"admin1"</span>,</span>
 <span>  track_map_key <span class="op">=</span> <span class="fu"><a href="../reference/saffir_simpson.html">saffir_simpson</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  track_interval <span class="op">=</span> <span class="fl">6</span>,</span>
-<span>  basemap <span class="op">=</span> <span class="st">"none"</span></span>
+<span>  track_interval <span class="op">=</span> <span class="fl">3</span>,</span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figs/track-map-1.png" alt="plot of chunk track-map"><div class="figcaption">plot of chunk track-map</div>
+<img src="figs/unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6"><div class="figcaption">plot of chunk unnamed-chunk-6</div>
+</div>
+<p>By default, their points are classified with
+<code><a href="../reference/saffir_simpson.html">saffir_simpson()</a></code>, which returns the conventional
+Saffir-Simpson category key in meters per second. Supply a compatible
+data frame to <code>track_map_key</code> to use a different
+classification, and use <code>track_interval</code> to sample displayed
+points at three- or six-hour UTC intervals while retaining the complete
+path. Static wind legends always show every category in the supplied
+key, even when no displayed track observation falls in a category.</p>
+</div>
+<div class="section level3">
+<h3 id="categorical-adm2-maps">Categorical ADM2 maps<a class="anchor" aria-label="anchor" href="#categorical-adm2-maps"></a>
+</h3>
+<p>If you’d like to categorize ADM2s into buckets defined by the wind
+they’ve been exposed to, you can use the <code>wind_categories</code>
+argument and pass in a table that looks like the one returned by
+<code><a href="../reference/saffir_simpson.html">saffir_simpson()</a></code>:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/saffir_simpson.html">saffir_simpson</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 7 × 4</span></span>
+<span><span class="co">#&gt;   category threshold unit  color</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;</span></span>
+<span><span class="co">#&gt; 1 TD              17 m/s   #6EC1EA</span></span>
+<span><span class="co">#&gt; 2 TS              32 m/s   #5FF</span></span>
+<span><span class="co">#&gt; 3 Cat 1           42 m/s   #FFFFD9</span></span>
+<span><span class="co">#&gt; 4 Cat 2           49 m/s   #FBDA8C</span></span>
+<span><span class="co">#&gt; 5 Cat 3           58 m/s   #F89F59</span></span>
+<span><span class="co">#&gt; 6 Cat 4           70 m/s   #F6738A</span></span>
+<span><span class="co">#&gt; 7 Cat 5          Inf m/s   #A188FC</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">katrina</span>, wind_categories <span class="op">=</span> <span class="fu"><a href="../reference/saffir_simpson.html">saffir_simpson</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error in `plot_resolve_wind_categories()`:</span></span>
+<span><span class="co">#&gt; ! A bare `wind_categories` key requires exactly one selected metric.</span></span>
+<span><span class="co">#&gt; ℹ For multiple metrics, supply a named list keyed by metric.</span></span></code></pre></div>
+<p>The <code>wind_categories</code> argument classifies aggregated ADM2
+wind exposure rather than drawing it on a continuous scale. It applies
+to non-binary exposure maps for metrics in the wind table, including
+interactive maps. For multiple selected metrics, use a named list keyed
+by the selected wind metric or metrics to classify; metrics without a
+supplied key retain their continuous fill. The built-in
+<code><a href="../reference/saffir_simpson.html">saffir_simpson()</a></code> key is permitted only for
+<code>VMAX_SUST_MS</code> with <code>aggregate = "max"</code>; it
+represents a local sustained-wind equivalent, not storm status. Use an
+explicitly custom key for other wind metrics or aggregations.</p>
+<p>Custom category keys use <code>category</code>,
+<code>threshold</code>, <code>unit</code>, and <code>color</code>
+columns. Categories must be unique; thresholds are strictly increasing
+upper bounds ending in <code>Inf</code>; and <code>unit</code> must be
+one arbitrary, nonempty, consistent value matching the source metric’s
+unit. Conventional spellings of meters per second, such as
+<code>m/s</code> and <code>meters per second</code>, are treated as
+compatible. Values equal to a threshold belong to that category. Unlike
+<code>track_map_key</code>, categorical exposure keys are not limited to
+a fixed set of track-wind units. For example, this two-class key is
+intentionally coarse:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">two_class_wind</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  category <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Below hurricane"</span>, <span class="st">"Hurricane-force"</span><span class="op">)</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">32</span>, <span class="cn">Inf</span><span class="op">)</span>,</span>
+<span>  unit <span class="op">=</span> <span class="st">"m/s"</span>,</span>
+<span>  color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#9ECAE1"</span>, <span class="st">"#DE2D26"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">katrina</span>,</span>
+<span>  metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
+<span>  wind_categories <span class="op">=</span> <span class="va">two_class_wind</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9"><div class="figcaption">plot of chunk unnamed-chunk-9</div>
 </div>
 </div>
-<div class="section level2">
-<h2 id="interactive-maps">Interactive maps<a class="anchor" aria-label="anchor" href="#interactive-maps"></a>
-</h2>
+<div class="section level3">
+<h3 id="interactive-maps">Interactive maps<a class="anchor" aria-label="anchor" href="#interactive-maps"></a>
+</h3>
 <p>Set <code>interactive = TRUE</code> for a Leaflet exposure or count
 map. Interactive maps use vector layers and do not require a tile-server
 API key. Static gridlines do not apply to this output because Leaflet
 maps have no plot axes.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"exposure"</span>,</span>
-<span>  metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
-<span>  storm <span class="op">=</span> <span class="st">"Katrina-2005"</span>,</span>
 <span>  interactive <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  basemap <span class="op">=</span> <span class="st">"none"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="plotting-multiple-storms">Plotting multiple storms<a class="anchor" aria-label="anchor" href="#plotting-multiple-storms"></a>
+</h2>
+<p>Now let’s plot all the storms whose genesis date fell inside 2019,
+coming within 500km of India:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">india_19</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
+<span>  WHO_ENTITY <span class="op">=</span> <span class="st">"India"</span>,</span>
+<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2019</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Retrieving 0 files (0.0 B) ; 10 already cached.</span></span>
+<span></span>
+<span><span class="va">india_19</span><span class="op">$</span><span class="va">storm_metadata</span></span>
+<span><span class="co">#&gt; # A tibble: 7 × 4</span></span>
+<span><span class="co">#&gt;   STORM_ID      STORM_NAME        USA_ATCF_ID STORM_GENESIS_DATE_UTC</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;         &lt;chr&gt;             &lt;chr&gt;       &lt;date&gt;</span></span>
+<span><span class="co">#&gt; 1 2019116N02090 Fani-2019         IO012019    2019-04-25</span></span>
+<span><span class="co">#&gt; 2 2019160N11073 Vayu-2019         IO022019    2019-06-08</span></span>
+<span><span class="co">#&gt; 3 2019264N19071 Hikaa:hikka-2019  IO032019    2019-09-20</span></span>
+<span><span class="co">#&gt; 4 2019296N15066 Kyaar:kyarr-2019  IO042019    2019-10-22</span></span>
+<span><span class="co">#&gt; 5 2019301N05081 Maha-2019         IO052019    2019-10-28</span></span>
+<span><span class="co">#&gt; 6 2019302N11118 Bulbul:matmo-2019 WP232019    2019-10-28</span></span>
+<span><span class="co">#&gt; 7 2019337N11072 Unnamed-2019      IO072019    2019-12-02</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">india_19</span>, type <span class="op">=</span> <span class="st">"track"</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11"><div class="figcaption">plot of chunk unnamed-chunk-11</div>
+</div>
+<p>Let’s look at the maximum sustained winds each ADM2 was exposed to as
+a result of these storms:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">india_19</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>, track_labels <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-12-1.png" alt="plot of chunk unnamed-chunk-12"><div class="figcaption">plot of chunk unnamed-chunk-12</div>
+</div>
+<p>Or if the tracks are making it difficult for us to see the data
+clearly:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">india_19</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>, track <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-13-1.png" alt="plot of chunk unnamed-chunk-13"><div class="figcaption">plot of chunk unnamed-chunk-13</div>
+</div>
+<p>We can use the <code>bbox</code> argument to zoom in on a region of
+interest:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">india_19</span>,</span>
+<span>  metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  bbox <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>xmin <span class="op">=</span> <span class="fl">82.5</span>, xmax <span class="op">=</span> <span class="fl">87.7</span>, ymin <span class="op">=</span> <span class="fl">17.5</span>, ymax <span class="op">=</span> <span class="fl">25</span><span class="op">)</span>,</span>
+<span>  expand <span class="op">=</span> <span class="fl">0</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-14-1.png" alt="plot of chunk unnamed-chunk-14"><div class="figcaption">plot of chunk unnamed-chunk-14</div>
+</div>
+<div class="section level3">
+<h3 id="count-maps">Count maps<a class="anchor" aria-label="anchor" href="#count-maps"></a>
+</h3>
+<p>Count maps apply metric-specific thresholds before counting the
+number of distinct storms or local exposure days that meet those
+thresholds. The automatic caption records the selected definitions.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">india_19</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"count"</span>,</span>
+<span>  count_unit <span class="op">=</span> <span class="st">"days"</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/count-map-1.png" alt="plot of chunk count-map"><div class="figcaption">plot of chunk count-map</div>
+</div>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">india_19</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"count"</span>,</span>
+<span>  count_unit <span class="op">=</span> <span class="st">"storms"</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-15-1.png" alt="plot of chunk unnamed-chunk-15"><div class="figcaption">plot of chunk unnamed-chunk-15</div>
+</div>
+<p>We can use the <code>threshold</code> argument to change how we
+define an exposure:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
+<span>  <span class="va">india_19</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"count"</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"VMAX_SUST_MS"</span>, <span class="st">"PRECIP_MM"</span><span class="op">)</span>,</span>
+<span>  count_unit <span class="op">=</span> <span class="st">"days"</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>VMAX_SUST_MS <span class="op">=</span> <span class="fl">0</span>, PRECIP_MM <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  track <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figs/unnamed-chunk-16-1.png" alt="plot of chunk unnamed-chunk-16"><div class="figcaption">plot of chunk unnamed-chunk-16</div>
+</div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="saving-plots">Saving plots<a class="anchor" aria-label="anchor" href="#saving-plots"></a>
@@ -231,7 +432,7 @@ maps have no plot axes.</p>
 <p>Static calls return ggplot objects, which can be extended with
 ggplot2 layers and saved with <code><a href="../reference/gtropic_save.html">gtropic_save()</a></code> when the
 analysis is ready for publication.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">katrina</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"exposure"</span>,</span>
@@ -241,6 +442,39 @@ analysis is ready for publication.</p>
 <span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/theme_gtropic.html">theme_gtropic</a></span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/gtropic_save.html">gtropic_save</a></span><span class="op">(</span><span class="va">p</span>, <span class="st">"katrina-wind-exposure.png"</span>, dpi <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../reference/gtropic_plot.html">gtropic_plot()</a></code> produces exposure, count, and track maps
+directly from a <code>gtropic_data</code> object.</li>
+<li>Select metrics, aggregation methods, category keys, map extent, and
+track options to make the displayed exposure definition explicit.</li>
+<li>Static plots can be extended with ggplot2 and saved with
+<code><a href="../reference/gtropic_save.html">gtropic_save()</a></code>; exposure and count maps can also be
+interactive.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/getting-started.html">vignette("getting-started")</a></code> introduces data retrieval
+and the structure of G-TROPIC results.</li>
+<li>
+<code><a href="../articles/filtering.html">vignette("filtering")</a></code> covers how all the
+spatio-temporal/storm filters in <code><a href="../reference/gtropic_data.html">gtropic_data()</a></code>
+combine.</li>
+<li>
+<code><a href="../articles/linkage.html">vignette("linkage")</a></code> covers joining precipitation and
+flood records to storms before summarizing or mapping them.</li>
+<li>
+<code><a href="../articles/versions-and-caching.html">vignette("versions-and-caching")</a></code> shows how to preserve
+the versions and source files behind a plotted result.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

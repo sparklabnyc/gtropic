@@ -2,7 +2,7 @@
 
 Native ggplot2 viridis scales: inferno for wind, mako for precipitation,
 and viridis for flooding when a metric is supplied. Missing values are
-grey.
+gray.
 
 ## Usage
 

@@ -20,16 +20,19 @@ exists for documentation only.
 | `gtropic.doi_historical` | `"doi:10.70122/FK2/SWEYST"` | DOI of the historical dataset. |
 | `gtropic.doi_current` | `"doi:10.70122/FK2/DDSYYD"` | DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. |
 | `gtropic.collection` | `"gtropic"` | Dataverse collection (alias) searched during discovery. |
-| `gtropic.cache_enabled` | `FALSE` | Whether downloaded files are kept on disk between sessions. |
+| `gtropic.cache_enabled` | `TRUE` | Whether downloaded files are kept on disk. |
 | `gtropic.cache_dir` | `tools::R_user_dir("gtropic", "cache")` | Where cached files live. |
 | `gtropic.confirm_threshold_gb` | `1` | Download size, in gigabytes, above which you are asked to confirm. |
 | `gtropic.timeout` | `600` | Per-request timeout in seconds. |
 | `gtropic.max_tries` | `3` | Maximum attempts per request before giving up. |
 
 A "cache" here means a folder of previously downloaded files on your own
-computer. It is switched off by default, and turning it on writes only
-to a standard per-user location chosen by R (see
-[`gtropic_cache_enable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md)).
+computer. It is enabled by default and uses a standard per-user location
+chosen by R. Use
+[`gtropic_cache_disable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md)
+or `cache = FALSE` on a retrieval to bypass it. See
+[`gtropic_cache_enable()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_enable.md)
+to persist an enabled or disabled choice across R sessions.
 
 ## Examples
 

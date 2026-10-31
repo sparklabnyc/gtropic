@@ -1,8 +1,8 @@
 # Saffir-Simpson tropical-cyclone wind categories
 
-Provides the category thresholds and conventional display colours for
-the Saffir-Simpson Hurricane Wind Scale. Thresholds are sustained wind
-speeds in metres per second. Each threshold is the upper bound of its
+Provides the category thresholds and conventional display colors for the
+Saffir-Simpson Hurricane Wind Scale. Thresholds are sustained wind
+speeds in meters per second. Each threshold is the upper bound of its
 category, except for `"Cat5"`, which has no upper bound.
 
 ## Usage

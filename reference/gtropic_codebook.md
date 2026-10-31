@@ -8,7 +8,7 @@ an exposure analysis.
 ## Usage
 
 ``` r
-gtropic_codebook(version = ":latest")
+gtropic_codebook(version = ":latest", cache = NULL)
 ```
 
 ## Arguments
@@ -19,6 +19,12 @@ gtropic_codebook(version = ":latest")
   published version. See
   [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md)
   for version formats.
+
+- cache:
+
+  Whether downloaded source files may be cached. `NULL` uses
+  `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
+  setting for this call.
 
 ## Value
 

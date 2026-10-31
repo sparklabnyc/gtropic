@@ -93,7 +93,7 @@
 </li>
 <li>Discovery helpers for exploring the available vocabulary of administrative units and storms</li>
 <li>Version manifests for reproducible re-retrieval</li>
-<li>An optional opt-in on-disk cache</li>
+<li>An on-disk cache enabled by default, with per-call bypass controls</li>
 <li>Publication-ready static and interactive plots</li>
 </ul>
 </div>
@@ -114,11 +114,42 @@
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sparklabnyc/gtropic" class="external-link">gtropic</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Wind, precipitation, flooding and population for the USA, for storms that formed</span></span>
-<span><span class="co"># during 2005.</span></span>
-<span><span class="va">usa_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">usa_05</span></span></code></pre></div>
+<span><span class="co"># Grab exposure data for Hurricane Katrina (2005)</span></span>
+<span><span class="va">katrina</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Retrieving 0 files (0.0 B) ; 10 already cached.</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">katrina</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── G-TROPIC data summary ───────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Sources ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • Server: "demo.dataverse.org"</span></span>
+<span><span class="co">#&gt; • Historical dataset: doi:10.70122/FK2/SWEYST v4.0</span></span>
+<span><span class="co">#&gt; • Files retrieved: 10 (143.0 MB)</span></span>
+<span><span class="co">#&gt; • Retrieved at: 2026-10-30 22:53:30 UTC</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Tables ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • wind: 1477 rows x 12 columns</span></span>
+<span><span class="co">#&gt; • precip: 5908 rows x 3 columns</span></span>
+<span><span class="co">#&gt; • flood: 237 rows x 7 columns</span></span>
+<span><span class="co">#&gt; • zero_pairs: 39531 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • tracks: 64 rows x 10 columns</span></span>
+<span><span class="co">#&gt; • pop: 1477 rows x 6 columns</span></span>
+<span><span class="co">#&gt; • storm_metadata: 1 rows x 4 columns</span></span>
+<span><span class="co">#&gt; • adm2: 1477 rows x 5 columns</span></span>
+<span><span class="co">#&gt; • geometry: 1477 rows x 2 columns</span></span>
+<span><span class="co">#&gt; • codebook: 7 entries (list)</span></span>
+<span><span class="co">#&gt; • links: 1477 rows x 12 columns</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Resolved filters ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; • ADM2 units: 1477</span></span>
+<span><span class="co">#&gt; • Storms: 1</span></span>
+<span><span class="co">#&gt; • Wind radius: 500 km</span></span>
+<span><span class="co">#&gt; • Precipitation window: -2/ +1 days within 500 km</span></span>
+<span><span class="co">#&gt; • Flood window: -2/+1 days within 500 km (match: "start")</span></span></code></pre></div>
 <p>The <code><a href="reference/gtropic_data.html">gtropic_data()</a></code> function returns a named list of tables that by default includes:</p>
 <ul>
 <li>
@@ -134,9 +165,18 @@
 <li>
 <strong><code>codebook</code></strong> – the dataset’s own documentation, as a nested list.</li>
 <li>
+<strong><code>zero_pairs</code></strong> – administrative unit-storm pairs with no measurable wind.</li>
+<li>
+<strong><code>tracks</code></strong> – raw storm-track observations.</li>
+<li>
+<strong><code>geometry</code></strong> – administrative boundaries, as an <code>sf</code> object.</li>
+<li>
+<strong><code>storm_metadata</code></strong> – storm names, identifiers, and genesis dates.</li>
+<li>
 <strong><code>links</code></strong> – see below.</li>
 </ul>
-<p>Three further tables are available on request via the <code>tables</code> argument: <code>zero_pairs</code> (unit-storm pairs with no measurable wind), <code>tracks</code> (raw storm track observations, for plotting purposes), and <code>geometry</code> (administrative boundaries, again for plotting purposes, and requiring the <code>sf</code> package).</p>
+<p>Pass a shorter <code>tables</code> vector when you do not need every table and want to reduce transfer and storage requirements. The default includes <code>geometry</code>, so it requires the suggested <code>sf</code> and <code>sfarrow</code> packages.</p>
+<p>By default, <code>wind_radius_km = 500</code> retains returned <code>wind</code> records and <code>links</code> whose published <code>STORM_DIST_KM</code> is at or below 500 km, inclusively. Set it to <code>Inf</code> or <code>NULL</code> for no wind-distance bound. The precipitation and flood radii remain independent, but their windows are evaluated only for links retained by the wind-radius filter.</p>
 <p>Every result also carries a <strong>manifest</strong> providing a record of which published files went into the result, including their paths, dataset versions, sizes and checksums. Saving it lets you reproduce the same retrieval months later, even if the dataset has since been revised.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="fu"><a href="reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span>, <span class="st">"usa-2005-manifest.rds"</span><span class="op">)</span></span></code></pre></div>
@@ -144,29 +184,28 @@
 <div class="section level2">
 <h2 id="plotting">Plotting<a class="anchor" aria-label="anchor" href="#plotting"></a>
 </h2>
-<p>Request geometry and tracks with the original query, then plot the local result. Plotting never starts a new download or recomputes a published exposure value. <code><a href="reference/gtropic_exposures.html">gtropic_exposures()</a></code> lists the available wind, precipitation, and flooding metrics and their default aggregations.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">kat_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span></span>
-<span>  STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span>, WHO_ENTITY <span class="op">=</span> <span class="st">"United States"</span>,</span>
-<span>  date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span>,</span>
-<span>  tables <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"wind"</span>, <span class="st">"adm2"</span>, <span class="st">"geometry"</span>, <span class="st">"tracks"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">katrina</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-6-1.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Grab exposure data for Hurricane Helene (2024)</span></span>
+<span><span class="va">helene</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>STORM_NAME <span class="op">=</span> <span class="st">"Helene-2024"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
+<span><span class="co">#&gt; Retrieving 0 files (0.0 B) ; 10 already cached.</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"exposure"</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
-<span>  gridlines <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"count"</span>, metric <span class="op">=</span> <span class="st">"VMAX_SUST_MS"</span>,</span>
-<span>  gridlines <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">kat_05</span>, type <span class="op">=</span> <span class="st">"track"</span>, track_map_key <span class="op">=</span> <span class="fu"><a href="reference/saffir_simpson.html">saffir_simpson</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>See <code><a href="articles/plotting.html">vignette("plotting")</a></code> for vectorized multi-metric maps, Saffir-Simpson track keys, gridlines, interactive maps, thresholds, and publication sizing.</p>
+<span><span class="co"># Plot Helene's exposure data</span></span>
+<span><span class="fu"><a href="reference/gtropic_plot.html">gtropic_plot</a></span><span class="op">(</span><span class="va">helene</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-7-1.png" alt="" width="100%"></p>
+<p>See <code><a href="articles/plotting.html">vignette("plotting")</a></code> for vectorized multi-metric maps, Saffir-Simpson track keys, gridlines, interactive maps, thresholds, and more.</p>
 </div>
 <div class="section level2">
 <h2 id="getting-help">Getting help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
 </h2>
 <p>Extensive documentation is available on our pkgdown website as well as offline within R. You can see the <code>gtropic</code> reference manual in R with:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/help.html" class="external-link">help</a></span><span class="op">(</span><span class="st">"gtropic"</span><span class="op">)</span></span></code></pre></div>
 <p>A number of vignettes are available and can be browsed in R using:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"gtropic"</span><span class="op">)</span></span></code></pre></div>
 <p>We recommend reading the vignettes in the following order:</p>
 <ul>
@@ -186,7 +225,7 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>Please cite both the package and the underlying datasets. The dataset DOIs and versions used by any given result are recorded in its manifest:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">usa_05</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>

@@ -11,13 +11,19 @@ identify storms and confirm temporal coverage before retrieving exposure
 data with gtropic_data().
 Date filters are applied to STORM_GENESIS_DATE_UTC, the UTC date of the
 first best-track observation. They do not select storms by landfall, closest
-approach, or date of exposure."><meta property="og:description" content="Retrieves metadata for tropical cyclones represented in G-TROPIC, including
+approach, or date of exposure.
+When a requested STORM_NAME is not available, G-TROPIC checks the published
+exclusion records and reports whether the storm is excluded or absent from
+both lists."><meta property="og:description" content="Retrieves metadata for tropical cyclones represented in G-TROPIC, including
 storm identifiers, names, and genesis dates. This function can be used to
 identify storms and confirm temporal coverage before retrieving exposure
 data with gtropic_data().
 Date filters are applied to STORM_GENESIS_DATE_UTC, the UTC date of the
 first best-track observation. They do not select storms by landfall, closest
-approach, or date of exposure."><meta property="og:image" content="https://sparklabnyc.github.io/gtropic/logo.png"></head><body>
+approach, or date of exposure.
+When a requested STORM_NAME is not available, G-TROPIC checks the published
+exclusion records and reports whether the storm is excluded or absent from
+both lists."><meta property="og:image" content="https://sparklabnyc.github.io/gtropic/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -71,6 +77,9 @@ data with <code><a href="gtropic_data.html">gtropic_data()</a></code>.</p>
 <p>Date filters are applied to <code>STORM_GENESIS_DATE_UTC</code>, the UTC date of the
 first best-track observation. They do not select storms by landfall, closest
 approach, or date of exposure.</p>
+<p>When a requested <code>STORM_NAME</code> is not available, G-TROPIC checks the published
+exclusion records and reports whether the storm is excluded or absent from
+both lists.</p>
     </div>
 
     <div class="section level2">
@@ -100,8 +109,11 @@ is supplied. Years outside the published collection are omitted.</p></dd>
 
 
 <dt id="arg-storm-name">STORM_NAME<a class="anchor" aria-label="anchor" href="#arg-storm-name"></a></dt>
-<dd><p>Optional character vector of storm names. Matching is
-case-insensitive; every supplied value must match a published name.</p></dd>
+<dd><p>Optional character vector of published, disambiguated storm
+names in <code>Name-YYYY</code> form, such as <code>Katrina-2005</code>. Matching is
+case-insensitive; every supplied value must match a published name. The
+suffix year limits the metadata files scanned and is combined with an
+explicit <code>year</code> or <code>date_range</code> filter using AND.</p></dd>
 
 
 <dt id="arg-version">version<a class="anchor" aria-label="anchor" href="#arg-version"></a></dt>
@@ -124,7 +136,7 @@ tibble is returned.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="gtropic_data.html">gtropic_data()</a></code>, <code><a href="gtropic_adm2.html">gtropic_adm2()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="gtropic_data.html">gtropic_data()</a></code>, <code><a href="gtropic_adm2.html">gtropic_adm2()</a></code>, <code><a href="gtropic_excluded_storms.html">gtropic_excluded_storms()</a></code></p></div>
     </div>
 
     <div class="section level2">

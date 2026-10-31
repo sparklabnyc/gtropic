@@ -27,6 +27,6 @@ if the cache is empty or interactive confirmation is declined.
 ``` r
 # \donttest{
 gtropic_cache_clear(confirm = FALSE)
-#> ℹ Cache is already empty.
+#> ✔ Removed 1 cached file.
 # }
 ```

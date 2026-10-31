@@ -19,6 +19,7 @@
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_prune.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_codebook.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_data.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_manifest.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/gtropic_options.html</loc></url>
@@ -29,6 +30,7 @@
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/index.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/plot.gtropic_data.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/print.gtropic_data.html</loc></url>
+<url><loc>https://sparklabnyc.github.io/gtropic/reference/print.gtropic_filters.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/print.gtropic_manifest.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/saffir_simpson.html</loc></url>
 <url><loc>https://sparklabnyc.github.io/gtropic/reference/scale_fill_gtropic_c.html</loc></url>

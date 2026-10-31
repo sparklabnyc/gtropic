@@ -5,11 +5,11 @@
       fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
     }
   };
-</script><script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Print a G-TROPIC version manifest — print.gtropic_manifest"><meta name="description" content="Displays the dataset server, DOI and version information, file count and
-total size, retrieval time, and package version recorded for a G-TROPIC
+</script><script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Print a G-TROPIC version manifest — print.gtropic_manifest"><meta name="description" content="Displays the dataset server, DOI and version information for datasets actually
+used, file count and total size, retrieval time, and package version recorded for a G-TROPIC
 retrieval. A manifest can be supplied to gtropic_data() to request the same
-published source files in a subsequent analysis."><meta property="og:description" content="Displays the dataset server, DOI and version information, file count and
-total size, retrieval time, and package version recorded for a G-TROPIC
+published source files in a subsequent analysis."><meta property="og:description" content="Displays the dataset server, DOI and version information for datasets actually
+used, file count and total size, retrieval time, and package version recorded for a G-TROPIC
 retrieval. A manifest can be supplied to gtropic_data() to request the same
 published source files in a subsequent analysis."><meta property="og:image" content="https://sparklabnyc.github.io/gtropic/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -58,8 +58,8 @@ published source files in a subsequent analysis."><meta property="og:image" cont
     </div>
 
     <div class="ref-description section level2">
-    <p>Displays the dataset server, DOI and version information, file count and
-total size, retrieval time, and package version recorded for a G-TROPIC
+    <p>Displays the dataset server, DOI and version information for datasets actually
+used, file count and total size, retrieval time, and package version recorded for a G-TROPIC
 retrieval. A manifest can be supplied to <code><a href="gtropic_data.html">gtropic_data()</a></code> to request the same
 published source files in a subsequent analysis.</p>
     </div>
@@ -96,24 +96,26 @@ ignored.</p></dd>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Jamaica"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Discovering datasets in collection <span style="color: #0000BB;">"gtropic"</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">metadata/adm2.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">02_wind/storm_metadata/2005.parquet</span>.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Retrieving 8 files (133.0 MB) ; .</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Retrieving 10 files (143.0 MB) ; .</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">02_wind/exposures/2005.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">02_wind/zero_pairs/2005.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">04_precip/2005.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">03_flood/2005.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">01_pop/2005.parquet</span>.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">02_wind/storm_tracks/2005.parquet</span>.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">metadata/codebook.json</span>.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Downloading <span style="color: #0000BB;">metadata/adm2_geometry_simplified.parquet</span>.</span>
 <span class="r-in"><span><span class="fu"><a href="gtropic_manifest.html">gtropic_manifest</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">gtropic version manifest</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Server: <span style="color: #0000BB;">"demo.dataverse.org"</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Historical: <span style="color: #0000BB;">"doi:10.70122/FK2/SWEYST"</span> (version <span style="color: #0000BB;">"3.0"</span>)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Current-year: <span style="color: #0000BB;">"doi:10.70122/FK2/DDSYYD"</span> (version <span style="color: #0000BB;">"11.0"</span>)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Files recorded: 8</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Total size: 133.0 MB</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Retrieved: 2026-10-12 15:46:29 UTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Files recorded: 10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Total size: 143.0 MB</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Retrieved: 2026-10-31 02:42:59 UTC</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Package version: <span style="color: #0000BB;">"0.0.0.9000"</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Pass this object as `manifest` to `gtropic_data()` to</span>

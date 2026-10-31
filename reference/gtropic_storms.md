@@ -10,6 +10,10 @@ Date filters are applied to `STORM_GENESIS_DATE_UTC`, the UTC date of
 the first best-track observation. They do not select storms by landfall,
 closest approach, or date of exposure.
 
+When a requested `STORM_NAME` is not available, G-TROPIC checks the
+published exclusion records and reports whether the storm is excluded or
+absent from both lists.
+
 ## Usage
 
 ``` r
@@ -38,8 +42,11 @@ gtropic_storms(
 
 - STORM_NAME:
 
-  Optional character vector of storm names. Matching is
+  Optional character vector of published, disambiguated storm names in
+  `Name-YYYY` form, such as `Katrina-2005`. Matching is
   case-insensitive; every supplied value must match a published name.
+  The suffix year limits the metadata files scanned and is combined with
+  an explicit `year` or `date_range` filter using AND.
 
 - version:
 
@@ -64,7 +71,8 @@ empty tibble is returned.
 ## See also
 
 [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md),
-[`gtropic_adm2()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_adm2.md)
+[`gtropic_adm2()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_adm2.md),
+[`gtropic_excluded_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.md)
 
 ## Examples
 
