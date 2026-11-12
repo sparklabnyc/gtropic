@@ -7,9 +7,9 @@
 .onLoad <- function(libname, pkgname) {
   persisted_cache_enabled <- cache_config_read()
   defaults <- list(
-    gtropic.server = "demo.dataverse.org",
-    gtropic.doi_historical = "doi:10.70122/FK2/SWEYST",
-    gtropic.doi_current = "doi:10.70122/FK2/DDSYYD",
+    gtropic.server = "dataverse.harvard.edu",
+    gtropic.doi_historical = "doi:10.7910/DVN/EAVWC3",
+    gtropic.doi_current = "doi:10.7910/DVN/FZBAKO",
     gtropic.collection = "gtropic",
     # The config file is read without creating it. A user-supplied option takes
     # precedence over this persisted setting.

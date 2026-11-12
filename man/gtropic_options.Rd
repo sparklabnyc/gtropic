@@ -16,9 +16,9 @@ needing a package update.
 \details{
 \tabular{lll}{
    Option \tab Default \tab Meaning \cr
-   \code{gtropic.server} \tab \code{"demo.dataverse.org"} \tab Dataverse host (HTTPS only). \cr
-   \code{gtropic.doi_historical} \tab \code{"doi:10.70122/FK2/SWEYST"} \tab DOI of the historical dataset. \cr
-   \code{gtropic.doi_current} \tab \code{"doi:10.70122/FK2/DDSYYD"} \tab DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. \cr
+   \code{gtropic.server} \tab \code{"dataverse.harvard.edu"} \tab Dataverse host (HTTPS only). \cr
+   \code{gtropic.doi_historical} \tab \code{"doi:10.7910/DVN/EAVWC3"} \tab DOI of the historical dataset. \cr
+   \code{gtropic.doi_current} \tab \code{"doi:10.7910/DVN/FZBAKO"} \tab DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. \cr
    \code{gtropic.collection} \tab \code{"gtropic"} \tab Dataverse collection (alias) searched during discovery. \cr
    \code{gtropic.cache_enabled} \tab \code{TRUE} \tab Whether downloaded files are kept on disk. \cr
    \code{gtropic.cache_dir} \tab \code{tools::R_user_dir("gtropic", "cache")} \tab Where cached files live. \cr

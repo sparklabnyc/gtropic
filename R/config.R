@@ -9,9 +9,9 @@
 #' @details
 #' | Option | Default | Meaning |
 #' | --- | --- | --- |
-#' | `gtropic.server` | `"demo.dataverse.org"` | Dataverse host (HTTPS only). |
-#' | `gtropic.doi_historical` | `"doi:10.70122/FK2/SWEYST"` | DOI of the historical dataset. |
-#' | `gtropic.doi_current` | `"doi:10.70122/FK2/DDSYYD"` | DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. |
+#' | `gtropic.server` | `"dataverse.harvard.edu"` | Dataverse host (HTTPS only). |
+#' | `gtropic.doi_historical` | `"doi:10.7910/DVN/EAVWC3"` | DOI of the historical dataset. |
+#' | `gtropic.doi_current` | `"doi:10.7910/DVN/FZBAKO"` | DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. |
 #' | `gtropic.collection` | `"gtropic"` | Dataverse collection (alias) searched during discovery. |
 #' | `gtropic.cache_enabled` | `TRUE` | Whether downloaded files are kept on disk. |
 #' | `gtropic.cache_dir` | `tools::R_user_dir("gtropic", "cache")` | Where cached files live. |
