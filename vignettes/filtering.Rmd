@@ -88,18 +88,18 @@ You can use `gtropic_adm2()` to browse the vocabulary before querying:
 ``` r
 gtropic_adm2()
 #> # A tibble: 49,349 × 5
-#>    ADM2_ID                 ADM2_NAME    ADM2_GROUP WHO_ENTITY  WHO_REGION
-#>    <chr>                   <chr>        <chr>      <chr>       <chr>
-#>  1 17698898B67359070524975 Deh Bala     AFG        Afghanistan Eastern Mediterr…
-#>  2 17698898B98443198567384 Gulran       AFG        Afghanistan Eastern Mediterr…
-#>  3 17698898B82675281335003 Koshk        AFG        Afghanistan Eastern Mediterr…
-#>  4 17698898B74585757664988 Chaparhar    AFG        Afghanistan Eastern Mediterr…
-#>  5 17698898B84066352785355 Koshki Kohna AFG        Afghanistan Eastern Mediterr…
-#>  6 17698898B31168234973124 Pachier Agam AFG        Afghanistan Eastern Mediterr…
-#>  7 17698898B88962028797570 Kohsan       AFG        Afghanistan Eastern Mediterr…
-#>  8 17698898B58246966451205 Khogayani    AFG        Afghanistan Eastern Mediterr…
-#>  9 17698898B9118080572878  Shirzad      AFG        Afghanistan Eastern Mediterr…
-#> 10 17698898B30811011988841 Ghoryan      AFG        Afghanistan Eastern Mediterr…
+#>    ADM2_ID                 ADM2_NAME        ADM2_GROUP WHO_ENTITY  WHO_REGION
+#>    <chr>                   <chr>            <chr>      <chr>       <chr>
+#>  1 17698898B68993560499599 Ab Band          AFG        Afghanistan Eastern Medi…
+#>  2 17698898B73770643817409 Ab Kamari        AFG        Afghanistan Eastern Medi…
+#>  3 17698898B14779938213850 Acheen           AFG        Afghanistan Eastern Medi…
+#>  4 17698898B23166050371692 Adraskan         AFG        Afghanistan Eastern Medi…
+#>  5 17698898B88187802806148 Ahmad Abad       AFG        Afghanistan Eastern Medi…
+#>  6 17698898B56570025970807 Ajristan         AFG        Afghanistan Eastern Medi…
+#>  7 17698898B62190249131225 Alasay           AFG        Afghanistan Eastern Medi…
+#>  8 17698898B14177024461677 Ali Khail (Jaji) AFG        Afghanistan Eastern Medi…
+#>  9 17698898B86734293398191 Aliabad          AFG        Afghanistan Eastern Medi…
+#> 10 17698898B28188212808936 Alingar          AFG        Afghanistan Eastern Medi…
 #> # ℹ 49,339 more rows
 ```
 
@@ -123,7 +123,7 @@ nc_10to11 <- gtropic_data(polygon = north_carolina, date_range = c(2010, 2011))
 #> ℹ Centroids were evaluated for 2 years (2010-2011); an ADM2 unit is included if its centroid fell inside the polygon in any of them.
 #> Downloading '02_wind/storm_metadata/2010.parquet'.
 #> Downloading '02_wind/storm_metadata/2011.parquet'.
-#> Retrieving 10 files (247.1 MB) ; 7 already cached.
+#> Retrieving 10 files (279.7 MB) ; 7 already cached.
 #> Downloading '02_wind/exposures/2010.parquet'.
 #> Downloading '02_wind/exposures/2011.parquet'.
 #> Downloading '02_wind/zero_pairs/2010.parquet'.
@@ -136,18 +136,18 @@ nc_10to11 <- gtropic_data(polygon = north_carolina, date_range = c(2010, 2011))
 #> Downloading '02_wind/storm_tracks/2011.parquet'.
 nc_10to11$adm2
 #> # A tibble: 98 × 5
-#>    ADM2_ID                 ADM2_NAME  ADM2_GROUP WHO_ENTITY    WHO_REGION
-#>    <chr>                   <chr>      <chr>      <chr>         <chr>
-#>  1 52423323B72128668432216 Randolph   USA        United States Americas
-#>  2 52423323B59069176742644 Orange     USA        United States Americas
-#>  3 52423323B45605902717918 Jones      USA        United States Americas
-#>  4 52423323B14296787713089 Warren     USA        United States Americas
-#>  5 52423323B47180624843803 Vance      USA        United States Americas
-#>  6 52423323B75500493210020 Guilford   USA        United States Americas
-#>  7 52423323B43172948431886 Stanly     USA        United States Americas
-#>  8 52423323B14263080963128 Cumberland USA        United States Americas
-#>  9 52423323B42498482903221 Catawba    USA        United States Americas
-#> 10 52423323B43261157004179 Wilkes     USA        United States Americas
+#>    ADM2_ID                 ADM2_NAME ADM2_GROUP WHO_ENTITY    WHO_REGION
+#>    <chr>                   <chr>     <chr>      <chr>         <chr>
+#>  1 52423323B75735385248620 Alamance  USA        United States Americas
+#>  2 52423323B44414006635896 Alexander USA        United States Americas
+#>  3 52423323B93536446386656 Alleghany USA        United States Americas
+#>  4 52423323B73600596363110 Anson     USA        United States Americas
+#>  5 52423323B47317028722188 Ashe      USA        United States Americas
+#>  6 52423323B91612624851462 Avery     USA        United States Americas
+#>  7 52423323B44486980116087 Beaufort  USA        United States Americas
+#>  8 52423323B7787272397887  Bertie    USA        United States Americas
+#>  9 52423323B8015598177606  Bladen    USA        United States Americas
+#> 10 52423323B12833551098527 Brunswick USA        United States Americas
 #> # ℹ 88 more rows
 ```
 
@@ -224,22 +224,27 @@ you using every value you supplied to make the determination:
 # month, so day-month-year is impossible for this pair, which forces a
 # month-day-year interpretation for both.
 gtropic_storms(date_range = c("01/04/2001", "05/19/2001"))
-#> # A tibble: 13 × 4
+#> # A tibble: 18 × 4
 #>    STORM_ID      STORM_NAME    USA_ATCF_ID STORM_GENESIS_DATE_UTC
 #>    <chr>         <chr>         <chr>       <date>
-#>  1 2001028S15128 Terri-2001    SH072001    2001-01-27
-#>  2 2001039S11139 Winsome-2001  SH082001    2001-02-08
-#>  3 2001039S13117 Vincent-2001  SH092001    2001-02-07
-#>  4 2001047N09134 Unnamed-2001  WP012001    2001-02-16
-#>  5 2001054S15155 Abigail-2001  SH122001    2001-02-23
-#>  6 2001056S11163 Paula-2001    SH132001    2001-02-25
-#>  7 2001064S10052 Dera-2001     SH152001    2001-03-04
-#>  8 2001091S11111 Walter-2001   SH172001    2001-04-01
-#>  9 2001093S10062 Evariste-2001 SH182001    2001-04-02
-#> 10 2001094S12172 Sose-2001     SH192001    2001-04-03
-#> 11 2001106N04138 Unnamed-2001  WP022001    2001-04-16
-#> 12 2001106S08137 Alistair-2001 SH202001    2001-04-15
-#> 13 2001125N05129 Cimaron-2001  WP032001    2001-05-05
+#>  1 2001018S12086 Charly-2001   SH062001    2001-01-17
+#>  2 2001028S15128 Terri-2001    SH072001    2001-01-27
+#>  3 2001039S11139 Winsome-2001  SH082001    2001-02-08
+#>  4 2001039S13117 Vincent-2001  SH092001    2001-02-07
+#>  5 2001047N09134 Unnamed-2001  WP012001    2001-02-16
+#>  6 2001047S17157 Unnamed-2001  SH102001    2001-02-16
+#>  7 2001049S17198 Oma-2001      SH112001    2001-02-18
+#>  8 2001054S15155 Abigail-2001  SH122001    2001-02-23
+#>  9 2001056S11163 Paula-2001    SH132001    2001-02-25
+#> 10 2001060S19223 Rita-2001     SH142001    2001-02-28
+#> 11 2001064S10052 Dera-2001     SH152001    2001-03-04
+#> 12 2001091S11111 Walter-2001   SH172001    2001-04-01
+#> 13 2001091S13094 Unnamed-2001  SH162001    2001-04-01
+#> 14 2001093S10062 Evariste-2001 SH182001    2001-04-02
+#> 15 2001094S12172 Sose-2001     SH192001    2001-04-03
+#> 16 2001106N04138 Unnamed-2001  WP022001    2001-04-16
+#> 17 2001106S08137 Alistair-2001 SH202001    2001-04-15
+#> 18 2001125N05129 Cimaron-2001  WP032001    2001-05-05
 ```
 
 When more than one interpretation of the supplied dates is possible, `gtropic` will pick by precedence -- `ymd`,
@@ -252,22 +257,27 @@ gtropic_storms(date_range = c("01/04/2001", "05/06/2001"))
 #> ℹ Interpreting as "mdy", so "01/04/2001" means "2001-01-04".
 #> ℹ Rejected alternative: "dmy".
 #> ℹ Set `date_format` to be explicit, e.g. `date_format = "dmy"`.
-#> # A tibble: 13 × 4
+#> # A tibble: 18 × 4
 #>    STORM_ID      STORM_NAME    USA_ATCF_ID STORM_GENESIS_DATE_UTC
 #>    <chr>         <chr>         <chr>       <date>
-#>  1 2001028S15128 Terri-2001    SH072001    2001-01-27
-#>  2 2001039S11139 Winsome-2001  SH082001    2001-02-08
-#>  3 2001039S13117 Vincent-2001  SH092001    2001-02-07
-#>  4 2001047N09134 Unnamed-2001  WP012001    2001-02-16
-#>  5 2001054S15155 Abigail-2001  SH122001    2001-02-23
-#>  6 2001056S11163 Paula-2001    SH132001    2001-02-25
-#>  7 2001064S10052 Dera-2001     SH152001    2001-03-04
-#>  8 2001091S11111 Walter-2001   SH172001    2001-04-01
-#>  9 2001093S10062 Evariste-2001 SH182001    2001-04-02
-#> 10 2001094S12172 Sose-2001     SH192001    2001-04-03
-#> 11 2001106N04138 Unnamed-2001  WP022001    2001-04-16
-#> 12 2001106S08137 Alistair-2001 SH202001    2001-04-15
-#> 13 2001125N05129 Cimaron-2001  WP032001    2001-05-05
+#>  1 2001018S12086 Charly-2001   SH062001    2001-01-17
+#>  2 2001028S15128 Terri-2001    SH072001    2001-01-27
+#>  3 2001039S11139 Winsome-2001  SH082001    2001-02-08
+#>  4 2001039S13117 Vincent-2001  SH092001    2001-02-07
+#>  5 2001047N09134 Unnamed-2001  WP012001    2001-02-16
+#>  6 2001047S17157 Unnamed-2001  SH102001    2001-02-16
+#>  7 2001049S17198 Oma-2001      SH112001    2001-02-18
+#>  8 2001054S15155 Abigail-2001  SH122001    2001-02-23
+#>  9 2001056S11163 Paula-2001    SH132001    2001-02-25
+#> 10 2001060S19223 Rita-2001     SH142001    2001-02-28
+#> 11 2001064S10052 Dera-2001     SH152001    2001-03-04
+#> 12 2001091S11111 Walter-2001   SH172001    2001-04-01
+#> 13 2001091S13094 Unnamed-2001  SH162001    2001-04-01
+#> 14 2001093S10062 Evariste-2001 SH182001    2001-04-02
+#> 15 2001094S12172 Sose-2001     SH192001    2001-04-03
+#> 16 2001106N04138 Unnamed-2001  WP022001    2001-04-16
+#> 17 2001106S08137 Alistair-2001 SH202001    2001-04-15
+#> 18 2001125N05129 Cimaron-2001  WP032001    2001-05-05
 ```
 
 Supplying `date_format` skips inference entirely and silences the warning:

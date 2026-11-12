@@ -58,10 +58,10 @@ summary(katrina)
 #> 
 #> ── Sources ──
 #> 
-#> • Server: "demo.dataverse.org"
-#> • Historical dataset: doi:10.70122/FK2/SWEYST v4.0
-#> • Files retrieved: 10 (143.0 MB)
-#> • Retrieved at: 2026-10-30 22:53:30 UTC
+#> • Server: "dataverse.harvard.edu"
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
+#> • Files retrieved: 10 (165.5 MB)
+#> • Retrieved at: 2026-11-12 21:11:06 UTC
 #> 
 #> ── Tables ──
 #> 
