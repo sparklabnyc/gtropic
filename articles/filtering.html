@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gtropic</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -179,18 +179,18 @@ before querying:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/gtropic_adm2.html">gtropic_adm2</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 49,349 × 5</span></span>
-<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME    ADM2_GROUP WHO_ENTITY  WHO_REGION</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;        &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;</span></span>
-<span><span class="co">#&gt;  1 17698898B67359070524975 Deh Bala     AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  2 17698898B98443198567384 Gulran       AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  3 17698898B82675281335003 Koshk        AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  4 17698898B74585757664988 Chaparhar    AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  5 17698898B84066352785355 Koshki Kohna AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  6 17698898B31168234973124 Pachier Agam AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  7 17698898B88962028797570 Kohsan       AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  8 17698898B58246966451205 Khogayani    AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt;  9 17698898B9118080572878  Shirzad      AFG        Afghanistan Eastern Mediterr…</span></span>
-<span><span class="co">#&gt; 10 17698898B30811011988841 Ghoryan      AFG        Afghanistan Eastern Mediterr…</span></span>
+<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME        ADM2_GROUP WHO_ENTITY  WHO_REGION</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;            &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;</span></span>
+<span><span class="co">#&gt;  1 17698898B68993560499599 Ab Band          AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  2 17698898B73770643817409 Ab Kamari        AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  3 17698898B14779938213850 Acheen           AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  4 17698898B23166050371692 Adraskan         AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  5 17698898B88187802806148 Ahmad Abad       AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  6 17698898B56570025970807 Ajristan         AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  7 17698898B62190249131225 Alasay           AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  8 17698898B14177024461677 Ali Khail (Jaji) AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt;  9 17698898B86734293398191 Aliabad          AFG        Afghanistan Eastern Medi…</span></span>
+<span><span class="co">#&gt; 10 17698898B28188212808936 Alingar          AFG        Afghanistan Eastern Medi…</span></span>
 <span><span class="co">#&gt; # ℹ 49,339 more rows</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="filtering-with-a-polygon">Filtering with a polygon<a class="anchor" aria-label="anchor" href="#filtering-with-a-polygon"></a>
@@ -213,7 +213,7 @@ polygon. This requires the optional <code>sf</code> and
 <span><span class="co">#&gt; ℹ Centroids were evaluated for 2 years (2010-2011); an ADM2 unit is included if its centroid fell inside the polygon in any of them.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2010.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2011.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 10 files (247.1 MB) ; 7 already cached.</span></span>
+<span><span class="co">#&gt; Retrieving 10 files (279.7 MB) ; 7 already cached.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/exposures/2010.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/exposures/2011.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2010.parquet'.</span></span>
@@ -226,18 +226,18 @@ polygon. This requires the optional <code>sf</code> and
 <span><span class="co">#&gt; Downloading '02_wind/storm_tracks/2011.parquet'.</span></span>
 <span><span class="va">nc_10to11</span><span class="op">$</span><span class="va">adm2</span></span>
 <span><span class="co">#&gt; # A tibble: 98 × 5</span></span>
-<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME  ADM2_GROUP WHO_ENTITY    WHO_REGION</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;         &lt;chr&gt;</span></span>
-<span><span class="co">#&gt;  1 52423323B72128668432216 Randolph   USA        United States Americas</span></span>
-<span><span class="co">#&gt;  2 52423323B59069176742644 Orange     USA        United States Americas</span></span>
-<span><span class="co">#&gt;  3 52423323B45605902717918 Jones      USA        United States Americas</span></span>
-<span><span class="co">#&gt;  4 52423323B14296787713089 Warren     USA        United States Americas</span></span>
-<span><span class="co">#&gt;  5 52423323B47180624843803 Vance      USA        United States Americas</span></span>
-<span><span class="co">#&gt;  6 52423323B75500493210020 Guilford   USA        United States Americas</span></span>
-<span><span class="co">#&gt;  7 52423323B43172948431886 Stanly     USA        United States Americas</span></span>
-<span><span class="co">#&gt;  8 52423323B14263080963128 Cumberland USA        United States Americas</span></span>
-<span><span class="co">#&gt;  9 52423323B42498482903221 Catawba    USA        United States Americas</span></span>
-<span><span class="co">#&gt; 10 52423323B43261157004179 Wilkes     USA        United States Americas</span></span>
+<span><span class="co">#&gt;    ADM2_ID                 ADM2_NAME ADM2_GROUP WHO_ENTITY    WHO_REGION</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;                   &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;         &lt;chr&gt;</span></span>
+<span><span class="co">#&gt;  1 52423323B75735385248620 Alamance  USA        United States Americas</span></span>
+<span><span class="co">#&gt;  2 52423323B44414006635896 Alexander USA        United States Americas</span></span>
+<span><span class="co">#&gt;  3 52423323B93536446386656 Alleghany USA        United States Americas</span></span>
+<span><span class="co">#&gt;  4 52423323B73600596363110 Anson     USA        United States Americas</span></span>
+<span><span class="co">#&gt;  5 52423323B47317028722188 Ashe      USA        United States Americas</span></span>
+<span><span class="co">#&gt;  6 52423323B91612624851462 Avery     USA        United States Americas</span></span>
+<span><span class="co">#&gt;  7 52423323B44486980116087 Beaufort  USA        United States Americas</span></span>
+<span><span class="co">#&gt;  8 52423323B7787272397887  Bertie    USA        United States Americas</span></span>
+<span><span class="co">#&gt;  9 52423323B8015598177606  Bladen    USA        United States Americas</span></span>
+<span><span class="co">#&gt; 10 52423323B12833551098527 Brunswick USA        United States Americas</span></span>
 <span><span class="co">#&gt; # ℹ 88 more rows</span></span></code></pre></div>
 <p>There are two important points to keep in mind:</p>
 <ol style="list-style-type: decimal">
@@ -342,22 +342,27 @@ determination:</p>
 <span><span class="co"># month, so day-month-year is impossible for this pair, which forces a</span></span>
 <span><span class="co"># month-day-year interpretation for both.</span></span>
 <span><span class="fu"><a href="../reference/gtropic_storms.html">gtropic_storms</a></span><span class="op">(</span>date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"01/04/2001"</span>, <span class="st">"05/19/2001"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # A tibble: 13 × 4</span></span>
+<span><span class="co">#&gt; # A tibble: 18 × 4</span></span>
 <span><span class="co">#&gt;    STORM_ID      STORM_NAME    USA_ATCF_ID STORM_GENESIS_DATE_UTC</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;         &lt;chr&gt;       &lt;date&gt;</span></span>
-<span><span class="co">#&gt;  1 2001028S15128 Terri-2001    SH072001    2001-01-27</span></span>
-<span><span class="co">#&gt;  2 2001039S11139 Winsome-2001  SH082001    2001-02-08</span></span>
-<span><span class="co">#&gt;  3 2001039S13117 Vincent-2001  SH092001    2001-02-07</span></span>
-<span><span class="co">#&gt;  4 2001047N09134 Unnamed-2001  WP012001    2001-02-16</span></span>
-<span><span class="co">#&gt;  5 2001054S15155 Abigail-2001  SH122001    2001-02-23</span></span>
-<span><span class="co">#&gt;  6 2001056S11163 Paula-2001    SH132001    2001-02-25</span></span>
-<span><span class="co">#&gt;  7 2001064S10052 Dera-2001     SH152001    2001-03-04</span></span>
-<span><span class="co">#&gt;  8 2001091S11111 Walter-2001   SH172001    2001-04-01</span></span>
-<span><span class="co">#&gt;  9 2001093S10062 Evariste-2001 SH182001    2001-04-02</span></span>
-<span><span class="co">#&gt; 10 2001094S12172 Sose-2001     SH192001    2001-04-03</span></span>
-<span><span class="co">#&gt; 11 2001106N04138 Unnamed-2001  WP022001    2001-04-16</span></span>
-<span><span class="co">#&gt; 12 2001106S08137 Alistair-2001 SH202001    2001-04-15</span></span>
-<span><span class="co">#&gt; 13 2001125N05129 Cimaron-2001  WP032001    2001-05-05</span></span></code></pre></div>
+<span><span class="co">#&gt;  1 2001018S12086 Charly-2001   SH062001    2001-01-17</span></span>
+<span><span class="co">#&gt;  2 2001028S15128 Terri-2001    SH072001    2001-01-27</span></span>
+<span><span class="co">#&gt;  3 2001039S11139 Winsome-2001  SH082001    2001-02-08</span></span>
+<span><span class="co">#&gt;  4 2001039S13117 Vincent-2001  SH092001    2001-02-07</span></span>
+<span><span class="co">#&gt;  5 2001047N09134 Unnamed-2001  WP012001    2001-02-16</span></span>
+<span><span class="co">#&gt;  6 2001047S17157 Unnamed-2001  SH102001    2001-02-16</span></span>
+<span><span class="co">#&gt;  7 2001049S17198 Oma-2001      SH112001    2001-02-18</span></span>
+<span><span class="co">#&gt;  8 2001054S15155 Abigail-2001  SH122001    2001-02-23</span></span>
+<span><span class="co">#&gt;  9 2001056S11163 Paula-2001    SH132001    2001-02-25</span></span>
+<span><span class="co">#&gt; 10 2001060S19223 Rita-2001     SH142001    2001-02-28</span></span>
+<span><span class="co">#&gt; 11 2001064S10052 Dera-2001     SH152001    2001-03-04</span></span>
+<span><span class="co">#&gt; 12 2001091S11111 Walter-2001   SH172001    2001-04-01</span></span>
+<span><span class="co">#&gt; 13 2001091S13094 Unnamed-2001  SH162001    2001-04-01</span></span>
+<span><span class="co">#&gt; 14 2001093S10062 Evariste-2001 SH182001    2001-04-02</span></span>
+<span><span class="co">#&gt; 15 2001094S12172 Sose-2001     SH192001    2001-04-03</span></span>
+<span><span class="co">#&gt; 16 2001106N04138 Unnamed-2001  WP022001    2001-04-16</span></span>
+<span><span class="co">#&gt; 17 2001106S08137 Alistair-2001 SH202001    2001-04-15</span></span>
+<span><span class="co">#&gt; 18 2001125N05129 Cimaron-2001  WP032001    2001-05-05</span></span></code></pre></div>
 <p>When more than one interpretation of the supplied dates is possible,
 <code>gtropic</code> will pick by precedence – <code>ymd</code>, then
 <code>mdy</code>, then <code>dmy</code> – before issuing a warning,
@@ -368,22 +373,27 @@ naming the interpretation chosen:</p>
 <span><span class="co">#&gt; ℹ Interpreting as "mdy", so "01/04/2001" means "2001-01-04".</span></span>
 <span><span class="co">#&gt; ℹ Rejected alternative: "dmy".</span></span>
 <span><span class="co">#&gt; ℹ Set `date_format` to be explicit, e.g. `date_format = "dmy"`.</span></span>
-<span><span class="co">#&gt; # A tibble: 13 × 4</span></span>
+<span><span class="co">#&gt; # A tibble: 18 × 4</span></span>
 <span><span class="co">#&gt;    STORM_ID      STORM_NAME    USA_ATCF_ID STORM_GENESIS_DATE_UTC</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;         &lt;chr&gt;       &lt;date&gt;</span></span>
-<span><span class="co">#&gt;  1 2001028S15128 Terri-2001    SH072001    2001-01-27</span></span>
-<span><span class="co">#&gt;  2 2001039S11139 Winsome-2001  SH082001    2001-02-08</span></span>
-<span><span class="co">#&gt;  3 2001039S13117 Vincent-2001  SH092001    2001-02-07</span></span>
-<span><span class="co">#&gt;  4 2001047N09134 Unnamed-2001  WP012001    2001-02-16</span></span>
-<span><span class="co">#&gt;  5 2001054S15155 Abigail-2001  SH122001    2001-02-23</span></span>
-<span><span class="co">#&gt;  6 2001056S11163 Paula-2001    SH132001    2001-02-25</span></span>
-<span><span class="co">#&gt;  7 2001064S10052 Dera-2001     SH152001    2001-03-04</span></span>
-<span><span class="co">#&gt;  8 2001091S11111 Walter-2001   SH172001    2001-04-01</span></span>
-<span><span class="co">#&gt;  9 2001093S10062 Evariste-2001 SH182001    2001-04-02</span></span>
-<span><span class="co">#&gt; 10 2001094S12172 Sose-2001     SH192001    2001-04-03</span></span>
-<span><span class="co">#&gt; 11 2001106N04138 Unnamed-2001  WP022001    2001-04-16</span></span>
-<span><span class="co">#&gt; 12 2001106S08137 Alistair-2001 SH202001    2001-04-15</span></span>
-<span><span class="co">#&gt; 13 2001125N05129 Cimaron-2001  WP032001    2001-05-05</span></span></code></pre></div>
+<span><span class="co">#&gt;  1 2001018S12086 Charly-2001   SH062001    2001-01-17</span></span>
+<span><span class="co">#&gt;  2 2001028S15128 Terri-2001    SH072001    2001-01-27</span></span>
+<span><span class="co">#&gt;  3 2001039S11139 Winsome-2001  SH082001    2001-02-08</span></span>
+<span><span class="co">#&gt;  4 2001039S13117 Vincent-2001  SH092001    2001-02-07</span></span>
+<span><span class="co">#&gt;  5 2001047N09134 Unnamed-2001  WP012001    2001-02-16</span></span>
+<span><span class="co">#&gt;  6 2001047S17157 Unnamed-2001  SH102001    2001-02-16</span></span>
+<span><span class="co">#&gt;  7 2001049S17198 Oma-2001      SH112001    2001-02-18</span></span>
+<span><span class="co">#&gt;  8 2001054S15155 Abigail-2001  SH122001    2001-02-23</span></span>
+<span><span class="co">#&gt;  9 2001056S11163 Paula-2001    SH132001    2001-02-25</span></span>
+<span><span class="co">#&gt; 10 2001060S19223 Rita-2001     SH142001    2001-02-28</span></span>
+<span><span class="co">#&gt; 11 2001064S10052 Dera-2001     SH152001    2001-03-04</span></span>
+<span><span class="co">#&gt; 12 2001091S11111 Walter-2001   SH172001    2001-04-01</span></span>
+<span><span class="co">#&gt; 13 2001091S13094 Unnamed-2001  SH162001    2001-04-01</span></span>
+<span><span class="co">#&gt; 14 2001093S10062 Evariste-2001 SH182001    2001-04-02</span></span>
+<span><span class="co">#&gt; 15 2001094S12172 Sose-2001     SH192001    2001-04-03</span></span>
+<span><span class="co">#&gt; 16 2001106N04138 Unnamed-2001  WP022001    2001-04-16</span></span>
+<span><span class="co">#&gt; 17 2001106S08137 Alistair-2001 SH202001    2001-04-15</span></span>
+<span><span class="co">#&gt; 18 2001125N05129 Cimaron-2001  WP032001    2001-05-05</span></span></code></pre></div>
 <p>Supplying <code>date_format</code> skips inference entirely and
 silences the warning:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">

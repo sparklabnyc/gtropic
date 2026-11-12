@@ -79,16 +79,16 @@ mf$files
 #> # A tibble: 10 × 10
 #>    source_role dataset_doi         dataset_version directory_label label file_id
 #>    <chr>       <chr>               <chr>           <chr>           <chr>   <int>
-#>  1 Historical  doi:10.70122/FK2/S… 4.0             metadata        adm2… 2702301
-#>  2 Historical  doi:10.70122/FK2/S… 4.0             02_wind/storm_… 2005… 2706357
-#>  3 Historical  doi:10.70122/FK2/S… 4.0             02_wind/exposu… 2005… 2721015
-#>  4 Historical  doi:10.70122/FK2/S… 4.0             02_wind/zero_p… 2005… 2721067
-#>  5 Historical  doi:10.70122/FK2/S… 4.0             04_precip       2005… 2721119
-#>  6 Historical  doi:10.70122/FK2/S… 4.0             03_flood        2005… 2704009
-#>  7 Historical  doi:10.70122/FK2/S… 4.0             01_pop          2005… 2720969
-#>  8 Historical  doi:10.70122/FK2/S… 4.0             02_wind/storm_… 2005… 2703942
-#>  9 Historical  doi:10.70122/FK2/S… 4.0             metadata        code… 2704082
-#> 10 Historical  doi:10.70122/FK2/S… 4.0             metadata        adm2… 2721140
+#>  1 Historical  doi:10.7910/DVN/EA… 1.0             metadata        adm2…  1.44e7
+#>  2 Historical  doi:10.7910/DVN/EA… 1.0             02_wind/storm_… 2005…  1.44e7
+#>  3 Historical  doi:10.7910/DVN/EA… 1.0             02_wind/exposu… 2005…  1.44e7
+#>  4 Historical  doi:10.7910/DVN/EA… 1.0             02_wind/zero_p… 2005…  1.44e7
+#>  5 Historical  doi:10.7910/DVN/EA… 1.0             04_precip       2005…  1.44e7
+#>  6 Historical  doi:10.7910/DVN/EA… 1.0             03_flood        2005…  1.44e7
+#>  7 Historical  doi:10.7910/DVN/EA… 1.0             01_pop          2005…  1.44e7
+#>  8 Historical  doi:10.7910/DVN/EA… 1.0             02_wind/storm_… 2005…  1.44e7
+#>  9 Historical  doi:10.7910/DVN/EA… 1.0             metadata        code…  1.44e7
+#> 10 Historical  doi:10.7910/DVN/EA… 1.0             metadata        adm2…  1.44e7
 #> # ℹ 4 more variables: checksum <chr>, checksum_type <chr>, size_bytes <dbl>,
 #> #   downloaded_at <dttm>
 ```

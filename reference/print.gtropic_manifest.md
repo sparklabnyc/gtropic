@@ -41,7 +41,7 @@ result <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Retrieving 10 files (143.0 MB) ; .
+#> Retrieving 10 files (165.5 MB) ; .
 #> Downloading 02_wind/exposures/2005.parquet.
 #> Downloading 02_wind/zero_pairs/2005.parquet.
 #> Downloading 04_precip/2005.parquet.
@@ -53,12 +53,12 @@ result <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 gtropic_manifest(result)
 #> 
 #> ── gtropic version manifest ────────────────────────────────────────────────────
-#> • Server: "demo.dataverse.org"
-#> • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)
+#> • Server: "dataverse.harvard.edu"
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Files recorded: 10
-#> • Total size: 143.0 MB
-#> • Retrieved: 2026-10-31 02:42:59 UTC
-#> • Package version: "0.0.0.9000"
+#> • Total size: 165.5 MB
+#> • Retrieved: 2026-11-12 21:44:10 UTC
+#> • Package version: "0.0.0.9001"
 #> 
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to
 #> reproduce the same retrieval.

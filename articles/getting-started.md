@@ -76,18 +76,18 @@ The available administrative units in the dataset with:
 adm2s <- gtropic_adm2()
 adm2s
 #> # A tibble: 49,349 × 5
-#>    ADM2_ID                 ADM2_NAME    ADM2_GROUP WHO_ENTITY  WHO_REGION
-#>    <chr>                   <chr>        <chr>      <chr>       <chr>
-#>  1 17698898B67359070524975 Deh Bala     AFG        Afghanistan Eastern Mediterr…
-#>  2 17698898B98443198567384 Gulran       AFG        Afghanistan Eastern Mediterr…
-#>  3 17698898B82675281335003 Koshk        AFG        Afghanistan Eastern Mediterr…
-#>  4 17698898B74585757664988 Chaparhar    AFG        Afghanistan Eastern Mediterr…
-#>  5 17698898B84066352785355 Koshki Kohna AFG        Afghanistan Eastern Mediterr…
-#>  6 17698898B31168234973124 Pachier Agam AFG        Afghanistan Eastern Mediterr…
-#>  7 17698898B88962028797570 Kohsan       AFG        Afghanistan Eastern Mediterr…
-#>  8 17698898B58246966451205 Khogayani    AFG        Afghanistan Eastern Mediterr…
-#>  9 17698898B9118080572878  Shirzad      AFG        Afghanistan Eastern Mediterr…
-#> 10 17698898B30811011988841 Ghoryan      AFG        Afghanistan Eastern Mediterr…
+#>    ADM2_ID                 ADM2_NAME        ADM2_GROUP WHO_ENTITY  WHO_REGION
+#>    <chr>                   <chr>            <chr>      <chr>       <chr>
+#>  1 17698898B68993560499599 Ab Band          AFG        Afghanistan Eastern Medi…
+#>  2 17698898B73770643817409 Ab Kamari        AFG        Afghanistan Eastern Medi…
+#>  3 17698898B14779938213850 Acheen           AFG        Afghanistan Eastern Medi…
+#>  4 17698898B23166050371692 Adraskan         AFG        Afghanistan Eastern Medi…
+#>  5 17698898B88187802806148 Ahmad Abad       AFG        Afghanistan Eastern Medi…
+#>  6 17698898B56570025970807 Ajristan         AFG        Afghanistan Eastern Medi…
+#>  7 17698898B62190249131225 Alasay           AFG        Afghanistan Eastern Medi…
+#>  8 17698898B14177024461677 Ali Khail (Jaji) AFG        Afghanistan Eastern Medi…
+#>  9 17698898B86734293398191 Aliabad          AFG        Afghanistan Eastern Medi…
+#> 10 17698898B28188212808936 Alingar          AFG        Afghanistan Eastern Medi…
 #> # ℹ 49,339 more rows
 ```
 
@@ -97,8 +97,8 @@ G-TROPIC:
 ``` r
 
 head(unique(adm2s$WHO_ENTITY))
-#> [1] "Afghanistan"    "United Kingdom" "Albania"        "Algeria"
-#> [5] "United States"  NA
+#> [1] "Afghanistan"         "Albania"             "Algeria"
+#> [4] "Andorra"             "Angola"              "Antigua and Barbuda"
 ```
 
 Or, for instance, the available administrative units in a specific
@@ -108,18 +108,18 @@ country:
 
 gtropic_adm2(WHO_ENTITY = "United States")
 #> # A tibble: 3,231 × 5
-#>    ADM2_ID                 ADM2_NAME  ADM2_GROUP WHO_ENTITY    WHO_REGION
-#>    <chr>                   <chr>      <chr>      <chr>         <chr>
-#>  1 52423323B51867153498623 Highland   USA        United States Americas
-#>  2 52423323B67588574079428 Alpine     USA        United States Americas
-#>  3 52423323B97123089850170 Escambia   USA        United States Americas
-#>  4 52423323B54167037237770 Lawrence   USA        United States Americas
-#>  5 52423323B18579387327768 Wayne      USA        United States Americas
-#>  6 52423323B71362276548625 Tishomingo USA        United States Americas
-#>  7 52423323B19966710463863 Sanders    USA        United States Americas
-#>  8 52423323B67077901806593 Albany     USA        United States Americas
-#>  9 52423323B68632918387185 Potter     USA        United States Americas
-#> 10 52423323B68605261841500 Greene     USA        United States Americas
+#>    ADM2_ID                 ADM2_NAME ADM2_GROUP WHO_ENTITY    WHO_REGION
+#>    <chr>                   <chr>     <chr>      <chr>         <chr>
+#>  1 52423323B54775259864963 Abbeville USA        United States Americas
+#>  2 52423323B76935168618959 Acadia    USA        United States Americas
+#>  3 52423323B3829311906310  Accomack  USA        United States Americas
+#>  4 52423323B70404616629073 Ada       USA        United States Americas
+#>  5 52423323B5139201807141  Adair     USA        United States Americas
+#>  6 52423323B59110128996331 Adair     USA        United States Americas
+#>  7 52423323B63025537469888 Adair     USA        United States Americas
+#>  8 52423323B87676226812145 Adair     USA        United States Americas
+#>  9 52423323B23495952860942 Adams     USA        United States Americas
+#> 10 52423323B7193910850758  Adams     USA        United States Americas
 #> # ℹ 3,221 more rows
 ```
 
@@ -132,20 +132,20 @@ can get the list of storms for that given `year`:
 ``` r
 
 gtropic_storms(year = 2025)
-#> # A tibble: 77 × 4
+#> # A tibble: 106 × 4
 #>    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC
 #>    <chr>         <chr>        <chr>       <date>
-#>  1 2025017S18122 Sean-2025    SH102025    2025-01-17
-#>  2 2025024S11082 Faida-2025   SH112025    2025-01-23
-#>  3 2025029S25043 Elvis-2025   SH122025    2025-01-28
-#>  4 2025034S19166 Unnamed-2025 SH152025    2025-02-02
-#>  5 2025039S14125 Zelia-2025   SH172025    2025-02-08
-#>  6 2025052S14148 Alfred-2025  SH182025    2025-02-21
-#>  7 2025052S23038 Honde-2025   SH232025    2025-02-21
-#>  8 2025054S13182 Rae-2025     SH192025    2025-02-22
-#>  9 2025054S17051 Garance-2025 SH222025    2025-02-23
-#> 10 2025056S16171 Seru-2025    SH212025    2025-02-24
-#> # ℹ 67 more rows
+#>  1 2025010S17185 Pita-2025    SH082025    2025-01-10
+#>  2 2025017S18122 Sean-2025    SH102025    2025-01-17
+#>  3 2025024S11082 Faida-2025   SH112025    2025-01-23
+#>  4 2025029S25043 Elvis-2025   SH122025    2025-01-28
+#>  5 2025031S15106 Vince-2025   SH132025    2025-01-31
+#>  6 2025032S14120 Taliah-2025  SH142025    2025-01-31
+#>  7 2025034S19166 Unnamed-2025 SH152025    2025-02-02
+#>  8 2025039S14125 Zelia-2025   SH172025    2025-02-08
+#>  9 2025042S22164 Unnamed-2025 SH162025    2025-02-11
+#> 10 2025050S12125 Bianca-2025  SH202025    2025-02-19
+#> # ℹ 96 more rows
 ```
 
 The `STORM_GENESIS_DATE_UTC` column in that last result is the date used
@@ -224,7 +224,7 @@ usa_25 <- gtropic_data(
   date_range = c(2025, 2025)
 )
 #> Discovering datasets in collection "gtropic".
-#> Retrieving 7 files (166.0 MB) ; 3 already cached.
+#> Retrieving 7 files (188.3 MB) ; 3 already cached.
 #> Downloading '02_wind/exposures/2025.parquet'.
 #> Downloading '02_wind/zero_pairs/2025.parquet'.
 #> Downloading '04_precip/2025.parquet'.
@@ -235,8 +235,8 @@ usa_25 <- gtropic_data(
 
 usa_25
 #>
-#> ── G-TROPIC data ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-#> • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)
+#> ── G-TROPIC data ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Genesis dates: "2025-01-01" to "2025-12-31"
 #> • Storms: 10
 #> • ADM2 units: 803
@@ -245,7 +245,7 @@ usa_25
 #> • wind: 1068 rows x 12 columns
 #> • precip: 4272 rows x 3 columns
 #> • flood: 661 rows x 7 columns
-#> • zero_pairs: 225182 rows x 5 columns
+#> • zero_pairs: 314381 rows x 5 columns
 #> • tracks: 682 rows x 10 columns
 #> • pop: 803 rows x 6 columns
 #> • storm_metadata: 10 rows x 4 columns
@@ -269,21 +269,21 @@ warnings raised, we can use:
 
 summary(usa_25)
 #>
-#> ── G-TROPIC data summary ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> ── G-TROPIC data summary ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 #>
 #> ── Sources ──
 #>
-#> • Server: "demo.dataverse.org"
-#> • Historical dataset: doi:10.70122/FK2/SWEYST v4.0
-#> • Files retrieved: 10 (166.8 MB)
-#> • Retrieved at: 2026-10-30 22:50:44 UTC
+#> • Server: "dataverse.harvard.edu"
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
+#> • Files retrieved: 10 (189.1 MB)
+#> • Retrieved at: 2026-11-12 21:16:42 UTC
 #>
 #> ── Tables ──
 #>
 #> • wind: 1068 rows x 12 columns
 #> • precip: 4272 rows x 3 columns
 #> • flood: 661 rows x 7 columns
-#> • zero_pairs: 225182 rows x 5 columns
+#> • zero_pairs: 314381 rows x 5 columns
 #> • tracks: 682 rows x 10 columns
 #> • pop: 803 rows x 6 columns
 #> • storm_metadata: 10 rows x 4 columns
@@ -471,13 +471,13 @@ Three functions provide access to the metadata pertaining to your
 # Exactly which files were retrieved, at which version
 gtropic_manifest(usa_25)
 #>
-#> ── gtropic version manifest ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-#> • Server: "demo.dataverse.org"
-#> • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)
+#> ── gtropic version manifest ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> • Server: "dataverse.harvard.edu"
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Files recorded: 10
-#> • Total size: 166.8 MB
-#> • Retrieved: 2026-10-30 22:50:44 UTC
-#> • Package version: "0.0.0.9000"
+#> • Total size: 189.1 MB
+#> • Retrieved: 2026-11-12 21:16:42 UTC
+#> • Package version: "0.0.0.9001"
 #>
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to
 #> reproduce the same retrieval.
@@ -488,11 +488,11 @@ gtropic_manifest(usa_25)
 # The filters as the package resolved them
 gtropic_filters(usa_25)
 #>
-#> ── G-TROPIC resolved filters ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-#> • adm2_ids (803 values): ["52423323B10055621117527", "52423323B10065184809144", "52423323B10302998803932", "52423323B10350916691509", "52423323B10442929932087", "52423323B10584672826222",
-#> "52423323B10770912620871", "52423323B10780727675908", "52423323B11034045930208", "52423323B11153152222342"] (793 values omitted)
-#> • storm_ids (10 values): ["2025185N30280", "2025223N17337", "2025280N11319", "2025215N33284", "2025243N14239", "2025270N21285", "2025180N19266", "2025205N13145", "2025218N19149",
-#> "2025308N09145"]
+#> ── G-TROPIC resolved filters ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> • adm2_ids (803 values): ["52423323B10055621117527", "52423323B10065184809144", "52423323B10302998803932", "52423323B10350916691509", "52423323B10442929932087",
+#> "52423323B10584672826222", "52423323B10770912620871", "52423323B10780727675908", "52423323B11034045930208", "52423323B11153152222342"] (793 values omitted)
+#> • storm_ids (10 values): ["2025185N30280", "2025223N17337", "2025280N11319", "2025215N33284", "2025243N14239", "2025270N21285", "2025180N19266", "2025205N13145",
+#> "2025218N19149", "2025308N09145"]
 #> • date_start (1 value): [2025-01-01]
 #> • date_end (1 value): [2025-12-31]
 #> • date_order (1 value): ["ymd"]

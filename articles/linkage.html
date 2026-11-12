@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gtropic</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,7 +107,7 @@ every <code>ADM2_ID</code>-<code>STORM_ID</code> pairing:</p>
 <code class="sourceCode R"><span><span class="va">jam_05</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gtropic_data.html">gtropic_data</a></span><span class="op">(</span>WHO_ENTITY <span class="op">=</span> <span class="st">"Jamaica"</span>, date_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2005</span>, <span class="fl">2005</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2005.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 6 files (132.2 MB) ; 4 already cached.</span></span>
+<span><span class="co">#&gt; Retrieving 6 files (154.8 MB) ; 4 already cached.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/exposures/2005.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2005.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '04_precip/2005.parquet'.</span></span>
@@ -320,7 +320,7 @@ data 1 week either side of the storm’s
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Discovering datasets in collection "gtropic".</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/storm_metadata/2019.parquet'.</span></span>
-<span><span class="co">#&gt; Retrieving 6 files (143.5 MB) ; 4 already cached.</span></span>
+<span><span class="co">#&gt; Retrieving 6 files (161.4 MB) ; 4 already cached.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/exposures/2019.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '02_wind/zero_pairs/2019.parquet'.</span></span>
 <span><span class="co">#&gt; Downloading '04_precip/2019.parquet'.</span></span>
@@ -338,16 +338,16 @@ ADM2</strong> within the temporal window defined during our
 <span><span class="co">#&gt; # A tibble: 397 × 2</span></span>
 <span><span class="co">#&gt;    ADM2_ID                 total_mm</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;                      &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 76128533B10270619600482  426.</span></span>
-<span><span class="co">#&gt;  2 76128533B11082155919544   64.6</span></span>
-<span><span class="co">#&gt;  3 76128533B11421856387892  114.</span></span>
-<span><span class="co">#&gt;  4 76128533B12079567451207   72.4</span></span>
-<span><span class="co">#&gt;  5 76128533B12144400448811    0.985</span></span>
-<span><span class="co">#&gt;  6 76128533B1222571856670    10.7</span></span>
-<span><span class="co">#&gt;  7 76128533B12294379827032    0.855</span></span>
-<span><span class="co">#&gt;  8 76128533B12380735325851   27.1</span></span>
+<span><span class="co">#&gt;  1 76128533B10270619600482  381.</span></span>
+<span><span class="co">#&gt;  2 76128533B11082155919544   64.7</span></span>
+<span><span class="co">#&gt;  3 76128533B11421856387892  112.</span></span>
+<span><span class="co">#&gt;  4 76128533B12079567451207   69.8</span></span>
+<span><span class="co">#&gt;  5 76128533B12144400448811    1.04</span></span>
+<span><span class="co">#&gt;  6 76128533B1222571856670    11.6</span></span>
+<span><span class="co">#&gt;  7 76128533B12294379827032    0.793</span></span>
+<span><span class="co">#&gt;  8 76128533B12380735325851   27.4</span></span>
 <span><span class="co">#&gt;  9 76128533B12519626815499  211.</span></span>
-<span><span class="co">#&gt; 10 76128533B12694285477701   12.6</span></span>
+<span><span class="co">#&gt; 10 76128533B12694285477701   12.2</span></span>
 <span><span class="co">#&gt; # ℹ 387 more rows</span></span></code></pre></div>
 <p>But let’s say instead we want to calculate the <strong>rainfall per
 storm</strong> within the spatial &amp; temporal window we defined. Use
@@ -379,16 +379,16 @@ both storms:</p>
 <span><span class="co">#&gt; # A tibble: 764 × 3</span></span>
 <span><span class="co">#&gt;    STORM_ID      ADM2_ID                 storm_adm2_mm</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;         &lt;chr&gt;                           &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 2019116N02090 76128533B10270619600482       426.</span></span>
-<span><span class="co">#&gt;  2 2019116N02090 76128533B11421856387892        78.2</span></span>
-<span><span class="co">#&gt;  3 2019116N02090 76128533B12144400448811         0.985</span></span>
-<span><span class="co">#&gt;  4 2019116N02090 76128533B1222571856670          9.38</span></span>
-<span><span class="co">#&gt;  5 2019116N02090 76128533B12294379827032         0.855</span></span>
-<span><span class="co">#&gt;  6 2019116N02090 76128533B12694285477701        12.6</span></span>
-<span><span class="co">#&gt;  7 2019116N02090 76128533B13437137070957       181.</span></span>
-<span><span class="co">#&gt;  8 2019116N02090 76128533B13733639953372        82.7</span></span>
-<span><span class="co">#&gt;  9 2019116N02090 76128533B14292125820380         1.28</span></span>
-<span><span class="co">#&gt; 10 2019116N02090 76128533B14403163214152        42.0</span></span>
+<span><span class="co">#&gt;  1 2019116N02090 76128533B10270619600482       381.</span></span>
+<span><span class="co">#&gt;  2 2019116N02090 76128533B11421856387892        76.0</span></span>
+<span><span class="co">#&gt;  3 2019116N02090 76128533B12144400448811         1.04</span></span>
+<span><span class="co">#&gt;  4 2019116N02090 76128533B1222571856670         10.4</span></span>
+<span><span class="co">#&gt;  5 2019116N02090 76128533B12294379827032         0.793</span></span>
+<span><span class="co">#&gt;  6 2019116N02090 76128533B12694285477701        12.2</span></span>
+<span><span class="co">#&gt;  7 2019116N02090 76128533B13437137070957       182.</span></span>
+<span><span class="co">#&gt;  8 2019116N02090 76128533B13733639953372        75.3</span></span>
+<span><span class="co">#&gt;  9 2019116N02090 76128533B14292125820380         1.26</span></span>
+<span><span class="co">#&gt; 10 2019116N02090 76128533B14403163214152        34.0</span></span>
 <span><span class="co">#&gt; # ℹ 754 more rows</span></span></code></pre></div>
 <p>Or alternatively:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -398,13 +398,13 @@ both storms:</p>
 <span><span class="co">#&gt; # A tibble: 7 × 2</span></span>
 <span><span class="co">#&gt;   STORM_ID      storm_mm</span></span>
 <span><span class="co">#&gt;   &lt;chr&gt;            &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1 2019116N02090   20502.</span></span>
-<span><span class="co">#&gt; 2 2019160N11073    8488.</span></span>
-<span><span class="co">#&gt; 3 2019264N19071    8241.</span></span>
-<span><span class="co">#&gt; 4 2019296N15066    6102.</span></span>
-<span><span class="co">#&gt; 5 2019301N05081   10394.</span></span>
-<span><span class="co">#&gt; 6 2019302N11118    4779.</span></span>
-<span><span class="co">#&gt; 7 2019337N11072     953.</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 2019116N02090   20391.</span></span>
+<span><span class="co">#&gt; 2 2019160N11073    8369.</span></span>
+<span><span class="co">#&gt; 3 2019264N19071    8369.</span></span>
+<span><span class="co">#&gt; 4 2019296N15066    6107.</span></span>
+<span><span class="co">#&gt; 5 2019301N05081   10221.</span></span>
+<span><span class="co">#&gt; 6 2019302N11118    4889.</span></span>
+<span><span class="co">#&gt; 7 2019337N11072     981.</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">

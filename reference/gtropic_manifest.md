@@ -67,7 +67,7 @@ res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2015.parquet.
 #> Downloading 02_wind/storm_metadata/2016.parquet.
-#> Retrieving 17 files (266.5 MB) ; .
+#> Retrieving 17 files (315.8 MB) ; .
 #> Downloading 02_wind/exposures/2015.parquet.
 #> Downloading 02_wind/exposures/2016.parquet.
 #> Downloading 02_wind/zero_pairs/2015.parquet.

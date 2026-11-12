@@ -31,7 +31,7 @@ both lists."><meta property="og:image" content="https://sparklabnyc.github.io/gt
 
     <a class="navbar-brand me-2" href="../index.html">gtropic</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,20 +144,20 @@ tibble is returned.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># Review storms that formed during the 2005 season</span></span></span>
 <span class="r-in"><span><span class="fu">gtropic_storms</span><span class="op">(</span>year <span class="op">=</span> <span class="fl">2005</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 75 × 4</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 103 × 4</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;date&gt;</span>                </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> 2005003S09177 Kerry-2005   SH082005    2005-01-03            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> 2005007N04085 Unnamed-2005 IO012005    2005-01-07            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> 2005013N05153 Kulap-2005   WP012005    2005-01-13            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 2005017S09061 Ernest-2005  SH122005    2005-01-16            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 2005029S11072 Gerard-2005  SH142005    2005-01-29            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 2005032S14195 Meena-2005   SH152005    2005-02-01            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 2005035S14136 Harvey-2005  SH162005    2005-02-03            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 2005041S13181 Olaf-2005    SH192005    2005-02-10            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 2005042S12190 Nancy-2005   SH182005    2005-02-10            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 2005054S09173 Percy-2005   SH202005    2005-02-23            </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 65 more rows</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> 2005006S09099 Sally-2005   SH092005    2005-01-06            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> 2005007N04085 Unnamed-2005 IO012005    2005-01-07            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 2005012N04090 Unnamed-2005 IO022005    2005-01-11            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 2005013N05153 Kulap-2005   WP012005    2005-01-13            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 2005013S14124 Unnamed-2005 SH102005    2005-01-13            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 2005015S06089 Daren-2005   SH112005    2005-01-15            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 2005017S09061 Ernest-2005  SH122005    2005-01-16            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 2005022S14112 Tim-2005     SH132005    2005-01-22            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 2005029S11072 Gerard-2005  SH142005    2005-01-29            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 93 more rows</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Retrieve the published identifiers and dates for Hurricane Katrina</span></span></span>
 <span class="r-in"><span><span class="fu">gtropic_storms</span><span class="op">(</span>STORM_NAME <span class="op">=</span> <span class="st">"Katrina-2005"</span><span class="op">)</span></span></span>

@@ -374,7 +374,7 @@ jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Retrieving 10 files (143.0 MB) ; .
+#> Retrieving 10 files (165.5 MB) ; .
 #> Downloading 02_wind/exposures/2005.parquet.
 #> Downloading 02_wind/zero_pairs/2005.parquet.
 #> Downloading 04_precip/2005.parquet.
@@ -386,7 +386,7 @@ jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 jamaica
 #> 
 #> ── G-TROPIC data ───────────────────────────────────────────────────────────────
-#> • Historical dataset: doi:10.70122/FK2/SWEYST (version 4.0)
+#> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Genesis dates: "2005-01-01" to "2005-12-31"
 #> • Storms: 5
 #> • ADM2 units: 827
@@ -395,7 +395,7 @@ jamaica
 #> • wind: 3719 rows x 12 columns
 #> • precip: 14876 rows x 3 columns
 #> • flood: 176 rows x 7 columns
-#> • zero_pairs: 43370 rows x 5 columns
+#> • zero_pairs: 64083 rows x 5 columns
 #> • tracks: 376 rows x 10 columns
 #> • pop: 827 rows x 6 columns
 #> • storm_metadata: 5 rows x 4 columns
@@ -414,7 +414,7 @@ katrina <- gtropic_data(
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Retrieving 3 files (10.2 MB) ; .
+#> Retrieving 3 files (11.7 MB) ; .
 #> Downloading 02_wind/exposures/2005.parquet.
 
 # Define a seven-day rainfall window and a 300-km storm field for an
@@ -430,7 +430,7 @@ philippines <- gtropic_data(
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2015.parquet.
-#> Retrieving 5 files (120.0 MB) ; .
+#> Retrieving 5 files (147.4 MB) ; .
 #> Downloading 02_wind/exposures/2015.parquet.
 #> Downloading 02_wind/zero_pairs/2015.parquet.
 #> Downloading 04_precip/2015.parquet.
@@ -443,7 +443,7 @@ philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
 #> ℹ `version` and the DOI options are ignored.
 #> Downloading metadata/adm2.parquet.
 #> Downloading 02_wind/storm_metadata/2015.parquet.
-#> Retrieving 5 files (120.0 MB) ; .
+#> Retrieving 5 files (147.4 MB) ; .
 #> Downloading 02_wind/exposures/2015.parquet.
 #> Downloading 02_wind/zero_pairs/2015.parquet.
 #> Downloading 04_precip/2015.parquet.

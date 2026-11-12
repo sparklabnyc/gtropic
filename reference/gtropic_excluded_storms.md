@@ -73,7 +73,20 @@ years, a warning is issued and an empty tibble is returned.
 # \donttest{
 # Review exclusion records for storms that formed during the 2005 season
 gtropic_excluded_storms(year = 2005)
-#> Warning: No excluded-storm records found for the years requested.
-#> # A tibble: 0 × 0
+#> # A tibble: 12 × 3
+#>    STORM_ID      STORM_NAME   STORM_GENESIS_DATE_UTC
+#>    <chr>         <chr>        <date>                
+#>  1 2005026S20040 Felapi-2005  2005-01-26            
+#>  2 2005027S18168 Lola-2005    2005-01-27            
+#>  3 2005103S08138 Unnamed-2005 2005-04-13            
+#>  4 2005110S17180 Sheila-2005  2005-04-20            
+#>  5 2005172N22069 Unnamed-2005 2005-06-21            
+#>  6 2005179N22088 Unnamed-2005 2005-06-27            
+#>  7 2005210N21088 Unnamed-2005 2005-07-29            
+#>  8 2005255N14113 Unnamed-2005 2005-09-12            
+#>  9 2005255N20088 Unnamed-2005 2005-09-12            
+#> 10 2005257N20069 Unnamed-2005 2005-09-14            
+#> 11 2005260N20091 Unnamed-2005 2005-09-17            
+#> 12 2005324N08085 Unnamed-2005 2005-11-20            
 # }
 ```

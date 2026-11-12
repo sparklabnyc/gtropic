@@ -80,20 +80,20 @@ empty tibble is returned.
 # \donttest{
 # Review storms that formed during the 2005 season
 gtropic_storms(year = 2005)
-#> # A tibble: 75 × 4
+#> # A tibble: 103 × 4
 #>    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC
 #>    <chr>         <chr>        <chr>       <date>                
 #>  1 2005003S09177 Kerry-2005   SH082005    2005-01-03            
-#>  2 2005007N04085 Unnamed-2005 IO012005    2005-01-07            
-#>  3 2005013N05153 Kulap-2005   WP012005    2005-01-13            
-#>  4 2005017S09061 Ernest-2005  SH122005    2005-01-16            
-#>  5 2005029S11072 Gerard-2005  SH142005    2005-01-29            
-#>  6 2005032S14195 Meena-2005   SH152005    2005-02-01            
-#>  7 2005035S14136 Harvey-2005  SH162005    2005-02-03            
-#>  8 2005041S13181 Olaf-2005    SH192005    2005-02-10            
-#>  9 2005042S12190 Nancy-2005   SH182005    2005-02-10            
-#> 10 2005054S09173 Percy-2005   SH202005    2005-02-23            
-#> # ℹ 65 more rows
+#>  2 2005006S09099 Sally-2005   SH092005    2005-01-06            
+#>  3 2005007N04085 Unnamed-2005 IO012005    2005-01-07            
+#>  4 2005012N04090 Unnamed-2005 IO022005    2005-01-11            
+#>  5 2005013N05153 Kulap-2005   WP012005    2005-01-13            
+#>  6 2005013S14124 Unnamed-2005 SH102005    2005-01-13            
+#>  7 2005015S06089 Daren-2005   SH112005    2005-01-15            
+#>  8 2005017S09061 Ernest-2005  SH122005    2005-01-16            
+#>  9 2005022S14112 Tim-2005     SH132005    2005-01-22            
+#> 10 2005029S11072 Gerard-2005  SH142005    2005-01-29            
+#> # ℹ 93 more rows
 
 # Retrieve the published identifiers and dates for Hurricane Katrina
 gtropic_storms(STORM_NAME = "Katrina-2005")
