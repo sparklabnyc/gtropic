@@ -29,6 +29,7 @@ gtropic_plot(
   palette = NULL,
   direction = NULL,
   gridlines = TRUE,
+  make_valid = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -57,7 +58,11 @@ For \code{type = "count"}, it selects the first available count default;
 \item{storm}{Optional character vector of \code{STORM_ID}s or \code{STORM_NAME}s used
 to subset all applicable tables in \code{data}. Specifying \code{storm}s requires that the \code{data}
 object passed in contains the \code{storm_metadata} table. \code{STORM_NAME}s are matched
-case-insensitively. \code{storm = NULL} (the default) retains all storms.}
+case-insensitively and a complete name can select multiple \code{STORM_ID}s,
+including across basins. Names are convenience labels in \code{Name-YYYY} form,
+where \code{YYYY} is the published \code{SEASON} year, not necessarily the genesis
+calendar year. Prefer unique \code{STORM_ID}s for unambiguous plots.
+\code{storm = NULL} (the default) retains all storms.}
 
 \item{adm2}{Optional character vector of \code{ADM2_ID}s used to subset all applicable
 tables in \code{data}. \code{adm2 = NULL} (the default) retains all ADM2 units. For a track map, this
@@ -142,11 +147,13 @@ No layers are ever downloaded. \code{basemap = "admin1"} requires the
 optional \code{rnaturalearthhires} package.}
 
 \item{bbox}{Map extent as an sf/sfc object, an sf bbox with a known CRS, or
-geographic \code{c(xmin, xmax, ymin, ymax)}. \code{NULL} (the default) derives the
-extent from the plotted geometry and any displayed tracks.}
+four geographic bounds in \code{\link[sf:st_bbox]{sf::st_bbox()}} order:
+\code{c(xmin, ymin, xmax, ymax)}. \code{NULL} (the default) derives the extent from
+the plotted geometry and any displayed tracks.}
 
 \item{expand}{Nonnegative geographic-degree padding added to each side of the
-map extent after \code{bbox} is resolved. Defaults to 2.}
+map extent after \code{bbox} is resolved. Latitude limits are constrained to
+-90--90 degrees. Defaults to 2.}
 
 \item{crs}{A coordinate reference system understood by \code{\link[sf:st_crs]{sf::st_crs()}}. \code{NULL}
 (the default) selects EPSG:4326 for longitudinal spans under 40 degrees and
@@ -170,6 +177,11 @@ situations.}
 \item{gridlines}{Logical; if \code{TRUE} (the default), static maps show gridlines
 and longitude/latitude labels. It is ignored for Leaflet maps, which have no
 static axes.}
+
+\item{make_valid}{Logical. If \code{TRUE} (the default), invalid ADM2 geometries
+are repaired with \code{\link[sf:st_make_valid]{sf::st_make_valid()}} before plotting. Set to \code{FALSE} to
+preserve supplied geometry or avoid the validity-check and repair cost.
+Repair can change geometry types. This argument is ignored for track maps.}
 
 \item{title, subtitle, caption}{Plot labels. Each defaults to \code{NULL}, which uses
 an automatic title/subtitle/caption. A supplied caption replaces the automatic
@@ -198,8 +210,9 @@ labels; multi-metric titles describe the panel set. A single plotted storm
 prefixes the title, while multiple storms do not alter it. Metric strips use
 readable aggregate and active-threshold labels. Automatic captions use
 newline-separated source, retrieval, dataset-provenance, hazard-parameter,
-track-interval, and plotting-CRS lines. Hazard radii and windows are derived
-from rows that contributed to the plot.
+known source-data limitation, track-interval, and plotting-CRS lines as
+applicable. Hazard radii and windows are derived from rows that contributed
+to the plot.
 
 Track paths are drawn from every supplied observation. By default, constant-
 size points use \code{\link[=saffir_simpson]{saffir_simpson()}} categories derived from \code{USA_WIND}, which is

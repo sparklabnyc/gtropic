@@ -83,7 +83,7 @@ test_that("gtropic_data replays the stored canonical query", {
     date_list = NULL, date_format = NULL, tables = c("wind", "storm_metadata"),
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified",
+    flood_match = "start", geometry_resolution = "simplified", make_valid = FALSE,
     resolved_adm2_ids = "ADM2.1", resolved_storm_ids = "S.1",
     storm_metadata_years = 2001L
   )
@@ -106,8 +106,15 @@ test_that("gtropic_data replays the stored canonical query", {
   expect_identical(replay$resolved_storm_ids, query$resolved_storm_ids)
   expect_identical(replay$storm_metadata_years, query$storm_metadata_years)
   expect_identical(replay$tables, query$tables)
+  expect_false(replay$make_valid)
   expect_identical(replay$as, "arrow")
   expect_error(gtropic_data(manifest = manifest, tables = "flood"), "data-shaping")
+  expect_error(gtropic_data(manifest = manifest, make_valid = TRUE), "data-shaping")
+
+  legacy_query <- query
+  legacy_query$make_valid <- NULL
+  legacy_manifest <- manifest_finalize(manifest, resolved_query = legacy_query)
+  expect_true(gtropic_data(manifest = legacy_manifest)$make_valid)
 })
 
 test_that("canonical manifest queries retain resolved IDs and metadata years", {
@@ -119,7 +126,7 @@ test_that("canonical manifest queries retain resolved IDs and metadata years", {
     date_list = NULL, date_format = NULL, tables = c("wind", "storm_metadata"),
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified",
+    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
     resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
     storm_metadata_years = NULL
   )
@@ -181,7 +188,8 @@ test_that("unrestricted current-only wind retrieval avoids historical metadata",
     tables = c("wind", "storm_metadata"), wind_radius_km = 500,
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", as = "tibble",
+    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
+    as = "tibble",
     confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
     storm_metadata_years = NULL, resolved_query = NULL
   )
@@ -324,7 +332,8 @@ test_that("an old named storm without a date filter emits no current-period warn
     tables = c("wind", "storm_metadata"), wind_radius_km = 500,
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", as = "tibble",
+    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
+    as = "tibble",
     confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
     storm_metadata_years = NULL, resolved_query = NULL
   )

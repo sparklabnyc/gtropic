@@ -27,6 +27,20 @@ globally, from 1980 to the present. Key features include:
 - An on-disk cache enabled by default, with per-call bypass controls
 - Publication-ready static and interactive plots
 
+`STORM_ID` is G-TROPIC’s unique, preferred storm key for queries, joins,
+grouping, and reproducible work. `STORM_NAME` is a convenient lookup and
+display label in `Name-YYYY` form; a complete value can still match
+multiple storms, including across basins, and `YYYY` is the published
+`SEASON` year rather than necessarily the genesis calendar year. Use
+`gtropic_storms(STORM_NAME = ...)` to inspect matches and find the
+intended `STORM_ID`, then use that ID in `gtropic_data()` and downstream
+analysis.
+
+Explicit year and date filters select `STORM_GENESIS_DATE_UTC`.
+G-TROPIC’s annual storm metadata, wind, zero-pair, and track files—and
+the package’s temporal storm discovery and query organization—use that
+genesis calendar year.
+
 ## Installation
 
 The development version of `gtropic` can be installed from GitHub with:
@@ -48,10 +62,32 @@ library(gtropic)
 ``` r
 library(gtropic)
 
-# Grab exposure data for Hurricane Katrina (2005)
-katrina <- gtropic_data(STORM_NAME = "Katrina-2005")
+# Quickly find Hurricane Katrina by its convenience label
+katrina_matches <- gtropic_storms(STORM_NAME = "Katrina-2005")
+katrina_matches
+#> # A tibble: 1 × 4
+#>   STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC
+#>   <chr>         <chr>        <chr>       <date>                
+#> 1 2005236N23285 Katrina-2005 AL122005    2005-08-23
+
+# This example has one match; if several appear, choose the intended row
+katrina_id <- katrina_matches$STORM_ID[[1]]
+katrina <- gtropic_data(
+  STORM_ID = katrina_id,
+  date_range = c(2005, 2005)
+)
 #> Discovering datasets in collection "gtropic".
-#> Retrieving 0 files (0.0 B) ; 10 already cached.
+#> Downloading 'metadata/adm2.parquet'.
+#> Downloading '02_wind/storm_metadata/2005.parquet'.
+#> Retrieving 10 files (165.5 MB) ; .
+#> Downloading '02_wind/exposures/2005.parquet'.
+#> Downloading '02_wind/zero_pairs/2005.parquet'.
+#> Downloading '04_precip/2005.parquet'.
+#> Downloading '03_flood/2005.parquet'.
+#> Downloading '01_pop/2005.parquet'.
+#> Downloading '02_wind/storm_tracks/2005.parquet'.
+#> Downloading 'metadata/codebook.json'.
+#> Downloading 'metadata/adm2_geometry_simplified.parquet'.
 summary(katrina)
 #> 
 #> ── G-TROPIC data summary ───────────────────────────────────────────────────────
@@ -61,7 +97,7 @@ summary(katrina)
 #> • Server: "dataverse.harvard.edu"
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
 #> • Files retrieved: 10 (165.5 MB)
-#> • Retrieved at: 2026-11-12 21:11:06 UTC
+#> • Retrieved at: 2026-11-20 00:45:34 UTC
 #> 
 #> ── Tables ──
 #> 
@@ -81,9 +117,16 @@ summary(katrina)
 #> 
 #> • ADM2 units: 1477
 #> • Storms: 1
+#> • Genesis window: 2005-01-01 to 2005-12-31
 #> • Wind radius: 500 km
 #> • Precipitation window: -2/ +1 days within 500 km
 #> • Flood window: -2/+1 days within 500 km (match: "start")
+#> 
+#> ── Warnings ──
+#> 
+#> • precip_all_missing_adm2_ids: 86173395B10183828018242,
+#> 86173395B33619167853359, 86173395B49833060083827, 86173395B5227574641069,
+#> 86173395B64443584385378, and ... and 10 more
 ```
 
 The `gtropic_data()` function returns a named list of tables that by
@@ -105,6 +148,12 @@ default includes:
 - **`storm_metadata`** – storm names, identifiers, and genesis dates.
 - **`links`** – see below.
 
+> **Current precipitation limitation:** Some small or coastal ADM2 units
+> may have no non-missing precipitation values because no ERA5-Land grid
+> cell was assigned. Retrievals and automatic map captions identify
+> affected units; see `?gtropic_known_limitations` for details and the
+> planned dataset correction.
+
 Pass a shorter `tables` vector when you do not need every table and want
 to reduce transfer and storage requirements. The default includes
 `geometry`, so it requires the suggested `sf` and `sfarrow` packages.
@@ -121,7 +170,7 @@ versions, sizes and checksums. Saving it lets you reproduce the same
 retrieval months later, even if the dataset has since been revised.
 
 ``` r
-saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
+saveRDS(gtropic_manifest(katrina), "katrina-manifest.rds")
 ```
 
 ## Plotting
@@ -133,10 +182,31 @@ gtropic_plot(katrina)
 <img src="man/figures/README-unnamed-chunk-6-1.png" alt="" width="100%" />
 
 ``` r
-# Grab exposure data for Hurricane Helene (2024)
-helene <- gtropic_data(STORM_NAME = "Helene-2024")
+# Find and retrieve Hurricane Helene (2024) by its unique storm identifier
+helene_matches <- gtropic_storms(STORM_NAME = "Helene-2024")
+helene_matches
+#> # A tibble: 1 × 4
+#>   STORM_ID      STORM_NAME  USA_ATCF_ID STORM_GENESIS_DATE_UTC
+#>   <chr>         <chr>       <chr>       <date>                
+#> 1 2024268N17278 Helene-2024 AL092024    2024-09-23
+# This example has one match; if several appear, choose the intended row
+helene_id <- helene_matches$STORM_ID[[1]]
+helene <- gtropic_data(
+  STORM_ID = helene_id,
+  date_range = c(2024, 2024)
+)
 #> Discovering datasets in collection "gtropic".
-#> Retrieving 0 files (0.0 B) ; 10 already cached.
+#> Downloading 'metadata/adm2.parquet'.
+#> Downloading '02_wind/storm_metadata/2024.parquet'.
+#> Retrieving 10 files (175.3 MB) ; .
+#> Downloading '02_wind/exposures/2024.parquet'.
+#> Downloading '02_wind/zero_pairs/2024.parquet'.
+#> Downloading '04_precip/2024.parquet'.
+#> Downloading '03_flood/2024.parquet'.
+#> Downloading '01_pop/2024.parquet'.
+#> Downloading '02_wind/storm_tracks/2024.parquet'.
+#> Downloading 'metadata/codebook.json'.
+#> Downloading 'metadata/adm2_geometry_simplified.parquet'.
 
 # Plot Helene's exposure data
 gtropic_plot(helene)
@@ -184,5 +254,5 @@ Please cite both the package and the underlying datasets. The dataset
 DOIs and versions used by any given result are recorded in its manifest:
 
 ``` r
-gtropic_manifest(usa_05)
+gtropic_manifest(katrina)
 ```

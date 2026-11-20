@@ -40,7 +40,8 @@ remain available.
 selected ADM2 and storm identifiers, genesis-date bounds, years represented
 by the selected storms, the wind radius, and precipitation and flood window
 settings. These values support transparent reporting and quality assurance in
-downstream analyses.
+downstream analyses. Resolved storm identifiers are unique \code{STORM_ID} values,
+the preferred keys for reproducible joins and grouping.
 
 \code{gtropic_warnings()} returns diagnostic details retained with the result.
 This can include complete values that were abbreviated in a console warning,

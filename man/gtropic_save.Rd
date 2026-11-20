@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_save.R
 \name{gtropic_save}
 \alias{gtropic_save}
-\title{Save a static plot}
+\title{Save a plot or interactive widget}
 \usage{
 gtropic_save(
   plot,
@@ -15,14 +15,17 @@ gtropic_save(
 )
 }
 \arguments{
-\item{plot}{A ggplot, such as one returned by \code{\link[=gtropic_plot]{gtropic_plot()}}.}
+\item{plot}{A ggplot or HTML widget, such as one returned by \code{\link[=gtropic_plot]{gtropic_plot()}}.}
 
 \item{filename}{One nonempty output filename, optionally including a path.
 For static plots the extension selects the device unless \code{device} is
-supplied in \code{...}.}
+supplied in \code{...}. HTML widgets require a \code{.html} filename.}
 
 \item{...}{Uniquely named arguments. For static plots, passed unchanged to
-\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}, including \code{device}, \code{path}, \code{bg}, and \code{scale}.}
+\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}, including \code{device}, \code{path}, \code{bg}, and \code{scale}. For
+HTML widgets, \code{path} is combined with \code{filename}; other arguments are
+passed to \code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}}, including \code{selfcontained}, \code{libdir},
+\code{background}, \code{title}, and \code{knitrOptions}.}
 
 \item{dpi}{Positive finite resolution in dots per inch. Defaults to 300.}
 
@@ -37,14 +40,26 @@ Invisibly, the output filename, combined with \code{path} when supplied.
 The path is not normalized. Saver errors are propagated.
 }
 \description{
-Save a ggplot with \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}. This helper writes files;
+Save a ggplot with \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}} or an HTML widget, including a
+Leaflet map, with \code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}}. This helper writes files;
 \code{\link[=gtropic_plot]{gtropic_plot()}} itself only returns plot objects.
 }
 \details{
+\subsection{Interactive maps}{
+
+Interactive maps are saved as HTML widgets. By default, their JavaScript and
+CSS dependencies are written to a sibling directory rather than embedded in
+the HTML file (\code{selfcontained = FALSE}), which does not require Pandoc. Keep
+that directory with the HTML file when moving or publishing the map. Set
+\code{selfcontained = TRUE} to request a single-file widget when Pandoc is
+available.
+}
+
 \subsection{Figure dimensions}{
 
 Map plots carry a geographic \code{gtropic_bbox} attribute in the order
-\code{c(xmin, xmax, ymin, ymax)} (named bounds may be in any order). The estimated
+\code{c(xmin, ymin, xmax, ymax)} (named bounds may be in any order), matching
+\code{\link[sf:st_bbox]{sf::st_bbox()}}. The estimated
 width-to-height ratio is longitude span times the cosine of mean latitude,
 divided by latitude span. This is a geographic approximation, not a
 measurement of the final projected panels, legends, or facets.

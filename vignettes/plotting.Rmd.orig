@@ -9,8 +9,14 @@ vignette: >
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5,
-  fig.path = "figs/"
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
+  fig.cap = NA,
+  fig.path = "figs/",
+  out.width = "100%"
 )
 ```
 
@@ -28,10 +34,22 @@ interactive exposure and count maps.
 Let's begin by plotting Hurricane Katrina (2005):
 
 ```{r katrina-query}
+katrina_matches <- gtropic_storms(STORM_NAME = "Katrina-2005")
+katrina_matches
+
+# This example has one match; if several appear, choose the intended row
+katrina_id <- katrina_matches$STORM_ID[[1]]
 katrina <- gtropic_data(
-  STORM_NAME = "Katrina-2005"
+  STORM_ID = katrina_id,
+  date_range = c(2005, 2005)
 )
 ```
+
+This lookup-first workflow matters because `STORM_NAME` is only a convenience
+display label: a complete name can select multiple `STORM_ID`s, including
+across basins. Plot with the unique `STORM_ID` when the intended storm must be
+unambiguous. In `Name-YYYY`, `YYYY` is the published `SEASON` year, not
+necessarily the genesis calendar year.
 
 With the default 500 km radii applied to the wind, precipitation, and flood fields,
 the data we get back will only include those ADM2s within 500km of Katrina's storm track.
@@ -243,7 +261,7 @@ gtropic_plot(
   india_19,
   metric = "VMAX_SUST_MS",
   track = FALSE,
-  bbox = c(xmin = 82.5, xmax = 87.7, ymin = 17.5, ymax = 25),
+  bbox = c(xmin = 82.5, ymin = 17.5, xmax = 87.7, ymax = 25),
   expand = 0
 )
 ```
@@ -294,7 +312,7 @@ p <- gtropic_plot(
   katrina,
   type = "exposure",
   metric = "VMAX_SUST_MS",
-  storm = "Katrina-2005",
+  storm = katrina_id,
   basemap = "none"
 ) + theme_gtropic(base_size = 11)
 

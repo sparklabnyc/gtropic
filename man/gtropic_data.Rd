@@ -29,6 +29,7 @@ gtropic_data(
   flood_radius_km = 500,
   flood_match = c("start", "overlap"),
   geometry_resolution = c("simplified", "full"),
+  make_valid = TRUE,
   version = ":latest",
   manifest = NULL,
   cache = NULL,
@@ -75,12 +76,15 @@ non-ISO dates, such as \code{"ymd"}, \code{"mdy"}, or \code{"dmy"}. When supplie
 automatic date-order inference is not used.}
 
 \item{STORM_ID}{Optional character vector of published G-TROPIC storm
-identifiers. Matching is exact and case-sensitive.}
+identifiers. Each value uniquely identifies one storm. Matching is exact
+and case-sensitive; this is the preferred storm key.}
 
-\item{STORM_NAME}{Optional character vector of published, disambiguated storm
-names in \code{Name-YYYY} form, such as \code{Katrina-2005}, matched
-case-insensitively. The suffix year limits the metadata files scanned;
-storm and date filters are still combined with AND.}
+\item{STORM_NAME}{Optional character vector of published convenience labels
+in \code{Name-YYYY} form, such as \code{Katrina-2005}, matched case-insensitively.
+Complete values can match multiple \code{STORM_ID}s, including across basins.
+\code{YYYY} is the published \code{SEASON} year and need not be the genesis calendar
+year. Use \code{\link[=gtropic_storms]{gtropic_storms()}} to inspect matches, then prefer \code{STORM_ID} for
+retrieval and downstream work. Storm and date filters combine with AND.}
 
 \item{USA_ATCF_ID}{Optional character vector of US Automated Tropical Cyclone
 Forecasting System identifiers. Matching is exact and case-sensitive.}
@@ -125,6 +129,13 @@ events already in progress at the beginning of the window.}
 \item{geometry_resolution}{Resolution of boundaries returned when
 \code{tables} includes \code{"geometry"}: either \code{"simplified"} (the default) or
 \code{"full"}.}
+
+\item{make_valid}{Logical. If \code{TRUE} (the default), invalid returned ADM2
+geometries are repaired with \code{\link[sf:st_make_valid]{sf::st_make_valid()}}. Set to \code{FALSE} to
+preserve the published geometry exactly or avoid the validity-check and
+repair cost. Repair can change geometry types, for example from polygon to
+multipolygon or geometry collection. This setting is recorded in the
+retrieval manifest.}
 
 \item{version}{Dataset version specification. Use \code{":latest"} (the default),
 a single version applied to both datasets, or a named character vector such
@@ -204,6 +215,15 @@ nonempty. An unmatched \code{STORM_ID} or \code{STORM_NAME} is checked against t
 published exclusion records; use \code{\link[=gtropic_adm2]{gtropic_adm2()}}, \code{\link[=gtropic_storms]{gtropic_storms()}}, and
 \code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}} to review valid or excluded values.
 
+\code{STORM_ID} uniquely identifies a storm and is the preferred key for
+unambiguous queries, joins, grouping, and reproducible analyses.
+\code{STORM_NAME} is a convenience lookup and display label; even its complete
+\code{Name-YYYY} value can identify multiple storms, including storms in different
+basins. Here \code{YYYY} is the published \code{SEASON} year, which need not equal the
+calendar year of \code{STORM_GENESIS_DATE_UTC}. A recommended workflow is to call
+\code{gtropic_storms(STORM_NAME = ...)}, inspect the matches, and then pass the
+intended \code{STORM_ID} to \code{gtropic_data()} and use it downstream.
+
 A spatial filter supplied through \code{polygon} is combined with other geographic
 filters using AND. An ADM2 unit is selected when its published
 population-weighted centroid falls within the polygon in at least one year
@@ -217,6 +237,11 @@ whose membership changes over time.
 \code{STORM_GENESIS_DATE_UTC}, the UTC calendar date of the first best-track
 observation. These arguments do not filter by landfall date, date of closest
 approach, or date of local exposure.
+
+G-TROPIC's annual storm metadata, wind, zero-pair, and track files, as well as
+temporal storm discovery and query planning, are organized by the calendar
+year of \code{STORM_GENESIS_DATE_UTC}. Explicit year and date filters therefore
+select genesis dates, not \code{SEASON} values.
 
 Once a storm is selected, its requested records may extend beyond the
 specified genesis period. Conversely, a storm that formed before the period
@@ -269,6 +294,12 @@ assign records to storms, join them to \code{links} using \code{ADM2_ID} and the
 corresponding window columns. Analysts should define how overlapping storm
 windows will be treated to avoid double counting exposure.
 
+Date-only columns are returned consistently as \code{Date} vectors. This includes
+storm genesis, local precipitation and closest-approach dates, flood start
+and end dates, and all precipitation and flood window bounds. Datetime columns
+that include local UTC offsets remain ISO 8601 character vectors so their
+published local-time representation is preserved.
+
 Requesting precipitation or flood data also requires zero-pair files during
 processing. These files identify units that may have relevant rainfall or
 flooding despite no recorded wind exposure and can increase the estimated
@@ -291,14 +322,16 @@ originally scanned.
 }
 \examples{
 \donttest{
-# All available tables for storms that formed during the 2005 season and
-# were evaluated in Jamaica
+# All available tables for storms with genesis dates in calendar year 2005
+# that were evaluated in Jamaica
 jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 jamaica
 
-# Retrieve wind exposure for a named storm across all evaluated ADM2 units
-katrina <- gtropic_data(
-  STORM_NAME = "Katrina-2005",
+# Find a storm by its convenience label, then query by its unique STORM_ID
+gtropic_storms(STORM_NAME = "Haiyan-2013")
+haiyan <- gtropic_data(
+  STORM_ID = "2013306N07162",
+  date_range = c(2013, 2013),
   tables = c("wind", "adm2")
 )
 

@@ -28,7 +28,7 @@ test_that("map sizing corrects longitude spans for latitude and named bbox order
     seen <<- list(...)
   }, .package = "ggplot2")
   for (bbox in list(
-    c(0, 20, 50, 70),
+    c(0, 50, 20, 70),
     c(ymax = 70, xmin = 0, ymin = 50, xmax = 20),
     c(xmin = 170, xmax = 190, ymin = -70, ymax = -50)
   )) {
@@ -41,7 +41,7 @@ test_that("map sizing corrects longitude spans for latitude and named bbox order
     expect_equal(seen$width, 4)
     expect_equal(seen$height, 8)
   }
-  attr(p, "gtropic_bbox") <- c(0, 20, -5, 5)
+  attr(p, "gtropic_bbox") <- c(0, -5, 20, 5)
   gtropic_save(p, "map.png")
   expect_equal(seen$height, 3.5)
   gtropic_save(p, "map.png", width = 8)
@@ -54,7 +54,7 @@ test_that("extreme and unusable bounds produce finite bounded default dimensions
   local_mocked_bindings(ggsave = function(...) {
     seen <<- list(...)
   }, .package = "ggplot2")
-  for (bbox in list(c(0, 360, -0.01, 0.01), c(0, 0.01, 89, 90))) {
+  for (bbox in list(c(0, -0.01, 360, 0.01), c(0, 89, 0.01, 90))) {
     attr(p, "gtropic_bbox") <- bbox
     gtropic_save(p, "map.png")
     expect_true(seen$height %in% c(3, 10))
@@ -63,7 +63,7 @@ test_that("extreme and unusable bounds produce finite bounded default dimensions
   for (bbox in list(
     NULL, "bad", numeric(), c(0, 1, 2), c(0, Inf, 0, 1),
     c(0, 1, NA, 1), c(0, 0, 0, 1), c(1, 0, 0, 1),
-    c(0, 1, 0, 0), c(0, 1, 90, 91), c(0, 361, 0, 1),
+    c(0, 0, 1, 0), c(0, 90, 1, 91), c(0, 0, 361, 1),
     c(a = 0, b = 1, c = 0, d = 1)
   )) {
     attr(p, "gtropic_bbox") <- bbox
@@ -74,7 +74,7 @@ test_that("extreme and unusable bounds produce finite bounded default dimensions
 
 test_that("explicit dimensions, dpi and saver options take precedence", {
   p <- ggplot2::ggplot()
-  attr(p, "gtropic_bbox") <- c(0, 360, 0, 1)
+  attr(p, "gtropic_bbox") <- c(0, 0, 360, 1)
   seen <- NULL
   local_mocked_bindings(ggsave = function(...) {
     seen <<- list(...)

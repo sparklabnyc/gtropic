@@ -9,7 +9,7 @@ test_that("the simplified entrypoint exposes supported output modes", {
   expect_false("animate" %in% names(formals(gtropic_plot)))
   expect_false("frame_by" %in% names(formals(gtropic_plot)))
   expect_true(all(c(
-    "track_map_key", "track_labels", "track_interval", "gridlines"
+    "track_map_key", "track_labels", "track_interval", "gridlines", "make_valid"
   ) %in% names(formals(gtropic_plot))))
   expect_error(gtropic_plot(plot_fixture(), type = "timeline"), "type")
 })
@@ -142,6 +142,11 @@ test_that("caption provenance and hazard settings come from the supplied data", 
       "Current-year v.14.0 (doi:10.1/current)"
     ),
     "Precip parameters: radius=400 km, window=-2/+1 days, aggregate=sum",
+    paste0(
+      "Warning: No non-missing precipitation data for ADM2_ID PLOT.5. ",
+      "Known small/coastal-unit source-data limitation; see ",
+      "?gtropic_known_limitations."
+    ),
     "Flood parameters: radius=400 km, window=-2/+1 days, aggregate=max, match=start",
     "CRS: EPSG:4326"
   ))

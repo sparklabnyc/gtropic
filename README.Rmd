@@ -9,6 +9,9 @@ output: github_document
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
@@ -37,6 +40,18 @@ administrative units and storms
 * An on-disk cache enabled by default, with per-call bypass controls
 * Publication-ready static and interactive plots
 
+`STORM_ID` is G-TROPIC's unique, preferred storm key for queries, joins,
+grouping, and reproducible work. `STORM_NAME` is a convenient lookup and display
+label in `Name-YYYY` form; a complete value can still match multiple storms,
+including across basins, and `YYYY` is the published `SEASON` year rather than
+necessarily the genesis calendar year. Use `gtropic_storms(STORM_NAME = ...)`
+to inspect matches and find the intended `STORM_ID`, then use that ID in
+`gtropic_data()` and downstream analysis.
+
+Explicit year and date filters select `STORM_GENESIS_DATE_UTC`. G-TROPIC's
+annual storm metadata, wind, zero-pair, and track files—and the package's
+temporal storm discovery and query organization—use that genesis calendar year.
+
 ## Installation
 
 The development version of `gtropic` can be installed from GitHub with:
@@ -54,11 +69,19 @@ library(gtropic)
 
 ## Usage
 
-```{r}
+```{r, warning = FALSE}
 library(gtropic)
 
-# Grab exposure data for Hurricane Katrina (2005)
-katrina <- gtropic_data(STORM_NAME = "Katrina-2005")
+# Quickly find Hurricane Katrina by its convenience label
+katrina_matches <- gtropic_storms(STORM_NAME = "Katrina-2005")
+katrina_matches
+
+# This example has one match; if several appear, choose the intended row
+katrina_id <- katrina_matches$STORM_ID[[1]]
+katrina <- gtropic_data(
+  STORM_ID = katrina_id,
+  date_range = c(2005, 2005)
+)
 summary(katrina)
 ```
 
@@ -78,6 +101,11 @@ The `gtropic_data()` function returns a named list of tables that by default inc
 - **`storm_metadata`** -- storm names, identifiers, and genesis dates.
 - **`links`** -- see below.
 
+> **Current precipitation limitation:** Some small or coastal ADM2 units may
+> have no non-missing precipitation values because no ERA5-Land grid cell was
+> assigned. Retrievals and automatic map captions identify affected units; see
+> `?gtropic_known_limitations` for details and the planned dataset correction.
+
 Pass a shorter `tables` vector when you do not need every table and want to
 reduce transfer and storage requirements. The default includes `geometry`, so
 it requires the suggested `sf` and `sfarrow` packages.
@@ -93,7 +121,7 @@ into the result, including their paths, dataset versions, sizes and checksums.
 Saving it lets you reproduce the same retrieval months later, even if the dataset has since been revised.
 
 ```{r, eval = FALSE}
-saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
+saveRDS(gtropic_manifest(katrina), "katrina-manifest.rds")
 ```
 
 ## Plotting
@@ -102,9 +130,16 @@ saveRDS(gtropic_manifest(usa_05), "usa-2005-manifest.rds")
 gtropic_plot(katrina)
 ```
 
-```{r}
-# Grab exposure data for Hurricane Helene (2024)
-helene <- gtropic_data(STORM_NAME = "Helene-2024")
+```{r, warning = FALSE}
+# Find and retrieve Hurricane Helene (2024) by its unique storm identifier
+helene_matches <- gtropic_storms(STORM_NAME = "Helene-2024")
+helene_matches
+# This example has one match; if several appear, choose the intended row
+helene_id <- helene_matches$STORM_ID[[1]]
+helene <- gtropic_data(
+  STORM_ID = helene_id,
+  date_range = c(2024, 2024)
+)
 
 # Plot Helene's exposure data
 gtropic_plot(helene)
@@ -146,5 +181,5 @@ Please cite both the package and the underlying datasets. The dataset DOIs and
 versions used by any given result are recorded in its manifest:
 
 ```{r, eval = FALSE}
-gtropic_manifest(usa_05)
+gtropic_manifest(katrina)
 ```

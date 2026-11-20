@@ -10,7 +10,12 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
+  fig.cap = NA,
+  out.width = "100%"
 )
 ```
 
@@ -172,6 +177,14 @@ The G-TROPIC dataset is broadly made up of yearly exposure files, and it is thes
 that the cache retrieves from the remote Dataverse repository and writes to disk.
 The cache stores these published year-files in their entirety, exactly as the remote Dataverse repository serves
 them -- it does not use any of the filter arguments in your query before saving these files.
+
+For storm metadata, wind, zero-pair, and track data, the annual file year is the
+calendar year of `STORM_GENESIS_DATE_UTC`. Temporal storm discovery and queries
+use the same organization, so explicit year and date filters select genesis
+dates—not landfall or exposure dates and not the published `SEASON` value. A
+storm's `STORM_NAME` has `Name-YYYY` form where `YYYY` is `SEASON`, which can
+differ from its genesis calendar year; the name is therefore not the annual
+partition key.
 
 - For instance, if you have caching enabled, an initial query that asks for data from 2001-2003
   followed by a later query requesting data for 2002-2005 would result in

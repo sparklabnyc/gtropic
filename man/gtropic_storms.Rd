@@ -17,14 +17,18 @@ gtropic_storms(
 of storm genesis dates. Bare years, year-month values, complete dates, and
 \code{Date} or \code{POSIXct} values are accepted as described in \code{\link[=gtropic_data]{gtropic_data()}}.}
 
-\item{year}{Optional vector of years to retrieve. Ignored when \code{date_range}
-is supplied. Years outside the published collection are omitted.}
+\item{year}{Optional vector of storm genesis calendar years to retrieve.
+Ignored when \code{date_range} is supplied. Years outside the published
+collection are omitted.}
 
-\item{STORM_NAME}{Optional character vector of published, disambiguated storm
-names in \code{Name-YYYY} form, such as \code{Katrina-2005}. Matching is
-case-insensitive; every supplied value must match a published name. The
-suffix year limits the metadata files scanned and is combined with an
-explicit \code{year} or \code{date_range} filter using AND.}
+\item{STORM_NAME}{Optional character vector of published convenience labels
+in \code{Name-YYYY} form, such as \code{Katrina-2005}. Labels can duplicate across
+distinct \code{STORM_ID}s. Matching is case-insensitive; every supplied value
+must match a published name. The suffix is the storm season. Because
+Southern Hemisphere storms can form in the preceding calendar year,
+partitions for both \code{YYYY - 1} and \code{YYYY} are considered. This candidate
+set is combined with an explicit genesis \code{year} or \code{date_range} filter using
+AND.}
 
 \item{version}{Dataset version to use. The default, \code{":latest"}, uses the
 most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
@@ -37,7 +41,7 @@ setting for this call.}
 A tibble containing the published metadata records for storms that
 satisfy the requested genesis period and name filters. If no metadata files
 are available for the selected years, a warning is issued and an empty
-tibble is returned.
+tibble is returned. \code{STORM_GENESIS_DATE_UTC} is returned as a \code{Date}.
 }
 \description{
 Retrieves metadata for tropical cyclones represented in G-TROPIC, including
@@ -52,10 +56,16 @@ approach, or date of exposure.
 When a requested \code{STORM_NAME} is not available, G-TROPIC checks the published
 exclusion records and reports whether the storm is excluded or absent from
 both lists.
+
+\code{STORM_NAME} is a convenience lookup and can identify multiple storms. If a
+name matches multiple unique \code{STORM_ID}s after all filters are applied, this
+function returns every match and warns. Use \code{gtropic_storms(STORM_NAME = ...)}
+to identify the intended \code{STORM_ID}, then query \code{\link[=gtropic_data]{gtropic_data()}} with
+\code{STORM_ID}, which is unique and preferred.
 }
 \examples{
 \donttest{
-# Review storms that formed during the 2005 season
+# Review storms that formed during calendar year 2005
 gtropic_storms(year = 2005)
 
 # Retrieve the published identifiers and dates for Hurricane Katrina

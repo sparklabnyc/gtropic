@@ -162,7 +162,10 @@ fetch_yearly <- function(table, years, ctx, col_select = NULL,
     )
     if (is.null(tbl)) next
 
-    df <- tibble::as_tibble(dplyr::collect(tbl))
+    df <- normalize_table_types(
+      tibble::as_tibble(dplyr::collect(tbl)),
+      label = file.path(spec$dir, paste0(y, ".parquet"))
+    )
     # Recording the source file year is what makes the genesis-year convention
     # assertion possible at all.
     if (tag_year) df$.gtropic_file_year <- y
@@ -251,16 +254,24 @@ assemble_gtropic_data <- function(args, call = NULL) {
   # broadening its plan if the collection gains a new year after the manifest
   # was made.
   candidate_years <- if (!is.null(args$storm_metadata_years)) {
+    # A manifest records the exact partitions used by the original query.
     args$storm_metadata_years
-  } else if (identical(date_spec$type, "none")) {
-    discovery$year_index$year
   } else {
-    year_span(date_spec$start, date_spec$end)
-  }
-  if (!is.null(args$storm_name_years)) {
-    # Name suffixes safely identify the only metadata files that can contain
-    # these storms. resolve_storms() still applies date filters afterwards.
-    candidate_years <- args$storm_name_years
+    years <- if (identical(date_spec$type, "none")) {
+      discovery$year_index$year
+    } else {
+      year_span(date_spec$start, date_spec$end)
+    }
+    if (!is.null(args$storm_name_years)) {
+      # The suffix is a season. Yearly files are genesis-calendar-year
+      # partitions, so season S can occur in S - 1 or S. Explicit genesis-date
+      # filters remain an AND condition on those candidate partitions.
+      years <- intersect(
+        years,
+        storm_name_genesis_years(args$storm_name_years)
+      )
+    }
+    years
   }
   candidate_years <- intersect(candidate_years, discovery$year_index$year)
 
@@ -345,7 +356,8 @@ assemble_gtropic_data <- function(args, call = NULL) {
     NULL
   }
   storm_ids <- resolve_storms(
-    storm_metadata, date_spec, args$storm_filters, excluded_lookup
+    storm_metadata, date_spec, args$storm_filters, excluded_lookup,
+    warn_ambiguous_name = is.null(args$manifest)
   )
   storm_metadata <- storm_metadata[storm_metadata$STORM_ID %in% storm_ids, ,
     drop = FALSE
@@ -488,6 +500,16 @@ assemble_gtropic_data <- function(args, call = NULL) {
       precip <- precip[precip$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
       precip <- select_precip(links, precip)
     }
+
+    precip_scope_ids <- unique(links$ADM2_ID[links$PRECIP_IN_FIELD %in% TRUE])
+    precip_missing_ids <- precip_all_missing_adm2_ids(
+      precip,
+      adm2_ids = precip_scope_ids
+    )
+    if (length(precip_missing_ids)) {
+      warnings$precip_all_missing_adm2_ids <- precip_missing_ids
+      warn_precip_all_missing(precip_missing_ids)
+    }
   }
 
   flood <- NULL
@@ -536,6 +558,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
       kind = "geoparquet"
     )
     geometry <- geometry[geometry$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
+    geometry <- repair_invalid_geometry(geometry, args$make_valid)
   }
 
   # --- 12. build the result -------------------------------------------------

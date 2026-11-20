@@ -10,7 +10,12 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
+  fig.cap = NA,
+  out.width = "100%"
 )
 ```
 
@@ -21,6 +26,9 @@ library(dplyr)
 
 This vignette covers how to link precipitation and flood exposure data to
 specific `STORM_ID`s, and how to avoid double-counting exposure data in your analyses.
+`STORM_ID` is the unique, preferred storm key for these joins and groupings;
+`STORM_NAME` is a potentially duplicated convenience display label and should
+not be used as a relational key.
 
 We'll start by noting that the wind exposures come already linked to `STORM_ID`s,
 the `$wind` table contains rows for every `ADM2_ID`-`STORM_ID` pairing:

@@ -17,14 +17,16 @@ gtropic_excluded_storms(
 of storm genesis dates. Bare years, year-month values, complete dates, and
 \code{Date} or \code{POSIXct} values are accepted as described in \code{\link[=gtropic_data]{gtropic_data()}}.}
 
-\item{year}{Optional vector of years to retrieve. Ignored when \code{date_range}
-is supplied. Years outside the published collection are omitted.}
+\item{year}{Optional vector of storm genesis calendar years to retrieve.
+Ignored when \code{date_range} is supplied. Years outside the published
+collection are omitted.}
 
-\item{STORM_NAME}{Optional character vector of published, disambiguated storm
-names in \code{Name-YYYY} form. Matching is case-insensitive; every supplied
-value must match an excluded-storm record. The suffix year limits the files
-scanned and is combined with an explicit \code{year} or \code{date_range} filter using
-AND.}
+\item{STORM_NAME}{Optional character vector of published convenience labels
+in \code{Name-YYYY} form. Labels can duplicate across distinct \code{STORM_ID}s.
+Matching is case-insensitive; every supplied value must match an
+excluded-storm record. The suffix is the storm season; partitions for
+genesis years \code{YYYY - 1} and \code{YYYY} are considered and combined with an
+explicit genesis \code{year} or \code{date_range} filter using AND.}
 
 \item{version}{Dataset version to use. The default, \code{":latest"}, uses the
 most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
@@ -38,11 +40,13 @@ A tibble with \code{STORM_ID}, \code{STORM_NAME}, and
 \code{STORM_GENESIS_DATE_UTC} for published excluded storms satisfying the
 requested genesis period and name filters. If no exclusion files are
 available for the selected years, a warning is issued and an empty tibble is
-returned.
+returned. \code{STORM_GENESIS_DATE_UTC} is returned as a \code{Date}.
 }
 \description{
 Retrieves records for storms excluded from the published wind data. These
 records identify storms that cannot be retrieved with \code{\link[=gtropic_data]{gtropic_data()}}.
+Published \code{STORM_NAME} convenience labels can duplicate; the unique
+\code{STORM_ID} values in the returned rows distinguish excluded records.
 
 Date filters are applied to \code{STORM_GENESIS_DATE_UTC}, the UTC date of the
 first best-track observation. They do not select storms by landfall, closest
@@ -50,7 +54,7 @@ approach, or date of exposure.
 }
 \examples{
 \donttest{
-# Review exclusion records for storms that formed during the 2005 season
+# Review exclusion records for storms that formed during calendar year 2005
 gtropic_excluded_storms(year = 2005)
 }
 

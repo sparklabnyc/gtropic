@@ -117,6 +117,13 @@ plot_caption <- function(info, caption = NULL, crs = NULL) {
     if (is.null(hazard)) next
     hazard_settings <- settings[[hazard]] %||% list()
     pieces <- c(pieces, plot_hazard_caption(hazard, hazard_settings, spec, info))
+    if (hazard == "precip") {
+      retained <- info$warnings$precip_all_missing_adm2_ids %||% character(0)
+      pieces <- c(pieces, plot_precip_limitation_caption(
+        info$precip_all_missing_adm2_ids %||% character(0),
+        has_diagnostics = length(retained) > 0L
+      ))
+    }
   }
   if (length(info$wind_categories)) {
     for (metric in names(info$wind_categories)) {

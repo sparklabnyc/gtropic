@@ -24,7 +24,7 @@ test_that("exposure layers use each metric's resolved scale settings", {
   )
   key <- key_layers[[1L]]$data
   expect_equal(length(unique(key$y)), 1L)
-  expect_lt(key$y[1L], plot_cartography(data, basemap = "none")$bbox[3])
+  expect_lt(key$y[1L], plot_cartography(data, basemap = "none")$bbox[2])
   labels <- Filter(function(layer) inherits(layer$geom, "GeomText"), p$layers)[[1L]]$data
   expect_match(labels$label[1L], "^[0-9]+\\.[0-9]{2}$")
   for (position in c("top", "bottom", "left", "right", "top left", "top right",

@@ -22,7 +22,11 @@
 #' @param storm Optional character vector of `STORM_ID`s or `STORM_NAME`s used
 #'   to subset all applicable tables in `data`. Specifying `storm`s requires that the `data`
 #'   object passed in contains the `storm_metadata` table. `STORM_NAME`s are matched
-#'   case-insensitively. `storm = NULL` (the default) retains all storms.
+#'   case-insensitively and a complete name can select multiple `STORM_ID`s,
+#'   including across basins. Names are convenience labels in `Name-YYYY` form,
+#'   where `YYYY` is the published `SEASON` year, not necessarily the genesis
+#'   calendar year. Prefer unique `STORM_ID`s for unambiguous plots.
+#'   `storm = NULL` (the default) retains all storms.
 #' @param adm2 Optional character vector of `ADM2_ID`s used to subset all applicable
 #'   tables in `data`. `adm2 = NULL` (the default) retains all ADM2 units. For a track map, this
 #'   retains tracks linked to the selected ADM2 units when the `links` table is present in `data`.
@@ -93,10 +97,12 @@
 #'   No layers are ever downloaded. `basemap = "admin1"` requires the
 #'   optional `rnaturalearthhires` package.
 #' @param bbox Map extent as an sf/sfc object, an sf bbox with a known CRS, or
-#'   geographic `c(xmin, xmax, ymin, ymax)`. `NULL` (the default) derives the
-#'   extent from the plotted geometry and any displayed tracks.
+#'   four geographic bounds in [sf::st_bbox()] order:
+#'   `c(xmin, ymin, xmax, ymax)`. `NULL` (the default) derives the extent from
+#'   the plotted geometry and any displayed tracks.
 #' @param expand Nonnegative geographic-degree padding added to each side of the
-#'   map extent after `bbox` is resolved. Defaults to 2.
+#'   map extent after `bbox` is resolved. Latitude limits are constrained to
+#'   -90--90 degrees. Defaults to 2.
 #' @param crs A coordinate reference system understood by [sf::st_crs()]. `NULL`
 #'   (the default) selects EPSG:4326 for longitudinal spans under 40 degrees and
 #'   Equal Earth for wider extents. Static maps use this projection; interactive
@@ -115,6 +121,10 @@
 #' @param gridlines Logical; if `TRUE` (the default), static maps show gridlines
 #'   and longitude/latitude labels. It is ignored for Leaflet maps, which have no
 #'   static axes.
+#' @param make_valid Logical. If `TRUE` (the default), invalid ADM2 geometries
+#'   are repaired with [sf::st_make_valid()] before plotting. Set to `FALSE` to
+#'   preserve supplied geometry or avoid the validity-check and repair cost.
+#'   Repair can change geometry types. This argument is ignored for track maps.
 #' @param title,subtitle,caption Plot labels. Each defaults to `NULL`, which uses
 #'   an automatic title/subtitle/caption. A supplied caption replaces the automatic
 #'   provenance and method caption.
@@ -131,8 +141,9 @@
 #' prefixes the title, while multiple storms do not alter it. Metric strips use
 #' readable aggregate and active-threshold labels. Automatic captions use
 #' newline-separated source, retrieval, dataset-provenance, hazard-parameter,
-#' track-interval, and plotting-CRS lines. Hazard radii and windows are derived
-#' from rows that contributed to the plot.
+#' known source-data limitation, track-interval, and plotting-CRS lines as
+#' applicable. Hazard radii and windows are derived from rows that contributed
+#' to the plot.
 #'
 #' Track paths are drawn from every supplied observation. By default, constant-
 #' size points use [saffir_simpson()] categories derived from `USA_WIND`, which is
@@ -154,13 +165,16 @@ gtropic_plot <- function(
   basemap = c("countries", "admin1", "none"),
   bbox = NULL, expand = 2, crs = NULL, interactive = FALSE,
   palette = NULL, direction = NULL, gridlines = TRUE,
+  make_valid = TRUE,
   title = NULL, subtitle = NULL, caption = NULL,
   quiet = FALSE, ...
 ) {
   type <- rlang::arg_match(type)
   count_unit <- rlang::arg_match(count_unit)
   basemap <- rlang::arg_match(basemap)
-  for (nm in c("binary", "interactive", "quiet", "gridlines", "track_labels")) {
+  for (nm in c(
+    "binary", "interactive", "quiet", "gridlines", "track_labels", "make_valid"
+  )) {
     plot_flag(get(nm), nm)
   }
   if (!is.null(track)) plot_flag(track, "track")
@@ -196,7 +210,8 @@ gtropic_plot <- function(
     count_unit = count_unit, facet_by = facet_by, track = track,
     palette = palette, direction = direction, track_map_key = track_map_key,
     track_labels = track_labels, track_interval = track_interval,
-    track_legend_position = track_legend_position, quiet = quiet
+    track_legend_position = track_legend_position, make_valid = make_valid,
+    quiet = quiet
   )
   rlang::check_installed("ggplot2", reason = "to build G-TROPIC plots")
   if (interactive) rlang::check_installed("leaflet", reason = "to build interactive maps")

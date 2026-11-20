@@ -1,7 +1,8 @@
 #' Normalize locally available plotting tables without fetching data
 #'
 #' Codebooks retain their nested structure and geometry retains its sf class.
-#' Query, manifest, and resolved filters survive normalization of plain lists.
+#' Query, manifest, resolved filters, and diagnostics survive normalization of
+#' plain lists.
 #' @keywords internal
 #' @noRd
 normalize_plot_data <- function(data) {
@@ -35,7 +36,7 @@ normalize_plot_data <- function(data) {
   names(out) <- names(data)
   metadata <- c(
     "query", "manifest", "filters_resolved", "geometry_resolution",
-    "retrieved_at", "gtropic_version"
+    "warnings", "retrieved_at", "gtropic_version"
   )
   for (nm in metadata) {
     attr(out, nm) <- attr(data, nm, exact = TRUE)

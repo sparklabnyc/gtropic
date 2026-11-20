@@ -107,8 +107,8 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   )
   bounds <- cartography$bbox
   map <- leaflet::fitBounds(map,
-    lng1 = unname(bounds[1]), lat1 = unname(bounds[3]),
-    lng2 = unname(bounds[2]), lat2 = unname(bounds[4])
+    lng1 = unname(bounds[1]), lat1 = unname(bounds[2]),
+    lng2 = unname(bounds[3]), lat2 = unname(bounds[4])
   )
   plot_interactive_background(map)
 }

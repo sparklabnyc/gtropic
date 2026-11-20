@@ -183,7 +183,9 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
     )
   }
 
-  query_required <- manifest_query_fields()
+  # Manifests created before geometry repair was configurable replay with the
+  # current default (`make_valid = TRUE`). New manifests record it explicitly.
+  query_required <- setdiff(manifest_query_fields(), "make_valid")
   missing_query <- setdiff(query_required, names(manifest$resolved_query))
   if (length(missing_query) > 0L) {
     cli::cli_abort(
@@ -192,6 +194,9 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
       ),
       call = call
     )
+  }
+  if ("make_valid" %in% names(manifest$resolved_query)) {
+    check_make_valid(manifest$resolved_query$make_valid, call = call)
   }
 
   invisible(manifest)
@@ -206,7 +211,7 @@ manifest_query_fields <- function() {
     "polygon", "reproject", "date_range", "date_list", "date_format",
     "tables", "precip_days_before", "precip_days_after", "precip_radius_km",
     "flood_days_before", "flood_days_after", "flood_radius_km", "flood_match",
-    "geometry_resolution", "resolved_adm2_ids", "resolved_storm_ids",
+    "geometry_resolution", "make_valid", "resolved_adm2_ids", "resolved_storm_ids",
     "storm_metadata_years"
   )
 }

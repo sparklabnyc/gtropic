@@ -25,12 +25,40 @@ Let's begin by plotting Hurricane Katrina (2005):
 
 
 ``` r
+katrina_matches <- gtropic_storms(STORM_NAME = "Katrina-2005")
+katrina_matches
+#> # A tibble: 1 × 4
+#>   STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC
+#>   <chr>         <chr>        <chr>       <date>
+#> 1 2005236N23285 Katrina-2005 AL122005    2005-08-23
+
+# This example has one match; if several appear, choose the intended row
+katrina_id <- katrina_matches$STORM_ID[[1]]
 katrina <- gtropic_data(
-  STORM_NAME = "Katrina-2005"
+  STORM_ID = katrina_id,
+  date_range = c(2005, 2005)
 )
 #> Discovering datasets in collection "gtropic".
 #> Retrieving 0 files (0.0 B) ; 10 already cached.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 15 selected ADM2 units.
+#> ! "86173395B10183828018242", "86173395B33619167853359",
+#>   "86173395B49833060083827", "86173395B5227574641069",
+#>   "86173395B64443584385378", "86173395B69111748421310",
+#>   "86173395B71884173217057", "86173395B8049186625596",
+#>   "86173395B80884224234425", "86173395B82868545095992", and "... and 5 more"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 ```
+
+This lookup-first workflow matters because `STORM_NAME` is only a convenience
+display label: a complete name can select multiple `STORM_ID`s, including
+across basins. Plot with the unique `STORM_ID` when the intended storm must be
+unambiguous. In `Name-YYYY`, `YYYY` is the published `SEASON` year, not
+necessarily the genesis calendar year.
 
 With the default 500 km radii applied to the wind, precipitation, and flood fields,
 the data we get back will only include those ADM2s within 500km of Katrina's storm track.
@@ -46,7 +74,7 @@ that gets rendered reminds us of this by examining the data present in `katrina`
 gtropic_plot(katrina)
 ```
 
-![plot of chunk katrina plot](figs/katrina plot-1.png)
+<img src="figs/katrina plot-1.png" alt="" width="100%" />
 
 Specifying none of the optional arguments by default renders an exposure map (implicitly, `type = "exposure"`),
 summarizing a selected published metric for each ADM2. With
@@ -105,7 +133,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-2](figs/unnamed-chunk-2-1.png)
+<img src="figs/unnamed-chunk-2-1.png" alt="" width="100%" />
 
 versus their maximum daily precipitation:
 
@@ -118,7 +146,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-3](figs/unnamed-chunk-3-1.png)
+<img src="figs/unnamed-chunk-3-1.png" alt="" width="100%" />
 
 We can also swap out which exposure metrics we want to visualize:
 
@@ -130,7 +158,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-4](figs/unnamed-chunk-4-1.png)
+<img src="figs/unnamed-chunk-4-1.png" alt="" width="100%" />
 
 
 ``` r
@@ -140,7 +168,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-5](figs/unnamed-chunk-5-1.png)
+<img src="figs/unnamed-chunk-5-1.png" alt="" width="100%" />
 
 Take a look at the help page for the plotting function with `?gtropic_plot` to examine other elements of the
 map you can manipulate, for example, the `basemap`, or color `palette`.
@@ -163,7 +191,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk multi-metric-map](figs/multi-metric-map-1.png)
+<img src="figs/multi-metric-map-1.png" alt="" width="100%" />
 
 ### Track maps
 
@@ -181,7 +209,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-6](figs/unnamed-chunk-6-1.png)
+<img src="figs/unnamed-chunk-6-1.png" alt="" width="100%" />
 
 By default, their points
 are classified with `saffir_simpson()`, which returns the conventional
@@ -257,7 +285,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-9](figs/unnamed-chunk-9-1.png)
+<img src="figs/unnamed-chunk-9-1.png" alt="" width="100%" />
 
 ### Interactive maps
 
@@ -286,6 +314,14 @@ india_19 <- gtropic_data(
 )
 #> Discovering datasets in collection "gtropic".
 #> Retrieving 0 files (0.0 B) ; 10 already cached.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 2 selected ADM2 units.
+#> ! "76128533B41477629049356" and "76128533B56857410767766"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 
 india_19$storm_metadata
 #> # A tibble: 7 × 4
@@ -305,7 +341,7 @@ india_19$storm_metadata
 gtropic_plot(india_19, type = "track")
 ```
 
-![plot of chunk unnamed-chunk-11](figs/unnamed-chunk-11-1.png)
+<img src="figs/unnamed-chunk-11-1.png" alt="" width="100%" />
 
 Let's look at the maximum sustained winds each ADM2 was exposed to as a result of these storms:
 
@@ -313,7 +349,7 @@ Let's look at the maximum sustained winds each ADM2 was exposed to as a result o
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track_labels = FALSE)
 ```
 
-![plot of chunk unnamed-chunk-12](figs/unnamed-chunk-12-1.png)
+<img src="figs/unnamed-chunk-12-1.png" alt="" width="100%" />
 
 Or if the tracks are making it difficult for us to see the data clearly:
 
@@ -321,7 +357,7 @@ Or if the tracks are making it difficult for us to see the data clearly:
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track = FALSE)
 ```
 
-![plot of chunk unnamed-chunk-13](figs/unnamed-chunk-13-1.png)
+<img src="figs/unnamed-chunk-13-1.png" alt="" width="100%" />
 
 We can use the `bbox` argument to zoom in on a region of interest:
 
@@ -330,12 +366,12 @@ gtropic_plot(
   india_19,
   metric = "VMAX_SUST_MS",
   track = FALSE,
-  bbox = c(xmin = 82.5, xmax = 87.7, ymin = 17.5, ymax = 25),
+  bbox = c(xmin = 82.5, ymin = 17.5, xmax = 87.7, ymax = 25),
   expand = 0
 )
 ```
 
-![plot of chunk unnamed-chunk-14](figs/unnamed-chunk-14-1.png)
+<img src="figs/unnamed-chunk-14-1.png" alt="" width="100%" />
 
 ### Count maps
 
@@ -353,7 +389,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk count-map](figs/count-map-1.png)
+<img src="figs/count-map-1.png" alt="" width="100%" />
 
 
 ``` r
@@ -365,7 +401,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-15](figs/unnamed-chunk-15-1.png)
+<img src="figs/unnamed-chunk-15-1.png" alt="" width="100%" />
 
 We can use the `threshold` argument to change how we define an exposure:
 
@@ -380,7 +416,7 @@ gtropic_plot(
 )
 ```
 
-![plot of chunk unnamed-chunk-16](figs/unnamed-chunk-16-1.png)
+<img src="figs/unnamed-chunk-16-1.png" alt="" width="100%" />
 
 ## Saving plots
 
@@ -393,7 +429,7 @@ p <- gtropic_plot(
   katrina,
   type = "exposure",
   metric = "VMAX_SUST_MS",
-  storm = "Katrina-2005",
+  storm = katrina_id,
   basemap = "none"
 ) + theme_gtropic(base_size = 11)
 

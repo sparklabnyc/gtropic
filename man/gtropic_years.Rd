@@ -17,13 +17,16 @@ and \code{all}. \code{all} is the sorted union of the two collections; \code{cur
 empty when no separate current-year dataset is available.
 }
 \description{
-Reports the calendar years represented in the historical and current-year
-G-TROPIC datasets. This information can be used to define feasible study
-periods before retrieving storm exposure data.
+Reports the genesis calendar years represented in the historical and
+current-year G-TROPIC datasets. Storm-linked annual coverage is based on
+\code{STORM_GENESIS_DATE_UTC}, not the season suffix in \code{STORM_NAME}. This
+information can be used to define feasible study periods before retrieving
+storm exposure data.
 
-The historical collection contains completed years. When available, the
-separate current-year collection is updated as the tropical cyclone season
-progresses and may therefore represent provisional temporal coverage.
+The historical collection contains completed genesis calendar years. When
+available, the separate current-year collection is updated as storms with
+genesis dates in the current calendar year are published, so coverage for
+that calendar year may be provisional.
 }
 \examples{
 \donttest{

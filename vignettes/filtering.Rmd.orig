@@ -10,7 +10,12 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
+  fig.cap = NA,
+  out.width = "100%"
 )
 ```
 
@@ -184,6 +189,10 @@ Importantly, `date_range` and `date_list` select **storms whose `STORM_GENESIS_D
 falls within the requested period**, i.e. the UTC calendar date of a storm's first best-track
 observation, which is when it formed, not when it made landfall, and not when it began to impact ADM2s.
 In this way, all data for these storms is then returned, subject to your other filters.
+The package's explicit year filters and temporal storm discovery follow this
+same genesis-date definition. Likewise, G-TROPIC's annual storm metadata, wind,
+zero-pair, and track files are organized by the calendar year of
+`STORM_GENESIS_DATE_UTC`, not by the published `SEASON` value.
 There are two consequences to this approach:
 
 1. **This will retrieve exposure data that may fall outside the requested range,** provided it is associated
@@ -249,15 +258,28 @@ gtropic_data(STORM_NAME = "Haiyan-2013")
 gtropic_data(USA_ATCF_ID = "WP312013", date_range = c(2013, 2013))
 ```
 
-Storm names repeat across basins and years, so you must be careful when selecting by `STORM_NAME`.
-`gtropic_storms()` helps you disambiguate storms from one another. The `STORM_ID` column always gives
-a unique value for every individual storm, and we recommend you perform most of your operations using this
-variable:
+`STORM_ID` uniquely identifies one storm and is the preferred key for
+unambiguous queries, joins, grouping, and reproducible work. `STORM_NAME` is a
+convenience lookup and display label, not a unique key: even a complete value
+can occur more than once, including for storms in different basins. Its
+`Name-YYYY` suffix is the published `SEASON` year, which need not equal the
+calendar year of `STORM_GENESIS_DATE_UTC`.
+
+The recommended workflow is to use `gtropic_storms(STORM_NAME = ...)` to
+quickly inspect all matches, identify the intended `STORM_ID`, and then use that
+ID in `gtropic_data()` and throughout downstream analysis:
 
 ```{r}
-# Use the storms() function to look up a storm you know by NAME-YEAR
-# Then grab it's STORM_ID value for later data operations
+# Look up a storm by its convenience label and inspect the possible matches
 gtropic_storms(STORM_NAME = "Haiyan-2013")
+```
+
+```{r, eval = FALSE}
+# After confirming the intended row above, use its unique key
+haiyan <- gtropic_data(STORM_ID = "2013306N07162")
+
+haiyan$wind |>
+  dplyr::group_by(STORM_ID, ADM2_ID)
 ```
 
 ## Summary
@@ -266,6 +288,8 @@ gtropic_storms(STORM_NAME = "Haiyan-2013")
   OR within an argument.
 - Date filters select storms by genesis date, so retrieved exposure records can
   extend outside the requested date range.
+- Use `STORM_NAME` to find candidate storms, then use the unique `STORM_ID` for
+  retrieval, joins, grouping, and reproducible analysis.
 - The `[wind/precip/flood]_radius_km` arguments, along with the `[precip/flood]_days_[before/after]`
   arguments are crucial in defining your spatial and temporal fields linking exposures to storms.
   The default values we supply are not prescriptive.

@@ -187,16 +187,19 @@ plot_frame_bbox <- function(data, tracks = NULL, shifted = FALSE) {
     cli::cli_abort("Cannot determine map extent: no finite coordinates remain.")
   }
   stats::setNames(
-    c(range(x[is.finite(x)]), range(y[is.finite(y)])),
-    c("xmin", "xmax", "ymin", "ymax")
+    c(
+      min(x[is.finite(x)]), min(y[is.finite(y)]),
+      max(x[is.finite(x)]), max(y[is.finite(y)])
+    ),
+    c("xmin", "ymin", "xmax", "ymax")
   )
 }
 
-#' Read explicit bounds without confusing numeric order with sf bbox order
+#' Read explicit bounds in sf bbox order
 #' @keywords internal
 #' @noRd
 plot_numeric_bbox <- function(bbox) {
-  order <- c("xmin", "xmax", "ymin", "ymax")
+  order <- c("xmin", "ymin", "xmax", "ymax")
   if (inherits(bbox, "bbox")) {
     if (is.na(sf::st_crs(bbox))) {
       cli::cli_abort("{.arg bbox} must have a known CRS.")
@@ -205,23 +208,23 @@ plot_numeric_bbox <- function(bbox) {
   }
   if (!is.numeric(bbox) || length(bbox) != 4L || any(!is.finite(bbox))) {
     cli::cli_abort("{.arg bbox} must be sf, sfc, bbox, or four finite numbers
-                    in order c(xmin, xmax, ymin, ymax).")
+                    in order c(xmin, ymin, xmax, ymax).")
   }
   if (!is.null(names(bbox))) {
     if (!setequal(names(bbox), order)) {
       cli::cli_abort("Named {.arg bbox} must have
-                      xmin, xmax, ymin, ymax names.")
+                      xmin, ymin, xmax, ymax names.")
     }
     bbox <- bbox[order]
   }
   bbox <- stats::setNames(as.numeric(bbox), order)
-  if (bbox[1] > bbox[2] || bbox[3] > bbox[4]) {
+  if (bbox[1] > bbox[3] || bbox[2] > bbox[4]) {
     cli::cli_abort("{.arg bbox} minima must not exceed maxima;
                     use longitudes such as 170, 190 to cross the dateline.")
   }
   if (
-    bbox[1] < -180 || bbox[2] > 360 || diff(bbox[1:2]) > 360 ||
-      bbox[3] < -90 || bbox[4] > 90
+    bbox[1] < -180 || bbox[3] > 360 || diff(bbox[c(1, 3)]) > 360 ||
+      bbox[2] < -90 || bbox[4] > 90
   ) {
     cli::cli_abort("{.arg bbox} must contain geographic longitude/latitude
                     bounds, with latitude between -90 and 90.")
@@ -232,7 +235,7 @@ plot_numeric_bbox <- function(bbox) {
 #' Resolve extent, projection, and a common longitude frame for map builders
 #'
 #' Geometry is normalized to EPSG:4326; coord_sf performs the final projection.
-#' Bounds always use c(xmin, xmax, ymin, ymax), in geographic degrees. Track
+#' Bounds always use sf's c(xmin, ymin, xmax, ymax), in geographic degrees. Track
 #' segmentation belongs to the track module, which can use original_LON.
 #' Wide shifted maps use Pacific-centered Equal Earth automatically; other wide
 #' maps use EPSG:8857. An explicit CRS always wins, with geometry split at its seam.
@@ -271,24 +274,24 @@ plot_cartography <- function(data, basemap = "countries", bbox = NULL,
     shifted_bounds <- plot_frame_bbox(extent_data, extent_tracks,
       shifted = TRUE
     )
-    shifted <- diff(bounds[1:2]) > 180 &&
-      diff(shifted_bounds[1:2]) < diff(bounds[1:2])
+    shifted <- diff(bounds[c(1, 3)]) > 180 &&
+      diff(shifted_bounds[c(1, 3)]) < diff(bounds[c(1, 3)])
     if (shifted) bounds <- shifted_bounds
     # Already-shifted inputs also define a 0-360 plotting frame.
-    shifted <- shifted || bounds[2] > 180
+    shifted <- shifted || bounds[3] > 180
     bounds <- plot_numeric_bbox(bounds)
   } else {
     bounds <- plot_numeric_bbox(bbox)
-    shifted <- bounds[2] > 180
+    shifted <- bounds[3] > 180
   }
-  bounds <- bounds + c(-expand, expand, -expand, expand)
-  bounds[1:2] <- pmax(
+  bounds <- bounds + c(-expand, -expand, expand, expand)
+  bounds[c(1, 3)] <- pmax(
     if (shifted) 0 else -180,
-    pmin(if (shifted) 360 else 180, bounds[1:2])
+    pmin(if (shifted) 360 else 180, bounds[c(1, 3)])
   )
-  bounds[3:4] <- pmax(-90, pmin(90, bounds[3:4]))
+  bounds[c(2, 4)] <- pmax(-90, pmin(90, bounds[c(2, 4)]))
   projection <- if (is.null(crs)) {
-    sf::st_crs(if (diff(bounds[1:2]) < 40) {
+    sf::st_crs(if (diff(bounds[c(1, 3)]) < 40) {
       4326
     } else if (shifted) {
       "+proj=eqearth +lon_0=180 +datum=WGS84 +units=m +no_defs"
@@ -363,14 +366,19 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
   projected <- !isTRUE(sf::st_is_longlat(cartography$crs))
   key_band <- if (info$type %in% c("exposure", "count") &&
     is.null(info$track_legend_position)) {
-    diff(cartography$bbox[3:4]) * 0.14
+    diff(cartography$bbox[c(2, 4)]) * 0.14
   } else {
     0
   }
+  latitude_limits <- c(
+    cartography$bbox[2] - key_band,
+    cartography$bbox[4]
+  )
+  latitude_limits <- pmax(-90, pmin(90, latitude_limits))
   p <- p + ggplot2::coord_sf(
     crs = cartography$crs, default_crs = sf::st_crs(4326),
-    xlim = cartography$bbox[1:2],
-    ylim = c(cartography$bbox[3] - key_band, cartography$bbox[4]),
+    xlim = cartography$bbox[c(1, 3)],
+    ylim = latitude_limits,
     # Curved projected bbox edges need a small panel margin to avoid clipping
     # observations exactly on the requested geographic boundary.
     expand = if (projected) c(FALSE, TRUE, FALSE, FALSE) else FALSE

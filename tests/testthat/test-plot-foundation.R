@@ -123,6 +123,28 @@ test_that("tracks need no geometry and retain metadata", {
   expect_error(prepare_plot_data(x, "track", binary = TRUE), "binary")
 })
 
+test_that("plot storm-name selection warns and preserves ambiguous IDs", {
+  x <- list(
+    storm_metadata = tibble::tribble(
+      ~STORM_ID, ~STORM_NAME,
+      "A", "Shared-2005",
+      "A", " shared-2005 ",
+      "B", "SHARED-2005",
+      "C", "Unique-2005"
+    ),
+    tracks = tibble::tibble(STORM_ID = c("A", "B", "C"))
+  )
+
+  expect_warning(
+    by_name <- subset_plot_data(x, storm = "shared-2005"),
+    "convenience lookup",
+    class = "gtropic_warning_ambiguous_storm_name"
+  )
+  expect_setequal(by_name$tracks$STORM_ID, c("A", "B"))
+  expect_silent(by_id <- subset_plot_data(x, storm = c("A", "B")))
+  expect_setequal(by_id$tracks$STORM_ID, c("A", "B"))
+})
+
 test_that("UTC parsing honors both offset directions and date changes", {
   out <- plot_parse_utc(
     c("2020-08-04T23:00:00-05:00", "2020-08-04T01:00:00+12:00"),

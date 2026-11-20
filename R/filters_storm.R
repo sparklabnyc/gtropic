@@ -26,6 +26,9 @@
 #' @param excluded_lookup Function returning excluded-storm records for the
 #'   candidate years, or `NULL`. It is called only after an ID or name fails to
 #'   match the available storm metadata.
+#' @param warn_ambiguous_name Whether to warn when a requested storm name maps
+#'   to more than one distinct storm identifier among the final selected rows.
+#'   Manifest replay disables this user-input diagnostic.
 #' @param call Calling environment for error reporting.
 #'
 #' @return A character vector of `STORM_ID`.
@@ -35,6 +38,7 @@ resolve_storms <- function(storm_metadata,
                            date_spec = list(type = "none"),
                            storm_filters = list(),
                            excluded_lookup = NULL,
+                           warn_ambiguous_name = TRUE,
                            call = rlang::caller_env()) {
   storm_filters <- compact(storm_filters)
 
@@ -52,6 +56,7 @@ resolve_storms <- function(storm_metadata,
   genesis <- as.Date(storm_metadata$STORM_GENESIS_DATE_UTC)
   keep <- rep(TRUE, nrow(storm_metadata))
   used_args <- character(0)
+  requested_storm_names <- NULL
 
   # --- temporal ------------------------------------------------------------
   if (identical(date_spec$type, "range")) {
@@ -115,6 +120,10 @@ resolve_storms <- function(storm_metadata,
       call = call
     )
 
+    if (identical(arg, "STORM_NAME")) {
+      requested_storm_names <- canonical
+    }
+
     hit <- if (id_spec[[arg]]$exact) {
       storm_metadata[[column]] %in% canonical
     } else {
@@ -137,7 +146,75 @@ resolve_storms <- function(storm_metadata,
     )
   }
 
+  if (!is.null(requested_storm_names) && isTRUE(warn_ambiguous_name)) {
+    warn_ambiguous_storm_names(
+      storm_metadata[keep, , drop = FALSE],
+      requested_storm_names,
+      call = call
+    )
+  }
+
   unique(as.character(storm_metadata$STORM_ID[keep]))
+}
+
+#' Warn when a requested storm name is not a unique identity
+#'
+#' Repeated metadata rows for one storm do not make a name ambiguous. The
+#' diagnostic is restricted to requested names so unrelated duplicate names in
+#' a metadata table remain silent.
+#'
+#' @param storm_metadata A data frame containing `STORM_ID` and `STORM_NAME`.
+#' @param values Requested storm names.
+#' @param excluded Whether the records describe excluded storms.
+#' @param call Calling environment for warning reporting.
+#'
+#' @return `NULL`, invisibly.
+#' @keywords internal
+#' @noRd
+warn_ambiguous_storm_names <- function(storm_metadata,
+                                       values,
+                                       excluded = FALSE,
+                                       call = rlang::caller_env()) {
+  if (is.null(values) ||
+    !all(c("STORM_ID", "STORM_NAME") %in% names(storm_metadata))) {
+    return(invisible(NULL))
+  }
+
+  ids <- as.character(storm_metadata$STORM_ID)
+  keys <- norm_key(storm_metadata$STORM_NAME)
+  requested_keys <- unique(norm_key(values))
+  ambiguous_keys <- requested_keys[vapply(requested_keys, function(key) {
+    matched_ids <- ids[!is.na(keys) & keys == key & !is.na(ids)]
+    length(unique(matched_ids)) > 1L
+  }, logical(1))]
+
+  if (length(ambiguous_keys) == 0L) {
+    return(invisible(NULL))
+  }
+
+  ambiguous_names <- values[match(ambiguous_keys, norm_key(values))]
+  if (isTRUE(excluded)) {
+    cli::cli_warn(
+      c(
+        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
+        i = "The returned unique {.field STORM_ID}s distinguish these excluded records; excluded storms cannot be retrieved with {.code gtropic_data()}."
+      ),
+      class = "gtropic_warning_ambiguous_excluded_storm_name",
+      call = call
+    )
+  } else {
+    cli::cli_warn(
+      c(
+        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
+        i = "{.field STORM_ID} is unique and preferred.",
+        i = "Use {.code gtropic_storms(STORM_NAME = ...)} to identify the intended {.field STORM_ID}, then query with {.arg STORM_ID}."
+      ),
+      class = "gtropic_warning_ambiguous_storm_name",
+      call = call
+    )
+  }
+
+  invisible(NULL)
 }
 
 #' Match storm identity filters, diagnosing excluded storms when possible
@@ -238,17 +315,18 @@ abort_unavailable_storms <- function(values,
   )
 }
 
-#' Extract genesis years encoded in storm names
+#' Extract season years encoded in storm names
 #'
-#' Published storm names are disambiguated with the genesis year, for example
-#' `Katrina-2005`. Reading that suffix before metadata retrieval avoids scanning
-#' every published storm-metadata file for a named query.
+#' Published storm names are convenience labels formatted with the storm season,
+#' for example `Katrina-2005`. Labels can duplicate across distinct `STORM_ID`s.
+#' The suffix is not always the genesis calendar year: a Southern Hemisphere
+#' storm in season `S` can form late in `S - 1`.
 #'
 #' @param values Normalized `STORM_NAME` filter values, or `NULL`.
 #' @param arg Argument name for errors.
 #' @param call Calling environment for error reporting.
 #'
-#' @return An integer vector of unique suffix years, or `NULL`.
+#' @return An integer vector of unique season suffix years, or `NULL`.
 #' @keywords internal
 #' @noRd
 storm_name_years <- function(values,
@@ -263,13 +341,31 @@ storm_name_years <- function(values,
     cli::cli_abort(
       c("Every {.arg {arg}} value must end with {.val Name-YYYY}.",
         x = "Invalid value{?s}: {.val {values[!valid]}}.",
-        i = "Use the published disambiguated storm name, for example {.val Katrina-2005}."
+        i = "Use the published {.val Name-YYYY} convenience label, for example {.val Katrina-2005}."
       ),
       call = call
     )
   }
 
   unique(as.integer(sub("^.*-([0-9]{4})$", "\\1", values)))
+}
+
+#' Find candidate genesis-year partitions for storm seasons
+#'
+#' G-TROPIC yearly files use the calendar year of storm genesis. A storm whose
+#' full name ends in season `S` can therefore occur in partition `S - 1` or `S`.
+#'
+#' @param season_years Integer season years, or `NULL`.
+#'
+#' @return Sorted unique candidate genesis years, or `NULL`.
+#' @keywords internal
+#' @noRd
+storm_name_genesis_years <- function(season_years) {
+  if (is.null(season_years)) {
+    return(NULL)
+  }
+  season_years <- as.integer(season_years)
+  sort(unique(c(season_years - 1L, season_years)))
 }
 
 #' Verify the genesis-year file convention on loaded metadata

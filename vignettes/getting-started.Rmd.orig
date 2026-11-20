@@ -10,7 +10,12 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 7,
+  dpi = 110,
+  fig.cap = NA,
+  out.width = "100%"
 )
 ```
 
@@ -96,6 +101,14 @@ temporal filter in the package. So, for example, if you inquire after storms fro
 2025, the package is designed to return storms whose genesis date (UTC) occurs within
 the 2025 calendar year. For more in depth discussion, see the "Selecting storms by date" section below,
 and the `filtering` vignette.
+
+`STORM_ID` uniquely identifies each storm and is the preferred key for queries,
+joins, grouping, and reproducible work. `STORM_NAME` is a convenience lookup and
+display label whose complete value can repeat, including across basins. It has
+`Name-YYYY` form, but `YYYY` is the published `SEASON` year and need not equal
+the genesis calendar year. A good workflow is to call
+`gtropic_storms(STORM_NAME = ...)`, inspect the matches, and then use the
+intended `STORM_ID` in `gtropic_data()` and downstream code.
 
 One of the most important pieces of metadata is the G-TROPIC codebook, which can be
 obtained with:
@@ -308,6 +321,8 @@ Both topics are covered extensively in `vignette("versions-and-caching")`.
 
 - Use the discovery helpers to identify available years, places, storms, and
   exposure metrics before making a query.
+- Look up candidate storms by `STORM_NAME`, then use the unique `STORM_ID` for
+  retrieval and downstream work.
 - `gtropic_data()` returns a named collection of exposure tables plus metadata
   that documents the selected records and source files.
 - Use the `links` table to connect precipitation and flooding records to storms

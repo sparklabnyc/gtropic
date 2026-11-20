@@ -87,16 +87,26 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' exclusion records and reports whether the storm is excluded or absent from
 #' both lists.
 #'
+#' `STORM_NAME` is a convenience lookup and can identify multiple storms. If a
+#' name matches multiple unique `STORM_ID`s after all filters are applied, this
+#' function returns every match and warns. Use `gtropic_storms(STORM_NAME = ...)`
+#' to identify the intended `STORM_ID`, then query [gtropic_data()] with
+#' `STORM_ID`, which is unique and preferred.
+#'
 #' @param date_range Optional vector of length two defining an inclusive range
 #'   of storm genesis dates. Bare years, year-month values, complete dates, and
 #'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of years to retrieve. Ignored when `date_range`
-#'   is supplied. Years outside the published collection are omitted.
-#' @param STORM_NAME Optional character vector of published, disambiguated storm
-#'   names in `Name-YYYY` form, such as `Katrina-2005`. Matching is
-#'   case-insensitive; every supplied value must match a published name. The
-#'   suffix year limits the metadata files scanned and is combined with an
-#'   explicit `year` or `date_range` filter using AND.
+#' @param year Optional vector of storm genesis calendar years to retrieve.
+#'   Ignored when `date_range` is supplied. Years outside the published
+#'   collection are omitted.
+#' @param STORM_NAME Optional character vector of published convenience labels
+#'   in `Name-YYYY` form, such as `Katrina-2005`. Labels can duplicate across
+#'   distinct `STORM_ID`s. Matching is case-insensitive; every supplied value
+#'   must match a published name. The suffix is the storm season. Because
+#'   Southern Hemisphere storms can form in the preceding calendar year,
+#'   partitions for both `YYYY - 1` and `YYYY` are considered. This candidate
+#'   set is combined with an explicit genesis `year` or `date_range` filter using
+#'   AND.
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
 #' @param cache Whether downloaded files may be cached. `NULL` uses
@@ -106,11 +116,11 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' @return A tibble containing the published metadata records for storms that
 #'   satisfy the requested genesis period and name filters. If no metadata files
 #'   are available for the selected years, a warning is issued and an empty
-#'   tibble is returned.
+#'   tibble is returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
 #' @examples
 #' \donttest{
-#' # Review storms that formed during the 2005 season
+#' # Review storms that formed during calendar year 2005
 #' gtropic_storms(year = 2005)
 #'
 #' # Retrieve the published identifiers and dates for Hurricane Katrina
@@ -138,10 +148,11 @@ gtropic_storms <- function(date_range = NULL,
     ctx$discovery$year_index$year
   }
   if (!is.null(storm_name_year)) {
+    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
     years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
-      intersect(years, storm_name_year)
+      intersect(years, storm_genesis_year)
     } else {
-      storm_name_year
+      storm_genesis_year
     }
   }
   years <- intersect(years, ctx$discovery$year_index$year)
@@ -175,6 +186,7 @@ gtropic_storms <- function(date_range = NULL,
     meta <- meta[norm_key(meta$STORM_NAME) %in% norm_key(canonical), ,
       drop = FALSE
     ]
+    warn_ambiguous_storm_names(meta, canonical)
   }
 
   meta
@@ -185,6 +197,8 @@ gtropic_storms <- function(date_range = NULL,
 #' @description
 #' Retrieves records for storms excluded from the published wind data. These
 #' records identify storms that cannot be retrieved with [gtropic_data()].
+#' Published `STORM_NAME` convenience labels can duplicate; the unique
+#' `STORM_ID` values in the returned rows distinguish excluded records.
 #'
 #' Date filters are applied to `STORM_GENESIS_DATE_UTC`, the UTC date of the
 #' first best-track observation. They do not select storms by landfall, closest
@@ -193,13 +207,15 @@ gtropic_storms <- function(date_range = NULL,
 #' @param date_range Optional vector of length two defining an inclusive range
 #'   of storm genesis dates. Bare years, year-month values, complete dates, and
 #'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of years to retrieve. Ignored when `date_range`
-#'   is supplied. Years outside the published collection are omitted.
-#' @param STORM_NAME Optional character vector of published, disambiguated storm
-#'   names in `Name-YYYY` form. Matching is case-insensitive; every supplied
-#'   value must match an excluded-storm record. The suffix year limits the files
-#'   scanned and is combined with an explicit `year` or `date_range` filter using
-#'   AND.
+#' @param year Optional vector of storm genesis calendar years to retrieve.
+#'   Ignored when `date_range` is supplied. Years outside the published
+#'   collection are omitted.
+#' @param STORM_NAME Optional character vector of published convenience labels
+#'   in `Name-YYYY` form. Labels can duplicate across distinct `STORM_ID`s.
+#'   Matching is case-insensitive; every supplied value must match an
+#'   excluded-storm record. The suffix is the storm season; partitions for
+#'   genesis years `YYYY - 1` and `YYYY` are considered and combined with an
+#'   explicit genesis `year` or `date_range` filter using AND.
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
 #' @param cache Whether downloaded files may be cached. `NULL` uses
@@ -210,11 +226,11 @@ gtropic_storms <- function(date_range = NULL,
 #'   `STORM_GENESIS_DATE_UTC` for published excluded storms satisfying the
 #'   requested genesis period and name filters. If no exclusion files are
 #'   available for the selected years, a warning is issued and an empty tibble is
-#'   returned.
+#'   returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
 #' @examples
 #' \donttest{
-#' # Review exclusion records for storms that formed during the 2005 season
+#' # Review exclusion records for storms that formed during calendar year 2005
 #' gtropic_excluded_storms(year = 2005)
 #' }
 #'
@@ -238,10 +254,11 @@ gtropic_excluded_storms <- function(date_range = NULL,
     ctx$discovery$year_index$year
   }
   if (!is.null(storm_name_year)) {
+    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
     years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
-      intersect(years, storm_name_year)
+      intersect(years, storm_genesis_year)
     } else {
-      storm_name_year
+      storm_genesis_year
     }
   }
   years <- intersect(years, ctx$discovery$year_index$year)
@@ -271,6 +288,7 @@ gtropic_excluded_storms <- function(date_range = NULL,
       norm_key(excluded$STORM_NAME) %in% norm_key(canonical), ,
       drop = FALSE
     ]
+    warn_ambiguous_storm_names(excluded, canonical, excluded = TRUE)
   }
 
   excluded
@@ -298,13 +316,16 @@ fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
 #' Report the temporal coverage of G-TROPIC
 #'
 #' @description
-#' Reports the calendar years represented in the historical and current-year
-#' G-TROPIC datasets. This information can be used to define feasible study
-#' periods before retrieving storm exposure data.
+#' Reports the genesis calendar years represented in the historical and
+#' current-year G-TROPIC datasets. Storm-linked annual coverage is based on
+#' `STORM_GENESIS_DATE_UTC`, not the season suffix in `STORM_NAME`. This
+#' information can be used to define feasible study periods before retrieving
+#' storm exposure data.
 #'
-#' The historical collection contains completed years. When available, the
-#' separate current-year collection is updated as the tropical cyclone season
-#' progresses and may therefore represent provisional temporal coverage.
+#' The historical collection contains completed genesis calendar years. When
+#' available, the separate current-year collection is updated as storms with
+#' genesis dates in the current calendar year are published, so coverage for
+#' that calendar year may be provisional.
 #'
 #' @param version Dataset version or versions to inspect. The default,
 #'   `":latest"`, uses the most recent published versions. See [gtropic_data()]

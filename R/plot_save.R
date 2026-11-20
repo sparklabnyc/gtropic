@@ -1,14 +1,18 @@
-#' Save a static plot
+#' Save a plot or interactive widget
 #'
-#' Save a ggplot with [ggplot2::ggsave()]. This helper writes files;
+#' Save a ggplot with [ggplot2::ggsave()] or an HTML widget, including a
+#' Leaflet map, with [htmlwidgets::saveWidget()]. This helper writes files;
 #' [gtropic_plot()] itself only returns plot objects.
 #'
-#' @param plot A ggplot, such as one returned by [gtropic_plot()].
+#' @param plot A ggplot or HTML widget, such as one returned by [gtropic_plot()].
 #' @param filename One nonempty output filename, optionally including a path.
 #'   For static plots the extension selects the device unless `device` is
-#'   supplied in `...`.
+#'   supplied in `...`. HTML widgets require a `.html` filename.
 #' @param ... Uniquely named arguments. For static plots, passed unchanged to
-#'   [ggplot2::ggsave()], including `device`, `path`, `bg`, and `scale`.
+#'   [ggplot2::ggsave()], including `device`, `path`, `bg`, and `scale`. For
+#'   HTML widgets, `path` is combined with `filename`; other arguments are
+#'   passed to [htmlwidgets::saveWidget()], including `selfcontained`, `libdir`,
+#'   `background`, `title`, and `knitrOptions`.
 #' @param dpi Positive finite resolution in dots per inch. Defaults to 300.
 #' @param width,height Positive finite output dimensions in `units`, or NULL
 #'   to infer them. Explicit dimensions are preserved. See Details for defaults.
@@ -16,9 +20,18 @@
 #'   are converted using `dpi`.
 #'
 #' @details
+#' ## Interactive maps
+#' Interactive maps are saved as HTML widgets. By default, their JavaScript and
+#' CSS dependencies are written to a sibling directory rather than embedded in
+#' the HTML file (`selfcontained = FALSE`), which does not require Pandoc. Keep
+#' that directory with the HTML file when moving or publishing the map. Set
+#' `selfcontained = TRUE` to request a single-file widget when Pandoc is
+#' available.
+#'
 #' ## Figure dimensions
 #' Map plots carry a geographic `gtropic_bbox` attribute in the order
-#' `c(xmin, xmax, ymin, ymax)` (named bounds may be in any order). The estimated
+#' `c(xmin, ymin, xmax, ymax)` (named bounds may be in any order), matching
+#' [sf::st_bbox()]. The estimated
 #' width-to-height ratio is longitude span times the cosine of mean latitude,
 #' divided by latitude span. This is a geographic approximation, not a
 #' measurement of the final projected panels, legends, or facets.
@@ -44,11 +57,24 @@
 #' }
 #' @export
 gtropic_save <- function(plot, filename, ..., dpi = 300,
-                         width = NULL, height = NULL, units = "in") {
-  if (!inherits(plot, "ggplot")) {
-    cli::cli_abort("{.arg plot} must be a ggplot.")
-  }
+                          width = NULL, height = NULL, units = "in") {
   plot_save_string(filename, "filename")
+  dots <- list(...)
+  if (length(dots)) {
+    nms <- names(dots)
+    if (is.null(nms) || anyNA(nms) || any(!nzchar(nms))) {
+      cli::cli_abort("All arguments in {.arg ...} must be named.")
+    }
+    if (anyDuplicated(nms)) {
+      cli::cli_abort("Arguments in {.arg ...} must be uniquely named.")
+    }
+  }
+  if (inherits(plot, "htmlwidget")) {
+    return(plot_save_widget(plot, filename, dots))
+  }
+  if (!inherits(plot, "ggplot")) {
+    cli::cli_abort("{.arg plot} must be a ggplot or HTML widget.")
+  }
   for (nm in c("dpi", "width", "height")) {
     value <- get(nm)
     if (nm != "dpi" && is.null(value)) next
@@ -60,16 +86,6 @@ gtropic_save <- function(plot, filename, ..., dpi = 300,
     }
   }
   units <- rlang::arg_match(units, c("in", "cm", "mm", "px"))
-  dots <- list(...)
-  if (length(dots)) {
-    nms <- names(dots)
-    if (is.null(nms) || anyNA(nms) || any(!nzchar(nms))) {
-      cli::cli_abort("All arguments in {.arg ...} must be named.")
-    }
-    if (anyDuplicated(nms)) {
-      cli::cli_abort("Arguments in {.arg ...} must be uniquely named.")
-    }
-  }
   path <- dots[["path"]]
   if (!is.null(path)) plot_save_string(path, "path")
   output <- if (is.null(path)) filename else file.path(path, filename)
@@ -80,6 +96,31 @@ gtropic_save <- function(plot, filename, ..., dpi = 300,
     filename = filename, plot = plot, dpi = dpi,
     width = size$width, height = size$height, units = units
   ), dots))
+  invisible(output)
+}
+
+#' Save an HTML widget without requiring a static-graphics device
+#' @keywords internal
+#' @noRd
+plot_save_widget <- function(widget, filename, dots) {
+  if (!identical(tolower(tools::file_ext(filename)), "html")) {
+    cli::cli_abort("{.arg filename} for an HTML widget must end in {.val .html}.")
+  }
+  path <- dots[["path"]]
+  if (!is.null(path)) plot_save_string(path, "path")
+  dots[["path"]] <- NULL
+  rlang::check_installed("htmlwidgets", reason = "to save HTML widgets")
+  supported <- c("selfcontained", "libdir", "background", "title", "knitrOptions")
+  unknown <- setdiff(names(dots), supported)
+  if (length(unknown)) {
+    cli::cli_abort("Unsupported HTML widget arguments in {.arg ...}: {.val {unknown}}.")
+  }
+  output <- if (is.null(path)) filename else file.path(path, filename)
+  arguments <- c(list(widget = widget, file = output), dots)
+  if (!"selfcontained" %in% names(dots)) {
+    arguments$selfcontained <- FALSE
+  }
+  do.call(htmlwidgets::saveWidget, arguments)
   invisible(output)
 }
 
@@ -127,17 +168,17 @@ plot_save_aspect <- function(bbox) {
   if (!is.numeric(bbox) || length(bbox) != 4L || any(!is.finite(bbox))) {
     return(fallback)
   }
-  order <- c("xmin", "xmax", "ymin", "ymax")
+  order <- c("xmin", "ymin", "xmax", "ymax")
   if (!is.null(names(bbox))) {
     if (!setequal(names(bbox), order)) {
       return(fallback)
     }
     bbox <- bbox[order]
   }
-  span <- unname(c(bbox[2] - bbox[1], bbox[4] - bbox[3]))
-  if (any(span <= 0) || span[1] > 360 || any(abs(bbox[3:4]) > 90)) {
+  span <- unname(c(bbox[3] - bbox[1], bbox[4] - bbox[2]))
+  if (any(span <= 0) || span[1] > 360 || any(abs(bbox[c(2, 4)]) > 90)) {
     return(fallback)
   }
-  aspect <- span[1] * cos(mean(bbox[3:4]) * pi / 180) / span[2]
+  aspect <- span[1] * cos(mean(bbox[c(2, 4)]) * pi / 180) / span[2]
   if (!is.finite(aspect) || aspect <= 0) fallback else aspect
 }

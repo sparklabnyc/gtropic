@@ -43,11 +43,74 @@ test_that("storm names match case-insensitively, ids exactly", {
   )
 })
 
+test_that("ambiguous storm names warn once and preserve every distinct ID", {
+  meta <- tibble::tribble(
+    ~STORM_ID, ~STORM_NAME, ~USA_ATCF_ID, ~STORM_GENESIS_DATE_UTC,
+    "A", "Shared-2005", "SH012004", "2004-12-30",
+    "A", " shared-2005 ", "SH012004", "2004-12-30",
+    "B", "SHARED-2005", "SH022005", "2005-01-02",
+    "C", "Unique-2005", "SH032005", "2005-02-01",
+    "D", "Other-2005", "SH042005", "2005-03-01"
+  )
+
+  expect_warning(
+    ids <- resolve_storms(
+      meta,
+      storm_filters = list(STORM_NAME = c("shared-2005", "unique-2005"))
+    ),
+    "convenience lookup",
+    class = "gtropic_warning_ambiguous_storm_name"
+  )
+  expect_setequal(ids, c("A", "B", "C"))
+
+  expect_silent(unique_id <- resolve_storms(
+    meta,
+    storm_filters = list(STORM_ID = c("A", "B"))
+  ))
+  expect_setequal(unique_id, c("A", "B"))
+
+  expect_silent(unique_names <- resolve_storms(
+    meta,
+    storm_filters = list(STORM_NAME = c("unique-2005", "other-2005"))
+  ))
+  expect_setequal(unique_names, c("C", "D"))
+
+  expect_silent(replayed <- resolve_storms(
+    meta,
+    storm_filters = list(STORM_NAME = "shared-2005"),
+    warn_ambiguous_name = FALSE
+  ))
+  expect_setequal(replayed, c("A", "B"))
+
+  expect_silent(by_date <- resolve_storms(
+    meta,
+    date_spec = parse_date_input(
+      date_range = c("2004-12-01", "2004-12-31")
+    ),
+    storm_filters = list(STORM_NAME = "shared-2005")
+  ))
+  expect_equal(by_date, "A")
+
+  expect_silent(by_id <- resolve_storms(
+    meta,
+    storm_filters = list(STORM_ID = "A", STORM_NAME = "shared-2005")
+  ))
+  expect_equal(by_id, "A")
+
+  one_id_repeated <- meta[meta$STORM_ID == "A", ]
+  expect_silent(repeated <- resolve_storms(
+    one_id_repeated,
+    storm_filters = list(STORM_NAME = "shared-2005")
+  ))
+  expect_equal(repeated, "A")
+})
+
 test_that("public storm-name filters require and extract final year suffixes", {
   expect_equal(
     storm_name_years(c("Katrina-2005", "Haiyan-2013", "Katrina-2005")),
     c(2005L, 2013L)
   )
+  expect_equal(storm_name_genesis_years(c(2005L, 2013L)), c(2004L, 2005L, 2012L, 2013L))
   for (name in c("Katrina", "Katrina-05", "Katrina-2005-extra", "-2005")) {
     expect_error(storm_name_years(name), "Name-YYYY")
   }
@@ -76,7 +139,18 @@ test_that("gtropic_data repeats a single date-range endpoint", {
   )
 })
 
-test_that("storm discovery fetches only years encoded in STORM_NAME", {
+test_that("gtropic_data exposes and records geometry repair", {
+  local_mocked_bindings(
+    assemble_gtropic_data = function(args, ...) args
+  )
+
+  expect_true(gtropic_data()$make_valid)
+  expect_false(gtropic_data(make_valid = FALSE)$make_valid)
+  expect_false(gtropic_data(make_valid = FALSE)$resolved_query$make_valid)
+  expect_error(gtropic_data(make_valid = NA), "make_valid")
+})
+
+test_that("storm discovery scans both genesis partitions for a season name", {
   fetched_years <- NULL
   local_mocked_bindings(
     helper_context = function(...) {
@@ -84,18 +158,36 @@ test_that("storm discovery fetches only years encoded in STORM_NAME", {
     },
     fetch_yearly = function(table, years, ctx, ...) {
       fetched_years <<- years
-      if (length(years) == 0L) return(NULL)
-      tibble::tibble(
+      if (length(years) == 0L) {
+        return(NULL)
+      }
+      records <- tibble::tibble(
         STORM_ID = "A", STORM_NAME = "Name-2005",
-        STORM_GENESIS_DATE_UTC = "2005-08-01"
+        STORM_GENESIS_DATE_UTC = "2004-12-28",
+        file_year = 2004L
       )
+      records[records$file_year %in% years, setdiff(names(records), "file_year"),
+        drop = FALSE
+      ]
     }
   )
 
   out <- gtropic_storms(STORM_NAME = "name-2005")
 
-  expect_equal(fetched_years, 2005L)
+  expect_equal(fetched_years, 2004:2005)
   expect_equal(out$STORM_ID, "A")
+
+  by_date <- gtropic_storms(
+    date_range = c("2004-12-01", "2004-12-31"),
+    STORM_NAME = "name-2005"
+  )
+  expect_equal(fetched_years, 2004L)
+  expect_equal(by_date$STORM_ID, "A")
+
+  by_year <- gtropic_storms(year = 2004, STORM_NAME = "name-2005")
+  expect_equal(fetched_years, 2004L)
+  expect_equal(by_year$STORM_ID, "A")
+
   expect_warning(
     date_conflict <- gtropic_storms(
       date_range = c("2006-01-01", "2006-12-31"),
@@ -112,6 +204,41 @@ test_that("storm discovery fetches only years encoded in STORM_NAME", {
   )
   expect_identical(fetched_years, integer(0))
   expect_equal(nrow(year_conflict), 0L)
+})
+
+test_that("gtropic_storms warns for an ambiguous requested name only", {
+  local_mocked_bindings(
+    helper_context = function(...) {
+      list(discovery = list(year_index = tibble::tibble(year = 2004:2005)))
+    },
+    fetch_yearly = function(table, years, ...) {
+      if (identical(table, "excluded_storms")) {
+        return(tibble::tibble(STORM_ID = character(), STORM_NAME = character()))
+      }
+      tibble::tribble(
+        ~STORM_ID, ~STORM_NAME, ~STORM_GENESIS_DATE_UTC,
+        "A", "Shared-2005", "2004-12-30",
+        "A", "Shared-2005", "2004-12-30",
+        "B", "shared-2005", "2005-01-02",
+        "C", "Unique-2005", "2005-02-01"
+      )
+    }
+  )
+
+  expect_warning(
+    out <- gtropic_storms(STORM_NAME = "shared-2005"),
+    "STORM_ID.*unique and preferred",
+    class = "gtropic_warning_ambiguous_storm_name"
+  )
+  expect_setequal(out$STORM_ID, c("A", "B"))
+  expect_silent(unique_match <- gtropic_storms(STORM_NAME = "unique-2005"))
+  expect_equal(unique_match$STORM_ID, "C")
+
+  expect_silent(narrowed <- gtropic_storms(
+    date_range = c("2004-12-30", "2004-12-30"),
+    STORM_NAME = "shared-2005"
+  ))
+  expect_equal(unique(narrowed$STORM_ID), "A")
 })
 
 test_that("the genesis-year convention assertion passes on clean metadata", {
@@ -197,6 +324,10 @@ test_that("wind-radius validation accepts finite, Inf, and NULL values", {
   for (x in list(0, -1, NA_real_, NaN, -Inf, c(100, 200), "500")) {
     expect_error(check_wind_radius_km(x), "wind_radius_km")
   }
+  expect_error(
+    check_wind_radius_km(-Inf),
+    "positive finite number, Inf, or"
+  )
 })
 
 test_that("hazard-radius validation accepts finite, Inf, and NULL values", {
@@ -500,6 +631,7 @@ test_that("assembly reports finite hazard scope while preserving source links", 
       flood_radius_km = Inf,
       flood_match = "start",
       geometry_resolution = "simplified",
+      make_valid = TRUE,
       as = "tibble",
       confirm = TRUE
     )
@@ -633,7 +765,7 @@ test_that("the local date is the first 10 characters, whatever the offset", {
   out <- derive_local_date(x)
   expect_equal(
     out$LOCAL_DATE_STORM_CLOSEST,
-    c("2005-08-29", "2002-12-31", "2002-12-31")
+    as.Date(c("2005-08-29", "2002-12-31", "2002-12-31"))
   )
 })
 
@@ -672,6 +804,7 @@ test_that("precip rows are not duplicated when two windows overlap", {
   out <- select_precip(lk, precip)
   # Two days sit inside BOTH windows; each must appear once.
   expect_equal(nrow(out), 2L)
+  expect_s3_class(out$LOCAL_DATE, "Date")
   expect_setequal(
     as.character(out$LOCAL_DATE),
     c("2002-09-03", "2002-09-04")
@@ -700,5 +833,8 @@ test_that("flood 'start' and 'overlap' select different rows", {
   # Started before the window opened, so "start" misses it...
   expect_equal(nrow(select_flood(lk, flood, "start")), 0L)
   # ...but it was in progress when the storm arrived.
-  expect_equal(nrow(select_flood(lk, flood, "overlap")), 1L)
+  overlap <- select_flood(lk, flood, "overlap")
+  expect_equal(nrow(overlap), 1L)
+  expect_s3_class(overlap$FLOOD_START_DATE, "Date")
+  expect_s3_class(overlap$FLOOD_END_DATE, "Date")
 })

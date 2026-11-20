@@ -126,6 +126,89 @@ read_geoparquet_raw <- function(raw, label = "file",
   geometry
 }
 
+#' Normalize date-only columns from published tables
+#'
+#' Parquet source schemas currently mix ISO date strings and Arrow date values.
+#' Normalizing at the I/O boundary gives identically named join keys one stable
+#' R type without altering datetime strings that carry meaningful UTC offsets.
+#'
+#' @param x A data frame.
+#' @param label Table or path used in error messages.
+#' @param call Calling environment.
+#'
+#' @return `x` with recognized date-only columns converted to `Date`.
+#' @keywords internal
+#' @noRd
+normalize_table_types <- function(x, label = "table",
+                                  call = rlang::caller_env()) {
+  date_cols <- intersect(
+    c(
+      "STORM_GENESIS_DATE_UTC",
+      "LOCAL_DATE_STORM_CLOSEST",
+      "LOCAL_DATE",
+      "FLOOD_START_DATE",
+      "FLOOD_END_DATE",
+      "PRECIP_WINDOW_START",
+      "PRECIP_WINDOW_END",
+      "FLOOD_WINDOW_START",
+      "FLOOD_WINDOW_END"
+    ),
+    names(x)
+  )
+
+  for (column in date_cols) {
+    x[[column]] <- parse_published_date(
+      x[[column]],
+      column = column, label = label, call = call
+    )
+  }
+  x
+}
+
+#' Parse one published date-only column
+#'
+#' @param x A `Date` or character vector.
+#' @param column Column name.
+#' @param label Table or path used in error messages.
+#' @param call Calling environment.
+#'
+#' @return A `Date` vector.
+#' @keywords internal
+#' @noRd
+parse_published_date <- function(x, column, label = "table",
+                                 call = rlang::caller_env()) {
+  if (inherits(x, "Date")) {
+    return(x)
+  }
+
+  if (!is.character(x)) {
+    cli::cli_abort(
+      c(
+        "Could not parse {.field {column}} in {.path {label}} as a date.",
+        x = "Expected ISO dates stored as character values or Arrow dates, not {.cls {class(x)}}."
+      ),
+      call = call
+    )
+  }
+
+  valid_shape <- is.na(x) | grepl("^\\d{4}-\\d{2}-\\d{2}$", x)
+  parsed <- suppressWarnings(as.Date(x, format = "%Y-%m-%d"))
+  invalid <- !valid_shape | (!is.na(x) & is.na(parsed))
+  if (any(invalid)) {
+    bad <- unique(x[invalid])
+    cli::cli_abort(
+      c(
+        "Could not parse {.field {column}} in {.path {label}} as a date.",
+        x = "Invalid value{?s}: {.val {utils::head(bad, 3)}}.",
+        i = "Expected complete ISO dates in {.val YYYY-MM-DD} form."
+      ),
+      call = call
+    )
+  }
+
+  parsed
+}
+
 #' Require the optional geospatial packages
 #'
 #' @param what Description of the feature requiring them.
@@ -163,6 +246,9 @@ check_installed_geo <- function(what = "this feature",
 #' @noRd
 finalize_table <- function(x, as = c("tibble", "arrow")) {
   as <- match.arg(as)
+  if (is.data.frame(x)) {
+    x <- normalize_table_types(x)
+  }
   if (identical(as, "arrow")) {
     return(x)
   }

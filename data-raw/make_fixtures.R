@@ -69,7 +69,8 @@ for (y in 2001:2003) {
 }
 
 # --- storm metadata ---------------------------------------------------------
-# Storms live in the file for their genesis year, by construction.
+# SEASON is retained as schema data; files are partitioned by calendar genesis
+# year instead.
 
 storms <- tibble::tribble(
   ~STORM_ID,    ~STORM_NAME, ~USA_ATCF_ID, ~STORM_GENESIS_DATE_UTC, ~SEASON,
@@ -79,9 +80,16 @@ storms <- tibble::tribble(
   "2002DDD",    "Dolly",     "WP212002",   "2002-12-28",            2002L,
   "2003EEE",    "Erika",     "AL052003",   "2003-08-14",            2003L
 )
+genesis_year_by_storm <- stats::setNames(
+  as.integer(format(as.Date(storms$STORM_GENESIS_DATE_UTC), "%Y")),
+  storms$STORM_ID
+)
+storm_ids_for_genesis_year <- function(year) {
+  names(genesis_year_by_storm)[genesis_year_by_storm == year]
+}
 for (y in 2001:2003) {
   write_fix(
-    dplyr::filter(storms, SEASON == y),
+    dplyr::filter(storms, STORM_ID %in% storm_ids_for_genesis_year(y)),
     "02_wind", "storm_metadata", paste0(y, ".parquet")
   )
 }
@@ -89,6 +97,7 @@ for (y in 2001:2003) {
 # --- wind exposures ---------------------------------------------------------
 # Anchor offsets are varied on purpose: a negative offset, a positive offset,
 # and one where the UTC instant falls on the following day.
+# Storm-derived tables follow the metadata genesis-year partition, not SEASON.
 
 wind <- tibble::tribble(
   ~STORM_ID, ~ADM2_ID, ~STORM_DIST_KM, ~LOCAL_DATETIME_STORM_CLOSEST, ~MAX_WIND_MS, ~SEASON,
@@ -100,7 +109,7 @@ wind <- tibble::tribble(
 )
 for (y in 2001:2003) {
   write_fix(
-    dplyr::filter(wind, SEASON == y),
+    dplyr::filter(wind, STORM_ID %in% storm_ids_for_genesis_year(y)),
     "02_wind", "exposures", paste0(y, ".parquet")
   )
 }
@@ -120,7 +129,7 @@ zero <- tibble::tribble(
 )
 for (y in 2001:2003) {
   write_fix(
-    dplyr::filter(zero, SEASON == y),
+    dplyr::filter(zero, STORM_ID %in% storm_ids_for_genesis_year(y)),
     "02_wind", "zero_pairs", paste0(y, ".parquet")
   )
 }
@@ -181,7 +190,7 @@ tracks <- tibble::tribble(
 )
 for (y in 2001:2003) {
   write_fix(
-    dplyr::filter(tracks, SEASON == y),
+    dplyr::filter(tracks, STORM_ID %in% storm_ids_for_genesis_year(y)),
     "02_wind", "storm_tracks", paste0(y, ".parquet")
   )
 }

@@ -308,7 +308,9 @@ subset_plot_data <- function(data, storm = NULL, adm2 = NULL) {
   ids <- storm
   if (!is.null(storm) && !is.null(data$storm_metadata)) {
     meta <- data$storm_metadata
-    matched <- toupper(meta$STORM_NAME) %in% toupper(storm)
+    name_values <- storm[!storm %in% meta$STORM_ID]
+    warn_ambiguous_storm_names(meta, name_values)
+    matched <- norm_key(meta$STORM_NAME) %in% norm_key(name_values)
     ids <- unique(c(storm, meta$STORM_ID[matched]))
   }
   for (nm in setdiff(names(data), "codebook")) {
@@ -394,7 +396,8 @@ plot_prepare_overlay <- function(tracks, membership, facet_by) {
 prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
                               adm2 = NULL, aggregate = NULL, threshold = NULL,
                               binary = FALSE, count_unit = "storms",
-                              facet_by = NULL, track = NULL, ...) {
+                              facet_by = NULL, track = NULL,
+                              make_valid = TRUE, ...) {
   dots <- rlang::list2(...)
   unknown <- setdiff(names(dots), c(
     "interactive", "quiet", "palette", "direction", "track_map_key",
@@ -411,6 +414,7 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   type <- rlang::arg_match(type, c("exposure", "count", "track"))
   count_unit <- rlang::arg_match(count_unit, c("storms", "days"))
   plot_flag(binary, "binary")
+  plot_flag(make_valid, "make_valid")
   if (binary && !type %in% c("exposure", "count")) {
     cli::cli_abort("{.arg binary} applies only to exposure and count maps.")
   }
@@ -527,6 +531,7 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
       "ADM2_ID",
       drop = FALSE
     ]
+    geometry <- repair_invalid_geometry(geometry, make_valid)
     out <- dplyr::inner_join(geometry, out,
       by = "ADM2_ID", relationship = "one-to-many"
     )
@@ -561,6 +566,14 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   }
   hazard_settings <- plot_hazard_settings(if (type == "track") NULL else raw_parts)
   storm_info <- plot_storm_info(out, data$storm_metadata, membership)
+  precip_missing_ids <- character(0)
+  if (type != "track" && "PRECIP_MM" %in% metrics$metric) {
+    precip_rows <- out[as.character(out$metric) == "PRECIP_MM", , drop = FALSE]
+    precip_missing_ids <- precip_all_missing_adm2_ids(
+      precip_rows,
+      value_col = "value"
+    )
+  }
   info <- list(
     type = type, metrics = metrics, metric = metrics$metric,
     registry = plot_metric_registry(data$codebook),
@@ -580,6 +593,8 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
     wind_radius_km = hazard_settings$wind$radius_km,
     storm_ids = storm_info$ids, storm_labels = storm_info$labels,
     filters = filters, flood_match = flood_match,
+    precip_all_missing_adm2_ids = precip_missing_ids,
+    warnings = attr(data, "warnings", exact = TRUE),
     query = attr(data, "query", exact = TRUE),
     manifest = attr(data, "manifest", exact = TRUE),
     retrieved_at = attr(data, "retrieved_at", exact = TRUE),

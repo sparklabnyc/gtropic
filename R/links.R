@@ -36,7 +36,7 @@
 #' @param label Path used in error messages.
 #' @param call Calling environment.
 #'
-#' @return `x` with a `LOCAL_DATE_STORM_CLOSEST` character column added.
+#' @return `x` with a `LOCAL_DATE_STORM_CLOSEST` `Date` column added.
 #' @keywords internal
 #' @noRd
 derive_local_date <- function(x, validate = TRUE, label = "file",
@@ -53,12 +53,13 @@ derive_local_date <- function(x, validate = TRUE, label = "file",
 
   if (validate) validate_anchor(x, label = label, call = call)
 
-  dplyr::mutate(
+  out <- dplyr::mutate(
     x,
     LOCAL_DATE_STORM_CLOSEST = stringr::str_sub(
       .data$LOCAL_DATETIME_STORM_CLOSEST, 1L, 10L
     )
   )
+  normalize_table_types(out, label = label, call = call)
 }
 
 #' Validate the anchor column's format
@@ -219,7 +220,11 @@ build_links <- function(wind,
     return(links_empty())
   }
 
-  anchor <- as.Date(pairs$LOCAL_DATE_STORM_CLOSEST)
+  anchor <- parse_published_date(
+    pairs$LOCAL_DATE_STORM_CLOSEST,
+    column = "LOCAL_DATE_STORM_CLOSEST",
+    label = "links"
+  )
 
   tibble::tibble(
     STORM_ID = pairs$STORM_ID,
@@ -429,7 +434,8 @@ select_precip <- function(links, precip) {
     return(precip[0, , drop = FALSE])
   }
 
-  precip <- dplyr::mutate(precip, .gtropic_date = as.Date(.data[["LOCAL_DATE"]]))
+  precip <- normalize_table_types(precip, label = "precip") |>
+    dplyr::mutate(.gtropic_date = .data[["LOCAL_DATE"]])
 
   # dplyr >= 1.1 non-equi join. The semi_join keeps precip's grain intact: one
   # row per ADM2-date no matter how many pairs it satisfies.
@@ -469,11 +475,11 @@ select_flood <- function(links, flood, match = c("start", "overlap")) {
     return(flood[0, , drop = FALSE])
   }
 
-  flood <- dplyr::mutate(
-    flood,
-    .gtropic_start = as.Date(.data$FLOOD_START_DATE),
-    .gtropic_end = as.Date(.data$FLOOD_END_DATE)
-  )
+  flood <- normalize_table_types(flood, label = "flood") |>
+    dplyr::mutate(
+      .gtropic_start = .data$FLOOD_START_DATE,
+      .gtropic_end = .data$FLOOD_END_DATE
+    )
 
   windows <- dplyr::select(
     field, "ADM2_ID", "FLOOD_WINDOW_START",

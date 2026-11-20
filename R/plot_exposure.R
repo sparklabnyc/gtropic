@@ -175,8 +175,8 @@ plot_count_category <- function(value, categories = plot_count_categories(value)
 #' @keywords internal
 #' @noRd
 plot_metric_key_layout <- function(position, bbox, n) {
-  x_span <- bbox[2] - bbox[1]
-  y_span <- bbox[4] - bbox[3]
+  x_span <- bbox[3] - bbox[1]
+  y_span <- bbox[4] - bbox[2]
   horizontal <- function(y, label_y) {
     x <- seq(bbox[1] + x_span * 0.34, bbox[1] + x_span * 0.72, length.out = n)
     list(
@@ -197,36 +197,36 @@ plot_metric_key_layout <- function(position, bbox, n) {
   }
   if (is.null(position)) {
     return(horizontal(
-      bbox[3] - y_span * 0.065,
-      bbox[3] - y_span * 0.105
+      bbox[2] - y_span * 0.065,
+      bbox[2] - y_span * 0.105
     ))
   }
   switch(position,
     top = horizontal(bbox[4] - y_span * 0.07, bbox[4] - y_span * 0.115),
-    bottom = horizontal(bbox[3] + y_span * 0.07, bbox[3] + y_span * 0.025),
+    bottom = horizontal(bbox[2] + y_span * 0.07, bbox[2] + y_span * 0.025),
     left = vertical(
-      bbox[1] + x_span * 0.07, bbox[3] + y_span * 0.35,
-      bbox[3] + y_span * 0.65, bbox[1] + x_span * 0.10, 0
+      bbox[1] + x_span * 0.07, bbox[2] + y_span * 0.35,
+      bbox[2] + y_span * 0.65, bbox[1] + x_span * 0.10, 0
     ),
     right = vertical(
-      bbox[2] - x_span * 0.07, bbox[3] + y_span * 0.35,
-      bbox[3] + y_span * 0.65, bbox[2] - x_span * 0.10, 1
+      bbox[3] - x_span * 0.07, bbox[2] + y_span * 0.35,
+      bbox[2] + y_span * 0.65, bbox[3] - x_span * 0.10, 1
     ),
     `top left` = vertical(
-      bbox[1] + x_span * 0.07, bbox[3] + y_span * 0.63,
-      bbox[3] + y_span * 0.93, bbox[1] + x_span * 0.10, 0
+      bbox[1] + x_span * 0.07, bbox[2] + y_span * 0.63,
+      bbox[2] + y_span * 0.93, bbox[1] + x_span * 0.10, 0
     ),
     `top right` = vertical(
-      bbox[2] - x_span * 0.07, bbox[3] + y_span * 0.63,
-      bbox[3] + y_span * 0.93, bbox[2] - x_span * 0.10, 1
+      bbox[3] - x_span * 0.07, bbox[2] + y_span * 0.63,
+      bbox[2] + y_span * 0.93, bbox[3] - x_span * 0.10, 1
     ),
     `bottom left` = vertical(
-      bbox[1] + x_span * 0.07, bbox[3] + y_span * 0.07,
-      bbox[3] + y_span * 0.37, bbox[1] + x_span * 0.10, 0
+      bbox[1] + x_span * 0.07, bbox[2] + y_span * 0.07,
+      bbox[2] + y_span * 0.37, bbox[1] + x_span * 0.10, 0
     ),
     `bottom right` = vertical(
-      bbox[2] - x_span * 0.07, bbox[3] + y_span * 0.07,
-      bbox[3] + y_span * 0.37, bbox[2] - x_span * 0.10, 1
+      bbox[3] - x_span * 0.07, bbox[2] + y_span * 0.07,
+      bbox[2] + y_span * 0.37, bbox[3] - x_span * 0.10, 1
     )
   )
 }

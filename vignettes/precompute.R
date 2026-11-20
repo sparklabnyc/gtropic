@@ -18,9 +18,8 @@
 #
 # Then inspect the generated .Rmd files and commit both .orig and .Rmd.
 
-# Load gtropic to clear the cache
+# Load gtropic to manage the cache during precomputation
 library(gtropic)
-gtropic_cache_clear()
 
 if (!requireNamespace("knitr", quietly = TRUE)) {
   stop("knitr is required to precompute the vignettes.")
@@ -47,22 +46,38 @@ vignettes <- c(
 
 # Knit from within vignettes/ so that any figures land in the right place with
 # relative paths intact.
-old <- setwd("vignettes")
-on.exit(setwd(old), add = TRUE)
+precompute_vignettes <- function() {
+  old_cache_enabled <- options(gtropic.cache_enabled = TRUE)
+  on.exit(options(old_cache_enabled), add = TRUE)
+  gtropic_cache_clear()
 
-for (v in vignettes) {
-  input <- paste0(v, ".Rmd.orig")
-  output <- paste0(v, ".Rmd")
+  old <- setwd("vignettes")
+  on.exit(setwd(old), add = TRUE)
 
-  if (!file.exists(input)) {
-    warning("Skipping ", input, ": not found.")
-    next
+  old_display_options <- options(c(
+    "width",
+    "cli.width",
+    "pillar.width"
+  ))
+  options(width = 80, cli.width = 80, pillar.width = 80)
+  on.exit(options(old_display_options), add = TRUE)
+
+  for (v in vignettes) {
+    input <- paste0(v, ".Rmd.orig")
+    output <- paste0(v, ".Rmd")
+
+    if (!file.exists(input)) {
+      warning("Skipping ", input, ": not found.")
+      next
+    }
+
+    message("Knitting ", input, " -> ", output)
+    knitr::knit(input = input, output = output)
+    normalize_rmd_whitespace(output)
   }
-
-  message("Knitting ", input, " -> ", output)
-  knitr::knit(input = input, output = output)
-  normalize_rmd_whitespace(output)
 }
+
+precompute_vignettes()
 
 message(
   "\nDone. Check the generated .Rmd files for:\n",
