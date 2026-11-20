@@ -32,6 +32,8 @@ and column definitions.
   : List available tropical cyclones
 - [`gtropic_excluded_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.md)
   : List excluded tropical cyclones
+- [`gtropic_exposures()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.md)
+  : List G-TROPIC exposure metrics
 - [`gtropic_years()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_years.md)
   : Report the temporal coverage of G-TROPIC
 - [`gtropic_codebook()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_codebook.md)
@@ -39,7 +41,7 @@ and column definitions.
 
 ## Cache
 
-Optional, opt-in storage of downloaded files between R sessions.
+Optional storage of downloaded files between R sessions.
 
 - [`gtropic_cache_dir()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_cache_dir.md)
   : Locate the G-TROPIC cache
@@ -73,15 +75,7 @@ available G-TROPIC tables.
 - [`gtropic_basemap()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_basemap.md)
   : Natural Earth basemaps cached for the current R session
 - [`gtropic_save()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_save.md)
-  : Save a static plot
-
-## Exposure metrics
-
-Available published exposure metrics and their default plot
-aggregations.
-
-- [`gtropic_exposures()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_exposures.md)
-  : List G-TROPIC exposure metrics
+  : Save a plot or interactive widget
 
 ## Configuration
 
@@ -90,3 +84,10 @@ large query download guardrail.
 
 - [`gtropic_options`](https://sparklabnyc.github.io/gtropic/reference/gtropic_options.md)
   : Options used by gtropic
+
+## Data notes
+
+Known limitations in the published G-TROPIC source data.
+
+- [`gtropic_known_limitations`](https://sparklabnyc.github.io/gtropic/reference/gtropic_known_limitations.md)
+  : Known G-TROPIC data limitations

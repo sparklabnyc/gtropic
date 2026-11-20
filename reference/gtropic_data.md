@@ -38,6 +38,7 @@ gtropic_data(
   flood_radius_km = 500,
   flood_match = c("start", "overlap"),
   geometry_resolution = c("simplified", "full"),
+  make_valid = TRUE,
   version = ":latest",
   manifest = NULL,
   cache = NULL,
@@ -107,14 +108,19 @@ gtropic_data(
 - STORM_ID:
 
   Optional character vector of published G-TROPIC storm identifiers.
-  Matching is exact and case-sensitive.
+  Each value uniquely identifies one storm. Matching is exact and
+  case-sensitive; this is the preferred storm key.
 
 - STORM_NAME:
 
-  Optional character vector of published, disambiguated storm names in
+  Optional character vector of published convenience labels in
   `Name-YYYY` form, such as `Katrina-2005`, matched case-insensitively.
-  The suffix year limits the metadata files scanned; storm and date
-  filters are still combined with AND.
+  Complete values can match multiple `STORM_ID`s, including across
+  basins. `YYYY` is the published `SEASON` year and need not be the
+  genesis calendar year. Use
+  [`gtropic_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.md)
+  to inspect matches, then prefer `STORM_ID` for retrieval and
+  downstream work. Storm and date filters combine with AND.
 
 - USA_ATCF_ID:
 
@@ -174,6 +180,16 @@ gtropic_data(
 
   Resolution of boundaries returned when `tables` includes `"geometry"`:
   either `"simplified"` (the default) or `"full"`.
+
+- make_valid:
+
+  Logical. If `TRUE` (the default), invalid returned ADM2 geometries are
+  repaired with
+  [`sf::st_make_valid()`](https://r-spatial.github.io/sf/reference/valid.html).
+  Set to `FALSE` to preserve the published geometry exactly or avoid the
+  validity-check and repair cost. Repair can change geometry types, for
+  example from polygon to multipolygon or geometry collection. This
+  setting is recorded in the retrieval manifest.
 
 - version:
 
@@ -270,6 +286,16 @@ and
 [`gtropic_excluded_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_excluded_storms.md)
 to review valid or excluded values.
 
+`STORM_ID` uniquely identifies a storm and is the preferred key for
+unambiguous queries, joins, grouping, and reproducible analyses.
+`STORM_NAME` is a convenience lookup and display label; even its
+complete `Name-YYYY` value can identify multiple storms, including
+storms in different basins. Here `YYYY` is the published `SEASON` year,
+which need not equal the calendar year of `STORM_GENESIS_DATE_UTC`. A
+recommended workflow is to call `gtropic_storms(STORM_NAME = ...)`,
+inspect the matches, and then pass the intended `STORM_ID` to
+`gtropic_data()` and use it downstream.
+
 A spatial filter supplied through `polygon` is combined with other
 geographic filters using AND. An ADM2 unit is selected when its
 published population-weighted centroid falls within the polygon in at
@@ -282,6 +308,11 @@ function reports units whose membership changes over time.
 `STORM_GENESIS_DATE_UTC`, the UTC calendar date of the first best-track
 observation. These arguments do not filter by landfall date, date of
 closest approach, or date of local exposure.
+
+G-TROPIC's annual storm metadata, wind, zero-pair, and track files, as
+well as temporal storm discovery and query planning, are organized by
+the calendar year of `STORM_GENESIS_DATE_UTC`. Explicit year and date
+filters therefore select genesis dates, not `SEASON` values.
 
 Once a storm is selected, its requested records may extend beyond the
 specified genesis period. Conversely, a storm that formed before the
@@ -335,6 +366,13 @@ To assign records to storms, join them to `links` using `ADM2_ID` and
 the corresponding window columns. Analysts should define how overlapping
 storm windows will be treated to avoid double counting exposure.
 
+Date-only columns are returned consistently as `Date` vectors. This
+includes storm genesis, local precipitation and closest-approach dates,
+flood start and end dates, and all precipitation and flood window
+bounds. Datetime columns that include local UTC offsets remain ISO 8601
+character vectors so their published local-time representation is
+preserved.
+
 Requesting precipitation or flood data also requires zero-pair files
 during processing. These files identify units that may have relevant
 rainfall or flooding despite no recorded wind exposure and can increase
@@ -368,8 +406,8 @@ metadata-file years originally scanned.
 
 ``` r
 # \donttest{
-# All available tables for storms that formed during the 2005 season and
-# were evaluated in Jamaica
+# All available tables for storms with genesis dates in calendar year 2005
+# that were evaluated in Jamaica
 jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
@@ -378,6 +416,18 @@ jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #> Downloading 02_wind/exposures/2005.parquet.
 #> Downloading 02_wind/zero_pairs/2005.parquet.
 #> Downloading 04_precip/2005.parquet.
+#> Warning: No non-missing precipitation values were returned for 146 selected ADM2 units.
+#> ! "35162164B10440863111199", "35162164B11758798186333",
+#>   "35162164B13235352626667", "35162164B13736079230506",
+#>   "35162164B14656063603224", "35162164B14734200252425",
+#>   "35162164B15393502878039", "35162164B15608303769076",
+#>   "35162164B15658417820468", "35162164B15710553395599", and "... and 136 more"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading 03_flood/2005.parquet.
 #> Downloading 01_pop/2005.parquet.
 #> Downloading 02_wind/storm_tracks/2005.parquet.
@@ -404,18 +454,24 @@ jamaica
 #> • codebook: 7 entries (list)
 #> • links: 3719 rows x 12 columns
 #> 
-#> ℹ Use `summary()` for detail.
+#> ℹ Use `summary()` for detail; 1 warning(s) recorded, see gtropic_warnings().
 
-# Retrieve wind exposure for a named storm across all evaluated ADM2 units
-katrina <- gtropic_data(
-  STORM_NAME = "Katrina-2005",
+# Find a storm by its convenience label, then query by its unique STORM_ID
+gtropic_storms(STORM_NAME = "Haiyan-2013")
+#> # A tibble: 1 × 4
+#>   STORM_ID      STORM_NAME  USA_ATCF_ID STORM_GENESIS_DATE_UTC
+#>   <chr>         <chr>       <chr>       <date>                
+#> 1 2013306N07162 Haiyan-2013 WP312013    2013-11-02            
+haiyan <- gtropic_data(
+  STORM_ID = "2013306N07162",
+  date_range = c(2013, 2013),
   tables = c("wind", "adm2")
 )
 #> Discovering datasets in collection "gtropic".
 #> Downloading metadata/adm2.parquet.
-#> Downloading 02_wind/storm_metadata/2005.parquet.
-#> Retrieving 3 files (11.7 MB) ; .
-#> Downloading 02_wind/exposures/2005.parquet.
+#> Downloading 02_wind/storm_metadata/2013.parquet.
+#> Retrieving 3 files (10.3 MB) ; .
+#> Downloading 02_wind/exposures/2013.parquet.
 
 # Define a seven-day rainfall window and a 300-km storm field for an
 # epidemiologic study in the Philippines
@@ -434,6 +490,14 @@ philippines <- gtropic_data(
 #> Downloading 02_wind/exposures/2015.parquet.
 #> Downloading 02_wind/zero_pairs/2015.parquet.
 #> Downloading 04_precip/2015.parquet.
+#> Warning: No non-missing precipitation values were returned for 1 selected ADM2 unit.
+#> ! "2640588B23864872837062"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading 01_pop/2015.parquet.
 
 # Retain source-file provenance for a subsequent retrieval
@@ -447,6 +511,14 @@ philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
 #> Downloading 02_wind/exposures/2015.parquet.
 #> Downloading 02_wind/zero_pairs/2015.parquet.
 #> Downloading 04_precip/2015.parquet.
+#> Warning: No non-missing precipitation values were returned for 1 selected ADM2 unit.
+#> ! "2640588B23864872837062"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading 01_pop/2015.parquet.
 # }
 ```

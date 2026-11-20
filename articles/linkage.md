@@ -16,7 +16,9 @@ library(dplyr)
 
 This vignette covers how to link precipitation and flood exposure data
 to specific `STORM_ID`s, and how to avoid double-counting exposure data
-in your analyses.
+in your analyses. `STORM_ID` is the unique, preferred storm key for
+these joins and groupings; `STORM_NAME` is a potentially duplicated
+convenience display label and should not be used as a relational key.
 
 We’ll start by noting that the wind exposures come already linked to
 `STORM_ID`s, the `$wind` table contains rows for every
@@ -31,6 +33,18 @@ jam_05 <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #> Downloading '02_wind/exposures/2005.parquet'.
 #> Downloading '02_wind/zero_pairs/2005.parquet'.
 #> Downloading '04_precip/2005.parquet'.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 146 selected ADM2 units.
+#> ! "35162164B10440863111199", "35162164B11758798186333",
+#>   "35162164B13235352626667", "35162164B13736079230506",
+#>   "35162164B14656063603224", "35162164B14734200252425",
+#>   "35162164B15393502878039", "35162164B15608303769076",
+#>   "35162164B15658417820468", "35162164B15710553395599", and "... and 136 more"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading '03_flood/2005.parquet'.
 #> Downloading '01_pop/2005.parquet'.
 #> Downloading '02_wind/storm_tracks/2005.parquet'.
@@ -53,7 +67,7 @@ jam_05$wind
 #> # ℹ abbreviated names: ¹​LOCAL_DATETIME_STORM_CLOSEST, ²​LOCAL_DATETIME_MAX_WIND
 #> # ℹ 7 more variables: VMAX_SUST_MS <dbl>, SUST_DUR_MINUTES <dbl>,
 #> #   VMAX_GUST_MS <dbl>, GUST_DUR_MINUTES <dbl>, WIND_RADII_VMAX_SUST_MS <dbl>,
-#> #   WIND_RADII_SUST_DUR_MINUTES <dbl>, LOCAL_DATE_STORM_CLOSEST <chr>
+#> #   WIND_RADII_SUST_DUR_MINUTES <dbl>, LOCAL_DATE_STORM_CLOSEST <date>
 ```
 
 Linking precipitation and flooding data to specific storms is a task
@@ -206,6 +220,14 @@ india_19 <- gtropic_data(
 #> Downloading '02_wind/exposures/2019.parquet'.
 #> Downloading '02_wind/zero_pairs/2019.parquet'.
 #> Downloading '04_precip/2019.parquet'.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 2 selected ADM2 units.
+#> ! "76128533B41477629049356" and "76128533B56857410767766"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading '03_flood/2019.parquet'.
 #> Downloading '01_pop/2019.parquet'.
 #> Downloading '02_wind/storm_tracks/2019.parquet'.
@@ -317,7 +339,7 @@ The flood event data shipped in G-TROPIC span intervals defined by the
 india_19$flood
 #> # A tibble: 340 × 7
 #>    ADM2_ID            FLOOD_ID FLOOD_START_DATE FLOOD_END_DATE PROP_FLOODED_AREA
-#>    <chr>              <chr>    <chr>            <chr>                      <dbl>
+#>    <chr>              <chr>    <date>           <date>                     <dbl>
 #>  1 76128533B72541188… 5393f9b… 2019-05-01       2019-05-01             0.00197
 #>  2 76128533B79750857… f76129e… 2019-05-03       2019-05-04             0.00329
 #>  3 76128533B52802748… ec9ea5e… 2019-05-03       2019-05-04             0.0899

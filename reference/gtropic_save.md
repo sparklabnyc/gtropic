@@ -1,7 +1,9 @@
-# Save a static plot
+# Save a plot or interactive widget
 
 Save a ggplot with
-[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html).
+[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html)
+or an HTML widget, including a Leaflet map, with
+[`htmlwidgets::saveWidget()`](https://rdrr.io/pkg/htmlwidgets/man/saveWidget.html).
 This helper writes files;
 [`gtropic_plot()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_plot.md)
 itself only returns plot objects.
@@ -24,20 +26,24 @@ gtropic_save(
 
 - plot:
 
-  A ggplot, such as one returned by
+  A ggplot or HTML widget, such as one returned by
   [`gtropic_plot()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_plot.md).
 
 - filename:
 
   One nonempty output filename, optionally including a path. For static
   plots the extension selects the device unless `device` is supplied in
-  `...`.
+  `...`. HTML widgets require a `.html` filename.
 
 - ...:
 
   Uniquely named arguments. For static plots, passed unchanged to
   [`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html),
-  including `device`, `path`, `bg`, and `scale`.
+  including `device`, `path`, `bg`, and `scale`. For HTML widgets,
+  `path` is combined with `filename`; other arguments are passed to
+  [`htmlwidgets::saveWidget()`](https://rdrr.io/pkg/htmlwidgets/man/saveWidget.html),
+  including `selfcontained`, `libdir`, `background`, `title`, and
+  `knitrOptions`.
 
 - dpi:
 
@@ -60,12 +66,22 @@ path is not normalized. Saver errors are propagated.
 
 ## Details
 
+### Interactive maps
+
+Interactive maps are saved as HTML widgets. By default, their JavaScript
+and CSS dependencies are written to a sibling directory rather than
+embedded in the HTML file (`selfcontained = FALSE`), which does not
+require Pandoc. Keep that directory with the HTML file when moving or
+publishing the map. Set `selfcontained = TRUE` to request a single-file
+widget when Pandoc is available.
+
 ### Figure dimensions
 
 Map plots carry a geographic `gtropic_bbox` attribute in the order
-`c(xmin, xmax, ymin, ymax)` (named bounds may be in any order). The
-estimated width-to-height ratio is longitude span times the cosine of
-mean latitude, divided by latitude span. This is a geographic
+`c(xmin, ymin, xmax, ymax)` (named bounds may be in any order), matching
+[`sf::st_bbox()`](https://r-spatial.github.io/sf/reference/st_bbox.html).
+The estimated width-to-height ratio is longitude span times the cosine
+of mean latitude, divided by latitude span. This is a geographic
 approximation, not a measurement of the final projected panels, legends,
 or facets.
 

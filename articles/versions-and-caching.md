@@ -63,6 +63,18 @@ usa_05 <- gtropic_data(
 )
 #> Discovering datasets in collection "gtropic".
 #> Retrieving 0 files (0.0 B) ; 10 already cached.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 10 selected ADM2 units.
+#> ! "52423323B10065184809144", "52423323B18524543454126",
+#>   "52423323B2854744470595", "52423323B36058634620210",
+#>   "52423323B37020317002794", "52423323B47905601981877",
+#>   "52423323B81395860012193", "52423323B84565222808084",
+#>   "52423323B93715825211285", and "52423323B95364314409049"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 
 mf <- gtropic_manifest(usa_05)
 ```
@@ -228,6 +240,14 @@ repository and writes to disk. The cache stores these published
 year-files in their entirety, exactly as the remote Dataverse repository
 serves them – it does not use any of the filter arguments in your query
 before saving these files.
+
+For storm metadata, wind, zero-pair, and track data, the annual file
+year is the calendar year of `STORM_GENESIS_DATE_UTC`. Temporal storm
+discovery and queries use the same organization, so explicit year and
+date filters select genesis dates—not landfall or exposure dates and not
+the published `SEASON` value. A storm’s `STORM_NAME` has `Name-YYYY`
+form where `YYYY` is `SEASON`, which can differ from its genesis
+calendar year; the name is therefore not the annual partition key.
 
 - For instance, if you have caching enabled, an initial query that asks
   for data from 2001-2003 followed by a later query requesting data for

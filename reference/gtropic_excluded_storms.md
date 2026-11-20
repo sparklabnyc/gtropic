@@ -3,6 +3,8 @@
 Retrieves records for storms excluded from the published wind data.
 These records identify storms that cannot be retrieved with
 [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md).
+Published `STORM_NAME` convenience labels can duplicate; the unique
+`STORM_ID` values in the returned rows distinguish excluded records.
 
 Date filters are applied to `STORM_GENESIS_DATE_UTC`, the UTC date of
 the first best-track observation. They do not select storms by landfall,
@@ -31,16 +33,18 @@ gtropic_excluded_storms(
 
 - year:
 
-  Optional vector of years to retrieve. Ignored when `date_range` is
-  supplied. Years outside the published collection are omitted.
+  Optional vector of storm genesis calendar years to retrieve. Ignored
+  when `date_range` is supplied. Years outside the published collection
+  are omitted.
 
 - STORM_NAME:
 
-  Optional character vector of published, disambiguated storm names in
-  `Name-YYYY` form. Matching is case-insensitive; every supplied value
-  must match an excluded-storm record. The suffix year limits the files
-  scanned and is combined with an explicit `year` or `date_range` filter
-  using AND.
+  Optional character vector of published convenience labels in
+  `Name-YYYY` form. Labels can duplicate across distinct `STORM_ID`s.
+  Matching is case-insensitive; every supplied value must match an
+  excluded-storm record. The suffix is the storm season; partitions for
+  genesis years `YYYY - 1` and `YYYY` are considered and combined with
+  an explicit genesis `year` or `date_range` filter using AND.
 
 - version:
 
@@ -61,6 +65,7 @@ A tibble with `STORM_ID`, `STORM_NAME`, and `STORM_GENESIS_DATE_UTC` for
 published excluded storms satisfying the requested genesis period and
 name filters. If no exclusion files are available for the selected
 years, a warning is issued and an empty tibble is returned.
+`STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 
 ## See also
 
@@ -71,7 +76,7 @@ years, a warning is issued and an empty tibble is returned.
 
 ``` r
 # \donttest{
-# Review exclusion records for storms that formed during the 2005 season
+# Review exclusion records for storms that formed during calendar year 2005
 gtropic_excluded_storms(year = 2005)
 #> # A tibble: 12 × 3
 #>    STORM_ID      STORM_NAME   STORM_GENESIS_DATE_UTC

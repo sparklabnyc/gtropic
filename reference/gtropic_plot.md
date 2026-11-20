@@ -34,6 +34,7 @@ gtropic_plot(
   palette = NULL,
   direction = NULL,
   gridlines = TRUE,
+  make_valid = TRUE,
   title = NULL,
   subtitle = NULL,
   caption = NULL,
@@ -74,8 +75,12 @@ gtropic_plot(
   Optional character vector of `STORM_ID`s or `STORM_NAME`s used to
   subset all applicable tables in `data`. Specifying `storm`s requires
   that the `data` object passed in contains the `storm_metadata` table.
-  `STORM_NAME`s are matched case-insensitively. `storm = NULL` (the
-  default) retains all storms.
+  `STORM_NAME`s are matched case-insensitively and a complete name can
+  select multiple `STORM_ID`s, including across basins. Names are
+  convenience labels in `Name-YYYY` form, where `YYYY` is the published
+  `SEASON` year, not necessarily the genesis calendar year. Prefer
+  unique `STORM_ID`s for unambiguous plots. `storm = NULL` (the default)
+  retains all storms.
 
 - adm2:
 
@@ -192,14 +197,17 @@ gtropic_plot(
 
 - bbox:
 
-  Map extent as an sf/sfc object, an sf bbox with a known CRS, or
-  geographic `c(xmin, xmax, ymin, ymax)`. `NULL` (the default) derives
-  the extent from the plotted geometry and any displayed tracks.
+  Map extent as an sf/sfc object, an sf bbox with a known CRS, or four
+  geographic bounds in
+  [`sf::st_bbox()`](https://r-spatial.github.io/sf/reference/st_bbox.html)
+  order: `c(xmin, ymin, xmax, ymax)`. `NULL` (the default) derives the
+  extent from the plotted geometry and any displayed tracks.
 
 - expand:
 
   Nonnegative geographic-degree padding added to each side of the map
-  extent after `bbox` is resolved. Defaults to 2.
+  extent after `bbox` is resolved. Latitude limits are constrained to
+  -90–90 degrees. Defaults to 2.
 
 - crs:
 
@@ -237,6 +245,15 @@ gtropic_plot(
   longitude/latitude labels. It is ignored for Leaflet maps, which have
   no static axes.
 
+- make_valid:
+
+  Logical. If `TRUE` (the default), invalid ADM2 geometries are repaired
+  with
+  [`sf::st_make_valid()`](https://r-spatial.github.io/sf/reference/valid.html)
+  before plotting. Set to `FALSE` to preserve supplied geometry or avoid
+  the validity-check and repair cost. Repair can change geometry types.
+  This argument is ignored for track maps.
+
 - title, subtitle, caption:
 
   Plot labels. Each defaults to `NULL`, which uses an automatic
@@ -268,9 +285,10 @@ titles use readable aggregate labels; multi-metric titles describe the
 panel set. A single plotted storm prefixes the title, while multiple
 storms do not alter it. Metric strips use readable aggregate and
 active-threshold labels. Automatic captions use newline-separated
-source, retrieval, dataset-provenance, hazard-parameter, track-interval,
-and plotting-CRS lines. Hazard radii and windows are derived from rows
-that contributed to the plot.
+source, retrieval, dataset-provenance, hazard-parameter, known
+source-data limitation, track-interval, and plotting-CRS lines as
+applicable. Hazard radii and windows are derived from rows that
+contributed to the plot.
 
 Track paths are drawn from every supplied observation. By default,
 constant- size points use

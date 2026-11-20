@@ -25,7 +25,7 @@ A ggplot2 theme that can be added to a plot.
 ``` r
 # \donttest{
 theme_gtropic()
-#> <theme> List of 144
+#> <theme>List of 144
 #>  $ line                            : <ggplot2::element_line>
 #>   ..@ colour       : chr "black"
 #>   ..@ linewidth    : num 0.545
@@ -54,7 +54,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 0.5
 #>   ..@ angle        : num 0
 #>   ..@ lineheight   : num 0.9
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 0 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 0points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : logi FALSE
 #>   ..@ inherit.blank: logi TRUE
 #>  $ title                           : <ggplot2::element_text>
@@ -102,7 +103,8 @@ theme_gtropic()
 #>   ..@ fill       : NULL
 #>  $ spacing                         : 'simpleUnit' num 6points
 #>   ..- attr(*, "unit")= int 8
-#>  $ margins                         : <ggplot2::margin> num [1:4] 6 6 6 6
+#>  $ margins                         : <ggplot2::margin> 'simpleUnit' num [1:4] 6points 6points 6points 6points
+#>  .. - attr(*, "unit")= int 8
 #>  $ aspect.ratio                    : NULL
 #>  $ axis.title                      : NULL
 #>  $ axis.title.x                    : <ggplot2::element_text>
@@ -117,7 +119,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 1
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 3 0 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 3points 0points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.title.x.top                : <ggplot2::element_text>
@@ -132,7 +135,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 0
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 0 3 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 0points 3points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.title.x.bottom             : NULL
@@ -148,7 +152,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 1
 #>   ..@ angle        : num 90
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 3 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 3points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.title.y.left               : NULL
@@ -164,7 +169,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 1
 #>   ..@ angle        : num -90
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 0 0 3
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 0points 0points 3points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text                       : <ggplot2::element_text>
@@ -194,7 +200,8 @@ theme_gtropic()
 #>   ..@ vjust        : num 1
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 2.4 0 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 2.4points 0points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.x.top                 : <ggplot2::element_text>
@@ -209,7 +216,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 0 5.4 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 0points 5.4points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.x.bottom              : <ggplot2::element_text>
@@ -224,7 +232,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 5.4 0 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 5.4points 0points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.y                     : <ggplot2::element_text>
@@ -239,7 +248,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 2.4 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 2.4points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.y.left                : <ggplot2::element_text>
@@ -254,7 +264,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 5.4 0 0
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 5.4points 0points 0points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.y.right               : <ggplot2::element_text>
@@ -269,7 +280,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 0 0 5.4
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 0points 0points 5.4points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.text.theta                 : NULL
@@ -285,7 +297,8 @@ theme_gtropic()
 #>   ..@ vjust        : NULL
 #>   ..@ angle        : NULL
 #>   ..@ lineheight   : NULL
-#>   ..@ margin       : <ggplot2::margin> num [1:4] 0 2.4 0 2.4
+#>   ..@ margin       : <ggplot2::margin> 'simpleUnit' num [1:4] 0points 2.4points 0points 2.4points
+#>  .. .. - attr(*, "unit")= int 8
 #>   ..@ debug        : NULL
 #>   ..@ inherit.blank: logi TRUE
 #>  $ axis.ticks                      : <ggplot2::element_blank>
@@ -391,6 +404,7 @@ theme_gtropic()
 #>  $ legend.justification.right      : NULL
 #>  $ legend.justification.inside     : NULL
 #>   [list output truncated]
+#>  - attr(*, "class")= chr "gg"
 #>  @ complete: logi TRUE
 #>  @ validate: logi TRUE
 # }

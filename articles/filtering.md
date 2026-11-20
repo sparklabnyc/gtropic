@@ -42,7 +42,8 @@ gtropic_data(WHO_ENTITY = "Mexico", ADM2_GROUP = "USA")
 #> Error in `assemble_gtropic_data()`:
 #> ! No ADM2 units satisfy all of the geographic filters supplied.
 #> ✖ Filters in play: `ADM2_GROUP` and `WHO_ENTITY`.
-#> ℹ Values are combined with OR within an argument and AND across arguments, so these conditions must hold together.
+#> ℹ Values are combined with OR within an argument and AND across arguments, so
+#>   these conditions must hold together.
 #> ℹ Use `gtropic_adm2()` to explore valid combinations.
 ```
 
@@ -122,7 +123,8 @@ nc_10to11 <- gtropic_data(polygon = north_carolina, date_range = c(2010, 2011))
 #> Downloading '01_pop/2010.parquet'.
 #> Downloading '01_pop/2011.parquet'.
 #> Warning: Polygon membership is year-dependent.
-#> ℹ Centroids were evaluated for 2 years (2010-2011); an ADM2 unit is included if its centroid fell inside the polygon in any of them.
+#> ℹ Centroids were evaluated for 2 years (2010-2011); an ADM2 unit is included if
+#>   its centroid fell inside the polygon in any of them.
 #> Downloading '02_wind/storm_metadata/2010.parquet'.
 #> Downloading '02_wind/storm_metadata/2011.parquet'.
 #> Retrieving 10 files (279.7 MB) ; 7 already cached.
@@ -309,7 +311,11 @@ Importantly, `date_range` and `date_list` select **storms whose
 UTC calendar date of a storm’s first best-track observation, which is
 when it formed, not when it made landfall, and not when it began to
 impact ADM2s. In this way, all data for these storms is then returned,
-subject to your other filters. There are two consequences to this
+subject to your other filters. The package’s explicit year filters and
+temporal storm discovery follow this same genesis-date definition.
+Likewise, G-TROPIC’s annual storm metadata, wind, zero-pair, and track
+files are organized by the calendar year of `STORM_GENESIS_DATE_UTC`,
+not by the published `SEASON` value. There are two consequences to this
 approach:
 
 1.  **This will retrieve exposure data that may fall outside the
@@ -385,22 +391,37 @@ gtropic_data(STORM_NAME = "Haiyan-2013")
 gtropic_data(USA_ATCF_ID = "WP312013", date_range = c(2013, 2013))
 ```
 
-Storm names repeat across basins and years, so you must be careful when
-selecting by `STORM_NAME`.
-[`gtropic_storms()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_storms.md)
-helps you disambiguate storms from one another. The `STORM_ID` column
-always gives a unique value for every individual storm, and we recommend
-you perform most of your operations using this variable:
+`STORM_ID` uniquely identifies one storm and is the preferred key for
+unambiguous queries, joins, grouping, and reproducible work.
+`STORM_NAME` is a convenience lookup and display label, not a unique
+key: even a complete value can occur more than once, including for
+storms in different basins. Its `Name-YYYY` suffix is the published
+`SEASON` year, which need not equal the calendar year of
+`STORM_GENESIS_DATE_UTC`.
+
+The recommended workflow is to use `gtropic_storms(STORM_NAME = ...)` to
+quickly inspect all matches, identify the intended `STORM_ID`, and then
+use that ID in
+[`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md)
+and throughout downstream analysis:
 
 ``` r
 
-# Use the storms() function to look up a storm you know by NAME-YEAR
-# Then grab it's STORM_ID value for later data operations
+# Look up a storm by its convenience label and inspect the possible matches
 gtropic_storms(STORM_NAME = "Haiyan-2013")
 #> # A tibble: 1 × 4
 #>   STORM_ID      STORM_NAME  USA_ATCF_ID STORM_GENESIS_DATE_UTC
 #>   <chr>         <chr>       <chr>       <date>
 #> 1 2013306N07162 Haiyan-2013 WP312013    2013-11-02
+```
+
+``` r
+
+# After confirming the intended row above, use its unique key
+haiyan <- gtropic_data(STORM_ID = "2013306N07162")
+
+haiyan$wind |>
+  dplyr::group_by(STORM_ID, ADM2_ID)
 ```
 
 ## Summary
@@ -409,6 +430,8 @@ gtropic_storms(STORM_NAME = "Haiyan-2013")
   arguments and OR within an argument.
 - Date filters select storms by genesis date, so retrieved exposure
   records can extend outside the requested date range.
+- Use `STORM_NAME` to find candidate storms, then use the unique
+  `STORM_ID` for retrieval, joins, grouping, and reproducible analysis.
 - The `[wind/precip/flood]_radius_km` arguments, along with the
   `[precip/flood]_days_[before/after]` arguments are crucial in defining
   your spatial and temporal fields linking exposures to storms. The

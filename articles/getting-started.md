@@ -155,6 +155,16 @@ genesis date (UTC) occurs within the 2025 calendar year. For more in
 depth discussion, see the “Selecting storms by date” section below, and
 the `filtering` vignette.
 
+`STORM_ID` uniquely identifies each storm and is the preferred key for
+queries, joins, grouping, and reproducible work. `STORM_NAME` is a
+convenience lookup and display label whose complete value can repeat,
+including across basins. It has `Name-YYYY` form, but `YYYY` is the
+published `SEASON` year and need not equal the genesis calendar year. A
+good workflow is to call `gtropic_storms(STORM_NAME = ...)`, inspect the
+matches, and then use the intended `STORM_ID` in
+[`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md)
+and downstream code.
+
 One of the most important pieces of metadata is the G-TROPIC codebook,
 which can be obtained with:
 
@@ -228,6 +238,17 @@ usa_25 <- gtropic_data(
 #> Downloading '02_wind/exposures/2025.parquet'.
 #> Downloading '02_wind/zero_pairs/2025.parquet'.
 #> Downloading '04_precip/2025.parquet'.
+#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 7 selected ADM2 units.
+#> ! "52423323B10065184809144", "52423323B18524543454126",
+#>   "52423323B37020317002794", "52423323B47905601981877",
+#>   "52423323B81395860012193", "52423323B84565222808084", and
+#>   "52423323B95364314409049"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading '03_flood/2025.parquet'.
 #> Downloading '01_pop/2025.parquet'.
 #> Downloading '02_wind/storm_tracks/2025.parquet'.
@@ -235,7 +256,7 @@ usa_25 <- gtropic_data(
 
 usa_25
 #>
-#> ── G-TROPIC data ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> ── G-TROPIC data ───────────────────────────────────────────────────────────────
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Genesis dates: "2025-01-01" to "2025-12-31"
 #> • Storms: 10
@@ -254,7 +275,7 @@ usa_25
 #> • codebook: 7 entries (list)
 #> • links: 1068 rows x 12 columns
 #>
-#> ℹ Use `summary()` for detail.
+#> ℹ Use `summary()` for detail; 1 warning(s) recorded, see gtropic_warnings().
 ```
 
 Printing the result gives a compact summary: which version of the data
@@ -269,14 +290,14 @@ warnings raised, we can use:
 
 summary(usa_25)
 #>
-#> ── G-TROPIC data summary ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> ── G-TROPIC data summary ───────────────────────────────────────────────────────
 #>
 #> ── Sources ──
 #>
 #> • Server: "dataverse.harvard.edu"
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
 #> • Files retrieved: 10 (189.1 MB)
-#> • Retrieved at: 2026-11-12 21:16:42 UTC
+#> • Retrieved at: 2026-11-20 00:54:25 UTC
 #>
 #> ── Tables ──
 #>
@@ -300,6 +321,12 @@ summary(usa_25)
 #> • Wind radius: 500 km
 #> • Precipitation window: -2/ +1 days within 500 km
 #> • Flood window: -2/+1 days within 500 km (match: "start")
+#>
+#> ── Warnings ──
+#>
+#> • precip_all_missing_adm2_ids: 52423323B10065184809144,
+#> 52423323B18524543454126, 52423323B37020317002794, 52423323B47905601981877,
+#> 52423323B81395860012193, and ... and 2 more
 ```
 
 The [`summary()`](https://rdrr.io/r/base/summary.html) function here
@@ -369,7 +396,7 @@ usa_25$wind
 #> # ℹ abbreviated names: ¹​LOCAL_DATETIME_STORM_CLOSEST, ²​LOCAL_DATETIME_MAX_WIND
 #> # ℹ 7 more variables: VMAX_SUST_MS <dbl>, SUST_DUR_MINUTES <dbl>,
 #> #   VMAX_GUST_MS <dbl>, GUST_DUR_MINUTES <dbl>, WIND_RADII_VMAX_SUST_MS <dbl>,
-#> #   WIND_RADII_SUST_DUR_MINUTES <dbl>, LOCAL_DATE_STORM_CLOSEST <chr>
+#> #   WIND_RADII_SUST_DUR_MINUTES <dbl>, LOCAL_DATE_STORM_CLOSEST <date>
 ```
 
 By default, the
@@ -471,13 +498,13 @@ Three functions provide access to the metadata pertaining to your
 # Exactly which files were retrieved, at which version
 gtropic_manifest(usa_25)
 #>
-#> ── gtropic version manifest ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#> ── gtropic version manifest ────────────────────────────────────────────────────
 #> • Server: "dataverse.harvard.edu"
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Files recorded: 10
 #> • Total size: 189.1 MB
-#> • Retrieved: 2026-11-12 21:16:42 UTC
-#> • Package version: "0.0.0.9001"
+#> • Retrieved: 2026-11-20 00:54:25 UTC
+#> • Package version: "0.0.0.9002"
 #>
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to
 #> reproduce the same retrieval.
@@ -488,11 +515,15 @@ gtropic_manifest(usa_25)
 # The filters as the package resolved them
 gtropic_filters(usa_25)
 #>
-#> ── G-TROPIC resolved filters ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-#> • adm2_ids (803 values): ["52423323B10055621117527", "52423323B10065184809144", "52423323B10302998803932", "52423323B10350916691509", "52423323B10442929932087",
-#> "52423323B10584672826222", "52423323B10770912620871", "52423323B10780727675908", "52423323B11034045930208", "52423323B11153152222342"] (793 values omitted)
-#> • storm_ids (10 values): ["2025185N30280", "2025223N17337", "2025280N11319", "2025215N33284", "2025243N14239", "2025270N21285", "2025180N19266", "2025205N13145",
-#> "2025218N19149", "2025308N09145"]
+#> ── G-TROPIC resolved filters ───────────────────────────────────────────────────
+#> • adm2_ids (803 values): ["52423323B10055621117527", "52423323B10065184809144",
+#> "52423323B10302998803932", "52423323B10350916691509",
+#> "52423323B10442929932087", "52423323B10584672826222",
+#> "52423323B10770912620871", "52423323B10780727675908",
+#> "52423323B11034045930208", "52423323B11153152222342"] (793 values omitted)
+#> • storm_ids (10 values): ["2025185N30280", "2025223N17337", "2025280N11319",
+#> "2025215N33284", "2025243N14239", "2025270N21285", "2025180N19266",
+#> "2025205N13145", "2025218N19149", "2025308N09145"]
 #> • date_start (1 value): [2025-01-01]
 #> • date_end (1 value): [2025-12-31]
 #> • date_order (1 value): ["ymd"]
@@ -512,7 +543,11 @@ gtropic_filters(usa_25)
 
 # Anything the query warned about
 gtropic_warnings(usa_25)
-#> list()
+#> $precip_all_missing_adm2_ids
+#> [1] "52423323B10065184809144" "52423323B18524543454126"
+#> [3] "52423323B37020317002794" "52423323B47905601981877"
+#> [5] "52423323B81395860012193" "52423323B84565222808084"
+#> [7] "52423323B95364314409049"
 ```
 
 ``` r
@@ -575,6 +610,8 @@ Both topics are covered extensively in
 
 - Use the discovery helpers to identify available years, places, storms,
   and exposure metrics before making a query.
+- Look up candidate storms by `STORM_NAME`, then use the unique
+  `STORM_ID` for retrieval and downstream work.
 - [`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md)
   returns a named collection of exposure tables plus metadata that
   documents the selected records and source files.

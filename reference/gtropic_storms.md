@@ -14,6 +14,14 @@ When a requested `STORM_NAME` is not available, G-TROPIC checks the
 published exclusion records and reports whether the storm is excluded or
 absent from both lists.
 
+`STORM_NAME` is a convenience lookup and can identify multiple storms.
+If a name matches multiple unique `STORM_ID`s after all filters are
+applied, this function returns every match and warns. Use
+`gtropic_storms(STORM_NAME = ...)` to identify the intended `STORM_ID`,
+then query
+[`gtropic_data()`](https://sparklabnyc.github.io/gtropic/reference/gtropic_data.md)
+with `STORM_ID`, which is unique and preferred.
+
 ## Usage
 
 ``` r
@@ -37,16 +45,20 @@ gtropic_storms(
 
 - year:
 
-  Optional vector of years to retrieve. Ignored when `date_range` is
-  supplied. Years outside the published collection are omitted.
+  Optional vector of storm genesis calendar years to retrieve. Ignored
+  when `date_range` is supplied. Years outside the published collection
+  are omitted.
 
 - STORM_NAME:
 
-  Optional character vector of published, disambiguated storm names in
-  `Name-YYYY` form, such as `Katrina-2005`. Matching is
-  case-insensitive; every supplied value must match a published name.
-  The suffix year limits the metadata files scanned and is combined with
-  an explicit `year` or `date_range` filter using AND.
+  Optional character vector of published convenience labels in
+  `Name-YYYY` form, such as `Katrina-2005`. Labels can duplicate across
+  distinct `STORM_ID`s. Matching is case-insensitive; every supplied
+  value must match a published name. The suffix is the storm season.
+  Because Southern Hemisphere storms can form in the preceding calendar
+  year, partitions for both `YYYY - 1` and `YYYY` are considered. This
+  candidate set is combined with an explicit genesis `year` or
+  `date_range` filter using AND.
 
 - version:
 
@@ -66,7 +78,8 @@ gtropic_storms(
 A tibble containing the published metadata records for storms that
 satisfy the requested genesis period and name filters. If no metadata
 files are available for the selected years, a warning is issued and an
-empty tibble is returned.
+empty tibble is returned. `STORM_GENESIS_DATE_UTC` is returned as a
+`Date`.
 
 ## See also
 
@@ -78,7 +91,7 @@ empty tibble is returned.
 
 ``` r
 # \donttest{
-# Review storms that formed during the 2005 season
+# Review storms that formed during calendar year 2005
 gtropic_storms(year = 2005)
 #> # A tibble: 103 × 4
 #>    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC

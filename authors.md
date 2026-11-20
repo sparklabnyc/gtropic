@@ -28,13 +28,13 @@ Source:
 
 Chillrud L, Jiang L, Abid M, Anderson G, Parks R (2026). *gtropic:
 Retrieve, Filter, and Plot G-TROPIC Global Tropical Cyclone Exposure
-Data (1980-Present)*. R package version 0.0.0.9001,
+Data (1980-Present)*. R package version 0.0.0.9002,
 <https://github.com/sparklabnyc/gtropic>.
 
     @Manual{,
       title = {gtropic: Retrieve, Filter, and Plot G-TROPIC Global Tropical Cyclone Exposure Data (1980-Present)},
       author = {Lawrence G. Chillrud and Lingke Jiang and Majd Abid and G. Brooke Anderson and Robbie M. Parks},
       year = {2026},
-      note = {R package version 0.0.0.9001},
+      note = {R package version 0.0.0.9002},
       url = {https://github.com/sparklabnyc/gtropic},
     }

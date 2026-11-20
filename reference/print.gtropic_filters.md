@@ -47,6 +47,14 @@ res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
 #> Downloading 02_wind/zero_pairs/2016.parquet.
 #> Downloading 04_precip/2015.parquet.
 #> Downloading 04_precip/2016.parquet.
+#> Warning: No non-missing precipitation values were returned for 1 selected ADM2 unit.
+#> ! "2640588B23864872837062"
+#> ℹ A known current source-data limitation can affect small or coastal ADM2 units
+#>   when no ERA5-Land grid cell is assigned.
+#> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
+#>   finer-resolution ERA5 precipitation data.
+#> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
+#>   `gtropic_warnings()`.
 #> Downloading 03_flood/2015.parquet.
 #> Downloading 03_flood/2016.parquet.
 #> Downloading 01_pop/2015.parquet.
