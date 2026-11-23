@@ -213,11 +213,8 @@ print.gtropic_data <- function(x, ...) {
 
   cli::cli_h1("G-TROPIC data")
 
+  cli_dataset_bullets(datasets)
   cli::cli_bullets(c(
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi, " (version ",
-        datasets$dataset_version, ")"), rep("*", nrow(datasets))
-    ),
     "*" = if (!is.null(fl$date_start)) {
       "Genesis dates: {.val {format(fl$date_start)}} to
        {.val {format(fl$date_end)}}"
@@ -272,13 +269,9 @@ summary.gtropic_data <- function(object, ...) {
   cli::cli_h1("G-TROPIC data summary")
 
   cli::cli_h2("Sources")
+  cli::cli_bullets(c("*" = "Server: {.val {mf$server}}"))
+  cli_dataset_bullets(datasets, compact = TRUE)
   cli::cli_bullets(c(
-    "*" = "Server: {.val {mf$server}}",
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi,
-        " v", datasets$dataset_version),
-      rep("*", nrow(datasets))
-    ),
     "*" = "Files retrieved: {nrow(mf$files)}
            ({format_bytes(sum(mf$files$size_bytes, na.rm = TRUE))})",
     "*" = "Retrieved at: {format(attr(object, 'retrieved_at'), usetz = TRUE)}"
@@ -317,6 +310,33 @@ summary.gtropic_data <- function(object, ...) {
   }
 
   invisible(object)
+}
+
+#' Print one bullet per source dataset
+#'
+#' The DOI and version come from the server or from a user-supplied manifest.
+#' They are interpolated as data into a literal template; pasting them into a
+#' `cli` template would evaluate any `{...}` they contain. (`cli_bullets_raw()`
+#' is not used because cli 3.6.6 prints braces in its text doubled.)
+#'
+#' @param datasets Output of `manifest_datasets()`.
+#' @param compact Use the short `"v1.0"` form instead of `"(version 1.0)"`.
+#'
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+cli_dataset_bullets <- function(datasets, compact = FALSE) {
+  for (i in seq_len(nrow(datasets))) {
+    role <- datasets$source_role[i]
+    doi <- datasets$dataset_doi[i]
+    ver <- datasets$dataset_version[i]
+    if (compact) {
+      cli::cli_bullets(c("*" = "{role} dataset: {doi} v{ver}"))
+    } else {
+      cli::cli_bullets(c("*" = "{role} dataset: {doi} (version {ver})"))
+    }
+  }
+  invisible(NULL)
 }
 
 #' Return datasets actually represented in a manifest

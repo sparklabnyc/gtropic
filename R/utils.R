@@ -85,6 +85,22 @@ format_bytes <- function(bytes) {
   }, character(1))
 }
 
+#' Mark text as literal for a cli template
+#'
+#' `cli` evaluates `{...}` in every template it is given as R code. Text that
+#' comes from a server, a manifest or the user and has to be pasted into a
+#' condition message must be escaped first: doubled braces print as single
+#' braces. Prefer interpolating such values as data (`"{.val {x}}"`) where the
+#' message allows it.
+#'
+#' @param x Character vector.
+#' @return `x` with `{` and `}` doubled; names are kept.
+#' @keywords internal
+#' @noRd
+cli_escape <- function(x) {
+  gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
+}
+
 #' Emit an informational message unless quiet
 #'
 #' `quiet` suppresses progress chatter only. Warnings and errors always speak.

@@ -94,6 +94,8 @@ match_values <- function(values,
   }
 
   missed <- values[!hit]
+  # Built from user input and published names, so escaped before it is placed
+  # in the error's cli template.
   bullets <- vapply(missed, function(m) {
     sugg <- suggest_matches(m, candidates)
     if (length(sugg) == 0L) {
@@ -107,7 +109,7 @@ match_values <- function(values,
   cli::cli_abort(
     c(
       "{length(missed)} value{?s} in {.arg {arg}} did not match any {what}.",
-      bullets,
+      cli_escape(bullets),
       i = "See {.code {helper}} for the full list of valid values."
     ),
     call = call

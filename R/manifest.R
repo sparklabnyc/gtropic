@@ -267,13 +267,9 @@ print.gtropic_manifest <- function(x, ...) {
   cli::cli_h1("gtropic version manifest")
   datasets <- manifest_datasets(x)
   datasets <- datasets[!is.na(datasets$dataset_doi) & nzchar(datasets$dataset_doi), , drop = FALSE]
+  cli::cli_bullets(c("*" = "Server: {.val {x$server}}"))
+  cli_dataset_bullets(datasets)
   cli::cli_bullets(c(
-    "*" = "Server: {.val {x$server}}",
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi, " (version ",
-        datasets$dataset_version, ")"),
-      rep("*", nrow(datasets))
-    ),
     "*" = "Files recorded: {nrow(x$files)}",
     "*" = "Total size: {format_bytes(sum(x$files$size_bytes, na.rm = TRUE))}",
     "*" = "Retrieved: {format(x$retrieved_at, usetz = TRUE)}",

@@ -291,24 +291,15 @@ abort_unavailable_storms <- function(values,
 
   excluded_matches <- values[is_excluded]
   absent_matches <- values[!is_excluded]
-  bullets <- character(0)
-  if (length(excluded_matches) > 0L) {
-    bullets <- c(
-      bullets,
-      "x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data."
-    )
-  }
-  if (length(absent_matches) > 0L) {
-    bullets <- c(
-      bullets,
-      "x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists."
-    )
-  }
-
   cli::cli_abort(
     c(
       "{length(values)} value{?s} in {.arg {arg}} did not match an available storm.",
-      bullets,
+      if (length(excluded_matches) > 0L) {
+        c("x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data.")
+      },
+      if (length(absent_matches) > 0L) {
+        c("x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists.")
+      },
       i = "Use {.code gtropic_excluded_storms()} to review excluded storm records."
     ),
     call = call

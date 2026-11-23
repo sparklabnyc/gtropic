@@ -491,7 +491,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   )
   availability_messages <- availability_warnings(availability)
   warnings <- c(warnings, availability_messages)
-  for (message in unname(availability_messages)) cli::cli_warn(message)
+  for (msg in unname(availability_messages)) cli::cli_warn("{msg}")
 
   precip <- NULL
   if ("precip" %in% args$tables) {
