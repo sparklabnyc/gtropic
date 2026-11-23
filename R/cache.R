@@ -311,6 +311,7 @@ cache_ensure_dirs <- function(dir) {
     recursive = TRUE, showWarnings = FALSE, mode = "0700"
   )
   cache_check_permissions(dir)
+  cache_sweep_tmp(dir)
   invisible(dir)
 }
 
@@ -363,7 +364,10 @@ cache_index_write <- function(dir, idx) {
   cache_ensure_dirs(dir)
   out <- as.data.frame(idx)[names(CACHE_INDEX_FIELDS)]
   out$fetched_at <- format_cache_time(out$fetched_at)
-  cache_write_json(cache_index_path(dir), out)
+  path <- cache_index_path(dir)
+  if (!cache_write_json(path, out)) {
+    cli::cli_warn("Could not update the cache index at {.path {path}}.")
+  }
   invisible(idx)
 }
 
@@ -540,9 +544,16 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
 
   # Content-addressed: identical bytes at two dataset versions share one blob.
   if (!file.exists(blob)) {
-    tmp <- paste0(blob, ".tmp")
-    writeBin(raw, tmp)
-    file.rename(tmp, blob)
+    stored <- cache_write_atomic(blob, function(tmp) writeBin(raw, tmp))
+    # Another session may have stored the same bytes in the meantime.
+    if (!stored && !file.exists(blob)) {
+      cli::cli_warn(c(
+        "Could not store {.path {file.path(key$directory_label, key$label)}}
+         in the cache.",
+        i = "The downloaded copy is still used for this result."
+      ))
+      return(downloaded_at)
+    }
   }
 
   idx <- cache_index_read(cache$dir)

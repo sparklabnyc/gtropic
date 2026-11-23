@@ -73,3 +73,9 @@
 * Cache and configuration directories are created readable and writable by
   the user only. On Unix, a cache directory that other users can write to is
   reported once per session.
+
+* Cache files are written through temporary files with unpredictable names
+  and checked renames. A file planted at a predictable temporary name can no
+  longer redirect a cache write, a failed write is reported instead of being
+  silently ignored, and temporary files left by interrupted writes are
+  removed after a day.

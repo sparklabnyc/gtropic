@@ -203,3 +203,63 @@ test_that("a cache directory others can write to is reported once", {
   Sys.chmod(dir, "0700", use_umask = FALSE)
   expect_no_warning(cache_resolve())
 })
+
+# --- temporary files (SEC-09) -------------------------------------------------
+
+list_tmp <- function(dir) {
+  list.files(dir, pattern = "tmp", all.files = TRUE, recursive = TRUE)
+}
+
+test_that("a file planted at a predictable temp name is not written through", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  victim <- withr::local_tempfile(lines = "keep me")
+  dir.create(file.path(dir, "blobs"), recursive = TRUE)
+  file.symlink(victim, file.path(dir, "index.json.tmp"))
+  bytes <- charToRaw("bytes")
+  checksum <- checksum_raw(bytes)
+  file.symlink(victim, file.path(dir, "blobs", paste0(checksum, ".blob.tmp")))
+
+  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum)
+
+  expect_identical(readLines(victim), "keep me")
+  expect_identical(cache_index_read(dir)$checksum, checksum)
+  expect_identical(cache_get(fetcher_cache(dir), fetcher_key()), bytes)
+})
+
+test_that("writes leave no temporary files behind", {
+  dir <- withr::local_tempdir()
+  bytes <- charToRaw("bytes")
+  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
+  cache_discovery_write(dir, fetcher_discovery(fetcher_listing()$listing), "x")
+
+  expect_length(list_tmp(dir), 0L)
+})
+
+test_that("a failed rename is reported and cleaned up", {
+  skip_on_os("windows")
+  withr::local_options(rlib_warning_verbosity = "verbose")
+  dir <- withr::local_tempdir()
+  # A directory in the way makes the final rename fail.
+  dir.create(file.path(dir, "index.json"), recursive = TRUE)
+
+  expect_warning(cache_index_write(dir, populated_index()), "Could not update the cache index")
+  expect_length(list_tmp(dir), 0L)
+})
+
+test_that("stale temporary files are removed when the cache is next written", {
+  dir <- withr::local_tempdir()
+  blobs <- file.path(dir, "blobs")
+  dir.create(blobs)
+  stale <- file.path(c(dir, blobs), ".tmp-stale")
+  fresh <- file.path(dir, ".tmp-fresh")
+  file.create(c(stale, fresh))
+  Sys.setFileTime(stale, Sys.time() - 2 * 86400)
+  rm(list = ls(.gtropic_session, pattern = "^tmp_swept"), envir = .gtropic_session)
+
+  bytes <- charToRaw("bytes")
+  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
+
+  expect_false(any(file.exists(stale)))
+  expect_true(file.exists(fresh))
+})

@@ -48,7 +48,7 @@ cache_read_json <- function(path, schema, empty = NULL, warn = TRUE) {
 #' Write a JSON metadata file
 #'
 #' Written to a temporary file next to `path` and renamed into place, so a
-#' reader never sees a half-written file.
+#' reader never sees a half-written file; see `cache_write_atomic()`.
 #'
 #' @param path Destination.
 #' @param value List or data frame; scalars must be wrapped in
@@ -58,16 +58,58 @@ cache_read_json <- function(path, schema, empty = NULL, warn = TRUE) {
 #' @keywords internal
 #' @noRd
 cache_write_json <- function(path, value) {
-  tmp <- paste0(path, ".tmp")
-  jsonlite::write_json(
-    value, tmp,
-    dataframe = "rows", na = "null", null = "null", digits = NA
-  )
-  if (!file.rename(tmp, path)) {
-    unlink(tmp)
-    return(FALSE)
+  cache_write_atomic(path, function(tmp) {
+    jsonlite::write_json(
+      value, tmp,
+      dataframe = "rows", na = "null", null = "null", digits = NA
+    )
+  })
+}
+
+#' Write a file through a temporary file and a checked rename
+#'
+#' The temporary file has an unpredictable name in the destination's directory
+#' (a fixed name such as `<path>.tmp` could be planted in advance, for example
+#' as a link to another file). It is removed if anything fails.
+#'
+#' @param path Destination.
+#' @param write Function of one argument, the temporary path, that writes the
+#'   content.
+#'
+#' @return `TRUE` on success, `FALSE` if the rename failed.
+#' @keywords internal
+#' @noRd
+cache_write_atomic <- function(path, write) {
+  tmp <- tempfile(pattern = ".tmp-", tmpdir = dirname(path))
+  on.exit(unlink(tmp), add = TRUE)
+  write(tmp)
+  # The return value is checked and reported by the caller; the base warning
+  # would only repeat it.
+  isTRUE(suppressWarnings(file.rename(tmp, path)))
+}
+
+#' Remove temporary files left by interrupted cache writes
+#'
+#' Runs once per cache directory and session, before the first write. Only
+#' `.tmp-*` files older than a day are removed, so a write in progress in
+#' another R session is not disturbed.
+#'
+#' @param dir Cache directory.
+#' @return Invisibly, the paths removed.
+#' @keywords internal
+#' @noRd
+cache_sweep_tmp <- function(dir) {
+  key <- paste0("tmp_swept|", normalizePath(dir, mustWork = FALSE))
+  if (isTRUE(.gtropic_session[[key]])) {
+    return(invisible(character(0)))
   }
-  TRUE
+  .gtropic_session[[key]] <- TRUE
+  tmp <- list.files(c(dir, file.path(dir, "blobs")),
+    pattern = "^[.]tmp-", all.files = TRUE, full.names = TRUE, no.. = TRUE
+  )
+  old <- tmp[!is.na(file.mtime(tmp)) & file.mtime(tmp) < Sys.time() - 86400]
+  unlink(old, recursive = FALSE, force = FALSE)
+  invisible(old)
 }
 
 # --- typed fields -------------------------------------------------------------
