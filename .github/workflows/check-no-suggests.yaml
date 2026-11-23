@@ -1,0 +1,78 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# (check-no-suggests), with the edits from Plan 01 INFRA-03 (b).
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+#
+# Installs only the "hard" dependencies (Depends, Imports, LinkingTo) plus
+# testthat, knitr and rmarkdown, and checks with _R_CHECK_DEPENDS_ONLY_=true.
+# Proves every use of a Suggests package is guarded. The cache is never used,
+# so no suggested package can be restored from it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+name: check-no-suggests.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-no-suggests:
+    runs-on: ubuntu-latest
+
+    name: ubuntu-latest (release, no Suggests)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_DEPENDS_ONLY_: true
+      _R_CHECK_FORCE_SUGGESTS_: false
+      _R_CHECK_CRAN_INCOMING_: false
+      _R_CHECK_DONTTEST_EXAMPLES_: false
+      OMP_NUM_THREADS: 2
+      OMP_THREAD_LIMIT: 2
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sandbox R user directories
+        shell: bash
+        run: |
+          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
+          {
+            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
+            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
+            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
+          } >> "$GITHUB_ENV"
+
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          dependencies: '"hard"'
+          cache: false
+          extra-packages: |
+            any::rcmdcheck
+            any::testthat
+            any::knitr
+            any::rmarkdown
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
+          error-on: '"warning"'
+          upload-snapshots: true

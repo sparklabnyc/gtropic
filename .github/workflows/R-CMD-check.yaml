@@ -1,31 +1,116 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# (check-standard), with the edits from Plan 01 INFRA-03 (a).
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+#
+# Staged settings until Plan 01 session 7 (INFRA-03 final settings): no
+# --run-donttest and _R_CHECK_DONTTEST_EXAMPLES_=false (the \donttest{}
+# examples still download data), error-on "warning" on every job, and a
+# warn-only tarball size gate.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 name: R-CMD-check.yaml
 
-permissions: read-all
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   R-CMD-check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.config.os }}
+
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-latest,   r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: '4.1'}
+
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      # Keep "New submission" and development-version NOTEs out of CI so a
+      # NOTE can be treated as a failure. The final local run (CRAN-15) has
+      # incoming checks on.
+      _R_CHECK_CRAN_INCOMING_: false
+      # Staged: \donttest{} examples still download data until CRAN-06.
+      _R_CHECK_DONTTEST_EXAMPLES_: false
+      # Two threads at most (CRAN policy; Plan 06 G7).
+      OMP_NUM_THREADS: 2
+      OMP_THREAD_LIMIT: 2
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: r-lib/actions/setup-r@v2
+      # Sandboxed user directories (Plan 06 G3); checked for files below.
+      - name: Sandbox R user directories
+        shell: bash
+        run: |
+          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
+          {
+            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
+            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
+            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
+          } >> "$GITHUB_ENV"
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
+          args: 'c("--no-manual", "--as-cran")'
+          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
+          error-on: '"warning"'
           upload-snapshots: true
-          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      # Thresholds from Plan 04 PERF-11. Staged: warn only above 5 MB until
+      # CRAN-04 is accepted (session 7).
+      - name: Tarball size gate
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          f=$(find check -maxdepth 1 -name "*.tar.gz" | head -n1)
+          if [ -z "$f" ]; then echo "::warning::No tarball found in check/"; exit 0; fi
+          s=$(wc -c < "$f" | tr -d ' ')
+          echo "Tarball: $s bytes" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$s" -gt 5000000 ]; then echo "::warning::Tarball exceeds 5 MB ($s bytes)"; exit 0; fi
+          if [ "$s" -gt 4000000 ]; then echo "::warning::Tarball exceeds 4 MB ($s bytes)"; fi
+
+      # Count files, not directories: the dataverse dependency creates an empty
+      # R/dataverse/api_cache directory on first use (until PERF-01 removes it).
+      - name: No files written to R user directories
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          files=$(find "$RUNNER_TEMP/r-user" -type f)
+          if [ -n "$files" ]; then
+            echo "::error::Files were written to the R user directories during the check:"
+            echo "$files"
+            exit 1
+          fi
