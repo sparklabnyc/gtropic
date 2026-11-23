@@ -142,8 +142,8 @@ test_that("caption provenance and hazard settings come from the supplied data", 
       "Current-year v.14.0 (doi:10.1/current)"
     ),
     "Precip parameters: radius=400 km, window=-2/+1 days, aggregate=sum",
+    "Warning: No non-missing precipitation data for ADM2_ID PLOT.5.",
     paste0(
-      "Warning: No non-missing precipitation data for ADM2_ID PLOT.5. ",
       "Known small/coastal-unit source-data limitation; see ",
       "?gtropic_known_limitations."
     ),
