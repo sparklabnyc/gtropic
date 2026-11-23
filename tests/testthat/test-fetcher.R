@@ -1,40 +1,5 @@
-test_that("file resolution uses directory and label together", {
-  skip_fetcher_integration()
-  local_dataverse_recordings()
-
-  with_fetcher_mock_dir({
-    listing <- dv_list_files(
-      "doi:10.70122/FK2/SWEYST",
-      server = "demo.dataverse.org",
-      quiet = TRUE
-    )
-  })
-
-  paths <- c(
-    "02_wind/exposures",
-    "02_wind/zero_pairs",
-    "02_wind/storm_metadata",
-    "02_wind/storm_tracks"
-  )
-  resolved <- lapply(paths, function(path) {
-    dv_resolve_file(listing, path, "1980.parquet")
-  })
-  recorded <- lapply(paths, function(path) {
-    listing[
-      listing$directory_label == path & listing$label == "1980.parquet", ,
-      drop = FALSE
-    ]
-  })
-
-  expect_true(all(vapply(resolved, nrow, integer(1)) == 1L))
-  expect_equal(vapply(resolved, `[[`, integer(1), "file_id"),
-    vapply(recorded, `[[`, integer(1), "file_id"))
-  expect_equal(vapply(resolved, `[[`, character(1), "checksum"),
-    vapply(recorded, `[[`, character(1), "checksum"))
-  expect_equal(vapply(resolved, `[[`, character(1), "checksum_type"),
-    vapply(recorded, `[[`, character(1), "checksum_type"))
-  expect_equal(vapply(resolved, `[[`, character(1), "directory_label"), paths)
-})
+# Fetcher tests that need no network: every transport call is mocked.
+# Tests against the live Dataverse server are in test-live-dataverse.R.
 
 test_that("yearly population rows are tagged with their source file year", {
   context <- list(
@@ -61,34 +26,7 @@ test_that("yearly population rows are tagged with their source file year", {
   )
 })
 
-test_that("current-year discovery identifies both datasets and year routing", {
-  skip_fetcher_integration()
-  local_dataverse_recordings()
-
-  with_fetcher_mock_dir({
-    discovery <- discover_datasets(
-      server = "demo.dataverse.org",
-      collection = "gtropic",
-      refresh = TRUE,
-      quiet = TRUE
-    )
-  })
-
-  expect_equal(discovery$historical$doi, "doi:10.70122/FK2/SWEYST")
-  expect_equal(discovery$current$doi, "doi:10.70122/FK2/DDSYYD")
-  expect_equal(discovery$historical$years, 1980:2025)
-  expect_equal(discovery$current$years, 2026L)
-  expect_equal(
-    discovery$year_index,
-    tibble::tibble(
-      year = 1980:2026,
-      dataset = c(rep("historical", 46L), "current")
-    )
-  )
-})
-
 test_that("failed automatic discovery warns before using configured DOIs", {
-  skip_fetcher_integration()
   fallback <- list(source = "configured options")
   local_mocked_bindings(
     discover_datasets_impl = function(...) stop("collection unavailable"),
@@ -103,7 +41,6 @@ test_that("failed automatic discovery warns before using configured DOIs", {
 })
 
 test_that("checksum verification rejects changed bytes", {
-  skip_fetcher_integration()
   bytes <- charToRaw("published bytes")
 
   expect_invisible(verify_checksum(bytes, checksum_raw(bytes), "fixture.bin"))
@@ -114,7 +51,6 @@ test_that("checksum verification rejects changed bytes", {
 })
 
 test_that("checksum verification supports Dataverse SHA-256 digests", {
-  skip_fetcher_integration()
   bytes <- charToRaw("published bytes")
   checksum <- digest::digest(bytes, algo = "sha256", serialize = FALSE)
 
@@ -130,7 +66,6 @@ test_that("checksum verification supports Dataverse SHA-256 digests", {
 })
 
 test_that("a corrupt cached blob is invalidated", {
-  skip_fetcher_integration()
   cache_dir <- withr::local_tempdir()
   cache <- fetcher_cache(cache_dir)
   key <- fetcher_key()
@@ -151,7 +86,6 @@ test_that("a corrupt cached blob is invalidated", {
 })
 
 test_that("a cached SHA-256 blob is verified using SHA-256", {
-  skip_fetcher_integration()
   cache_dir <- withr::local_tempdir()
   cache <- fetcher_cache(cache_dir)
   key <- fetcher_key()
@@ -163,7 +97,6 @@ test_that("a cached SHA-256 blob is verified using SHA-256", {
 })
 
 test_that("cold, warm, and overlapping fetches download only missing years", {
-  skip_fetcher_integration()
   fixture <- fetcher_listing()
   discovery <- fetcher_discovery(fixture$listing)
   cache <- fetcher_cache(withr::local_tempdir())
@@ -195,7 +128,6 @@ test_that("cold, warm, and overlapping fetches download only missing years", {
 })
 
 test_that("content-addressed cache deduplicates bytes across versions", {
-  skip_fetcher_integration()
   cache_dir <- withr::local_tempdir()
   cache <- fetcher_cache(cache_dir)
   bytes <- charToRaw("same immutable file")
@@ -212,72 +144,7 @@ test_that("content-addressed cache deduplicates bytes across versions", {
   )
 })
 
-test_that("manifest replay retrieves byte-identical recorded input", {
-  skip_fetcher_integration()
-  local_dataverse_recordings()
-  downloaded <- list()
-  recorded_download <- dv_get_file
-  local_mocked_bindings(
-    dv_get_file = function(...) {
-      raw <- recorded_download(...)
-      downloaded[[length(downloaded) + 1L]] <<- raw
-      raw
-    }
-  )
-
-  with_fetcher_mock_dir({
-    discovery <- discover_datasets(
-      server = "demo.dataverse.org",
-      collection = "gtropic",
-      refresh = TRUE,
-      quiet = TRUE
-    )
-    recorded <- dv_resolve_file(
-      discovery$current$listing,
-      "02_wind/storm_metadata", "2026.parquet",
-      doi = discovery$current$doi
-    )
-    first_context <- fetch_context(
-      discovery,
-      list(enabled = FALSE, dir = NULL),
-      quiet = TRUE
-    )
-    first <- fetch_file(
-      "current", "02_wind/storm_metadata", "2026.parquet",
-      first_context
-    )
-    manifest <- manifest_finalize(first_context$manifest_out$value)
-
-    replay_context <- fetch_context(
-      discovery,
-      list(enabled = FALSE, dir = NULL),
-      manifest_in = manifest,
-      quiet = TRUE
-    )
-    replay <- fetch_file(
-      "current", "02_wind/storm_metadata", "2026.parquet",
-      replay_context
-    )
-  })
-
-  expect_identical(
-    tibble::as_tibble(dplyr::collect(first)),
-    tibble::as_tibble(dplyr::collect(replay))
-  )
-  expect_length(downloaded, 2L)
-  expect_identical(downloaded[[1L]], downloaded[[2L]])
-  expect_equal(nrow(manifest$files), 1L)
-  expect_equal(manifest$files$file_id, recorded$file_id)
-  expect_equal(manifest$files$checksum, recorded$checksum)
-  expect_equal(manifest$files$checksum_type, recorded$checksum_type)
-  expect_equal(
-    manifest$files$checksum,
-    checksum_raw(downloaded[[1L]], recorded$checksum)
-  )
-})
-
 test_that("metadata remains historical when current listing contains a copy", {
-  skip_fetcher_integration()
   historical_listing <- tibble::tibble(
     file_id = c(1L, 2L),
     label = c("2001.parquet", "codebook.json"),
@@ -347,7 +214,8 @@ test_that("metadata remains historical when current listing contains a copy", {
 })
 
 test_that("unreachable servers produce a contextual Dataverse error", {
-  skip_fetcher_integration()
+  skip_if_not_installed("httptest2")
+  skip_if_not_installed("httr2")
   local_dataverse_recordings()
 
   expect_error(

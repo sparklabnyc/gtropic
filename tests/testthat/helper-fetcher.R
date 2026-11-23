@@ -1,13 +1,19 @@
-skip_fetcher_integration <- function() {
-  testthat::skip_on_cran()
-  testthat::skip_if_offline("demo.dataverse.org")
-}
+# Helpers for the fetcher tests (test-fetcher.R) and the live tests
+# (test-live-dataverse.R).
 
-sanitize_mock_url <- function(req) {
-  mock <- httptest2::build_mock_url(req)
-  mock <- gsub("/-persistentId-", "/persistentId-", mock, fixed = TRUE)
-  mock <- gsub("/-latest", "/latest", mock, fixed = TRUE)
-  mock
+#' Skip unless live Dataverse tests were requested
+#'
+#' Live tests contact the configured Dataverse server. They never run on CRAN
+#' and run elsewhere only with `GTROPIC_LIVE_TESTS=true` (the weekly live
+#' workflow sets it).
+#' @noRd
+skip_if_no_live_tests <- function() {
+  testthat::skip_on_cran()
+  testthat::skip_if(
+    !identical(Sys.getenv("GTROPIC_LIVE_TESTS"), "true"),
+    "Live Dataverse tests run only with GTROPIC_LIVE_TESTS=true"
+  )
+  testthat::skip_if_offline(opt_server())
 }
 
 # dataverse 0.3.16 builds requests with httr. This test-only transport keeps
@@ -47,10 +53,6 @@ local_dataverse_recordings <- function(.env = parent.frame()) {
   )
 }
 
-with_fetcher_mock_dir <- function(expr) {
-  eval.parent(substitute(expr))
-}
-
 fetcher_listing <- function(years = 2001:2005, directory = "yearly") {
   bytes <- lapply(years, function(year) {
     charToRaw(sprintf('{"year":%d}', year))
@@ -76,7 +78,7 @@ fetcher_discovery <- function(listing, current = NULL) {
     years = years
   )
   out <- list(
-    server = "demo.dataverse.org",
+    server = "example.invalid",
     historical = historical,
     current = current,
     year_index = tibble::tibble(
@@ -93,7 +95,7 @@ fetcher_cache <- function(dir) {
 
 fetcher_key <- function(version = "1.0", label = "2001.parquet") {
   list(
-    server = "demo.dataverse.org",
+    server = "example.invalid",
     doi = "doi:10.0000/HIST",
     version = version,
     directory_label = "yearly",
