@@ -267,13 +267,13 @@ cache_index_empty <- function() {
     label = character(0),
     checksum = character(0),
     size_bytes = numeric(0),
-    fetched_at = as.POSIXct(character(0))
+    fetched_at = as.POSIXct(character(0), tz = "UTC")
   )
 }
 
 #' @keywords internal
 #' @noRd
-cache_index_path <- function(dir) file.path(dir, "index.rds")
+cache_index_path <- function(dir) file.path(dir, "index.json")
 
 #' Path of the cached file content for a checksum
 #'
@@ -306,42 +306,64 @@ cache_blob_path <- function(dir, checksum, call = rlang::caller_env()) {
 #' @keywords internal
 #' @noRd
 cache_ensure_dirs <- function(dir) {
-  dir.create(file.path(dir, "blobs"), recursive = TRUE, showWarnings = FALSE)
+  # Private to the user: whoever can write here can change what is read back.
+  dir.create(file.path(dir, "blobs"),
+    recursive = TRUE, showWarnings = FALSE, mode = "0700"
+  )
+  cache_check_permissions(dir)
   invisible(dir)
 }
 
+#' Warn once if the cache directory is writable by other users
+#'
+#' Relocating the cache to a shared disk is supported, so this only warns.
+#'
+#' @param dir Cache directory.
+#' @return Invisibly `TRUE` when the permissions are private (or not checked).
+#' @keywords internal
+#' @noRd
+cache_check_permissions <- function(dir) {
+  if (!identical(.Platform$OS.type, "unix") || !dir.exists(dir)) {
+    return(invisible(TRUE))
+  }
+  mode <- file.info(dir, extra_cols = FALSE)$mode
+  # 022: group- or world-writable.
+  if (is.na(mode) || bitwAnd(as.integer(mode), 18L) == 0L) {
+    return(invisible(TRUE))
+  }
+  cli::cli_warn(
+    c("The gtropic cache directory {.path {dir}} is writable by other users.",
+      i = "They could change the cached metadata your queries read.
+           {.code Sys.chmod(\"{dir}\", \"0700\")} makes it private."
+    ),
+    .frequency = "once",
+    .frequency_id = paste0("gtropic_cache_permissions_", dir)
+  )
+  invisible(FALSE)
+}
+
+#' Read the cache index
+#'
+#' A missing or invalid `index.json` reads as an empty index (an invalid one
+#' with a warning); see `cache_read_json()`.
+#'
+#' @param dir Cache directory.
+#' @return A tibble shaped like `cache_index_empty()`.
 #' @keywords internal
 #' @noRd
 cache_index_read <- function(dir) {
-  path <- cache_index_path(dir)
-  if (!file.exists(path)) {
-    return(cache_index_empty())
-  }
-  out <- tryCatch(readRDS(path), error = function(e) NULL)
-  if (is.null(out)) {
-    cli::cli_warn("Cache index at {.path {path}} was unreadable; treating the
-                   cache as empty.")
-    return(cache_index_empty())
-  }
-  out <- tibble::as_tibble(out)
-  required <- names(cache_index_empty())
-  if (!identical(names(out), required)) {
-    cli::cli_abort(
-      "Cache index at {.path {path}} does not match the current cache format. Clear the cache and retrieve the files again."
-    )
-  }
-  out$fetched_at <- as.POSIXct(out$fetched_at, origin = "1970-01-01", tz = "UTC")
-  out
+  cache_read_json(cache_index_path(dir), cache_index_schema,
+    empty = cache_index_empty()
+  )
 }
 
 #' @keywords internal
 #' @noRd
 cache_index_write <- function(dir, idx) {
   cache_ensure_dirs(dir)
-  # Write-then-rename so an interrupted write cannot leave a truncated index.
-  tmp <- paste0(cache_index_path(dir), ".tmp")
-  saveRDS(idx, tmp)
-  file.rename(tmp, cache_index_path(dir))
+  out <- as.data.frame(idx)[names(CACHE_INDEX_FIELDS)]
+  out$fetched_at <- format_cache_time(out$fetched_at)
+  cache_write_json(cache_index_path(dir), out)
   invisible(idx)
 }
 
@@ -363,6 +385,7 @@ cache_resolve <- function(cache = NULL, quiet = FALSE) {
   }
 
   dir <- gtropic_cache_dir()
+  cache_check_permissions(dir)
   list(enabled = TRUE, dir = dir)
 }
 
@@ -375,7 +398,7 @@ cache_config_dir <- function() tools::R_user_dir("gtropic", "config")
 
 #' @keywords internal
 #' @noRd
-cache_config_path <- function() file.path(cache_config_dir(), "cache.rds")
+cache_config_path <- function() file.path(cache_config_dir(), "config.json")
 
 #' Read the persisted cache setting without creating files or directories
 #'
@@ -383,12 +406,7 @@ cache_config_path <- function() file.path(cache_config_dir(), "cache.rds")
 #' @keywords internal
 #' @noRd
 cache_config_read <- function() {
-  path <- cache_config_path()
-  if (!file.exists(path)) return(NULL)
-
-  settings <- tryCatch(readRDS(path), error = function(e) NULL)
-  value <- if (is.list(settings)) settings$cache_enabled else NULL
-  if (is.logical(value) && length(value) == 1L && !is.na(value)) value else NULL
+  cache_read_json(cache_config_path(), cache_config_schema, empty = NULL)
 }
 
 #' Write the persisted cache setting
@@ -399,15 +417,13 @@ cache_config_read <- function() {
 #' @noRd
 cache_config_write <- function(enabled) {
   dir <- cache_config_dir()
-  if (!dir.exists(dir) && !dir.create(dir, recursive = TRUE, showWarnings = FALSE)) {
+  if (!dir.exists(dir) &&
+    !dir.create(dir, recursive = TRUE, showWarnings = FALSE, mode = "0700")) {
     cli::cli_abort("Could not create the gtropic configuration directory {.path {dir}}.")
   }
 
   path <- cache_config_path()
-  tmp <- paste0(path, ".tmp")
-  saveRDS(list(cache_enabled = enabled), tmp)
-  if (!file.rename(tmp, path)) {
-    unlink(tmp)
+  if (!cache_write_json(path, list(cache_enabled = jsonlite::unbox(enabled)))) {
     cli::cli_abort("Could not save the gtropic cache setting at {.path {path}}.")
   }
   invisible(enabled)
@@ -505,7 +521,9 @@ cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
 #' @param raw Raw vector to store.
 #' @param checksum Published checksum.
 #'
-#' @return Original download time recorded for the cache entry.
+#' @return Original download time recorded for the cache entry, in whole
+#'   seconds (as stored in the index, so a later cache hit reports the same
+#'   time).
 #' @keywords internal
 #' @noRd
 cache_put <- function(cache, key, raw, checksum = NA_character_,
@@ -513,6 +531,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
   if (!isTRUE(cache$enabled)) {
     return(as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC"))
   }
+  downloaded_at <- cache_time(downloaded_at)
 
   if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_raw(raw)
 
@@ -541,7 +560,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
   )
   cache_index_write(cache$dir, idx)
 
-  as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC")
+  downloaded_at
 }
 
 #' Is a planned file already cached?
@@ -574,22 +593,22 @@ cache_has <- function(cache, key, expected_checksum = NA_character_) {
 
 #' @keywords internal
 #' @noRd
-cache_discovery_path <- function(dir) file.path(dir, "discovery.rds")
+cache_discovery_path <- function(dir) file.path(dir, "discovery.json")
 
 #' Persist a concrete discovery result for intentional offline use
 #' @keywords internal
 #' @noRd
 cache_discovery_write <- function(dir, discovery, collection) {
   if (is.null(dir)) return(invisible(FALSE))
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  cache_ensure_dirs(dir)
   path <- cache_discovery_path(dir)
-  tmp <- paste0(path, ".tmp")
-  saveRDS(list(
-    saved_at = Sys.time(), server = discovery$server, collection = collection,
-    discovery = discovery
-  ), tmp)
-  if (!file.rename(tmp, path)) {
-    unlink(tmp)
+  ok <- cache_write_json(path, list(
+    saved_at = jsonlite::unbox(format_cache_time(Sys.time())),
+    server = jsonlite::unbox(discovery$server),
+    collection = jsonlite::unbox(collection),
+    discovery = discovery_to_json(discovery)
+  ))
+  if (!ok) {
     cli::cli_warn("Could not save the discovery snapshot at {.path {path}}.")
     return(invisible(FALSE))
   }
@@ -608,9 +627,12 @@ cache_discovery_read <- function(dir, server, collection, versions,
       i = "Run the query online once with caching enabled before using {.code offline = TRUE}."
     ), call = call)
   }
-  snapshot <- tryCatch(readRDS(path), error = function(e) NULL)
-  if (!is.list(snapshot) || is.null(snapshot$discovery) || is.null(snapshot$saved_at)) {
-    cli::cli_abort("The discovery snapshot at {.path {path}} is unreadable.", call = call)
+  snapshot <- cache_read_json(path, cache_discovery_schema, warn = FALSE)
+  if (is.null(snapshot)) {
+    cli::cli_abort(c(
+      "The discovery snapshot at {.path {path}} is unreadable.",
+      i = "Run the query online once with caching enabled to replace it."
+    ), call = call)
   }
   if (!identical(snapshot$server, server) || !identical(snapshot$collection, collection)) {
     cli::cli_abort(c(

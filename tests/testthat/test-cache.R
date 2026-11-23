@@ -48,3 +48,158 @@ test_that("a tampered index cannot make the cache read or delete other files", {
   )
   expect_true(file.exists(victim))
 })
+
+# --- JSON metadata (SEC-04) ---------------------------------------------------
+
+populated_index <- function() {
+  tibble::tibble(
+    server = c("example.invalid", "dataverse.harvard.edu"),
+    doi = c("doi:10.0000/HIST", "doi:10.7910/DVN/EAVWC3"),
+    version = c("1.0", "14.2"),
+    directory_label = c("yearly", "02_wind/exposures"),
+    label = c("2001.parquet", "2005.parquet"),
+    checksum = c(strrep("a", 32L), strrep("b", 64L)),
+    size_bytes = c(10, 12345678901),
+    fetched_at = as.POSIXct(c("2026-01-02 03:04:05", "2025-12-31 23:59:59"), tz = "UTC")
+  )
+}
+
+write_index_json <- function(dir, text) {
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  writeLines(text, file.path(dir, "index.json"))
+}
+
+test_that("the cache index round-trips through index.json", {
+  dir <- withr::local_tempdir()
+  idx <- populated_index()
+
+  cache_index_write(dir, idx)
+
+  expect_true(file.exists(file.path(dir, "index.json")))
+  expect_identical(cache_index_read(dir), idx)
+  expect_identical(attr(cache_index_read(dir)$fetched_at, "tzone"), "UTC")
+  expect_identical(cache_index_read(withr::local_tempdir()), cache_index_empty())
+})
+
+test_that("an invalid index.json reads as an empty index, with a warning", {
+  withr::local_options(rlib_warning_verbosity = "verbose")
+  good <- jsonlite::toJSON(
+    within(as.data.frame(populated_index()), fetched_at <- format_cache_time(fetched_at)),
+    dataframe = "rows", digits = NA
+  )
+  bad <- list(
+    malformed = "{not json",
+    not_array = '{"server": "example.invalid"}',
+    wrong_type = sub('"size_bytes":10', '"size_bytes":"10"', good, fixed = TRUE),
+    missing_field = sub('"doi":"doi:10.0000/HIST",', "", good, fixed = TRUE),
+    traversal = sub(strrep("a", 32L), "../../x", good, fixed = TRUE),
+    bad_server = sub("example.invalid", "evil.example/x", good, fixed = TRUE),
+    bad_time = sub("2026-01-02T03:04:05Z", "yesterday", good, fixed = TRUE),
+    mixed_types = sub('"label":"2001.parquet"', '"label":5', good, fixed = TRUE)
+  )
+  for (nm in names(bad)) {
+    dir <- withr::local_tempdir()
+    write_index_json(dir, bad[[nm]])
+    expect_warning(idx <- cache_index_read(dir), "not valid gtropic metadata", label = nm)
+    expect_identical(idx, cache_index_empty(), label = nm)
+  }
+})
+
+test_that("unknown fields in index.json are dropped", {
+  dir <- withr::local_tempdir()
+  rows <- as.data.frame(populated_index())
+  rows$fetched_at <- format_cache_time(rows$fetched_at)
+  rows$extra <- "ignored"
+  write_index_json(dir, jsonlite::toJSON(rows, dataframe = "rows", digits = NA))
+
+  expect_identical(cache_index_read(dir), populated_index())
+})
+
+test_that("old R serialisation files in the cache are never read", {
+  dir <- withr::local_tempdir()
+  flag <- withr::local_tempfile()
+  # A file whose deserialisation would have side effects is simply ignored.
+  saveRDS(populated_index(), file.path(dir, "index.rds"))
+  saveRDS(list(discovery = "x", saved_at = Sys.time()), file.path(dir, "discovery.rds"))
+
+  expect_identical(cache_index_read(dir), cache_index_empty())
+  expect_error(
+    cache_discovery_read(dir, "example.invalid", "x", list(historical = ":latest")),
+    "needs a persisted discovery snapshot"
+  )
+  expect_false(file.exists(flag))
+})
+
+test_that("cache hits report the download time stored in the index", {
+  dir <- withr::local_tempdir()
+  cache <- fetcher_cache(dir)
+  bytes <- charToRaw("bytes")
+  stored <- cache_put(cache, fetcher_key(), bytes, checksum_raw(bytes),
+    downloaded_at = as.POSIXct("2026-01-02 03:04:05.75", tz = "UTC")
+  )
+
+  expect_identical(stored, as.POSIXct("2026-01-02 03:04:05", tz = "UTC"))
+  expect_identical(cache_get_record(cache, fetcher_key())$downloaded_at, stored)
+})
+
+test_that("an invalid discovery snapshot cannot be used offline", {
+  dir <- withr::local_tempdir()
+  discovery <- fetcher_discovery(fetcher_listing()$listing)
+  cache_discovery_write(dir, discovery, "x")
+  path <- file.path(dir, "discovery.json")
+  good <- readLines(path, warn = FALSE)
+  read <- function() {
+    cache_discovery_read(dir, "example.invalid", "x", list(historical = ":latest"))
+  }
+  expect_true(is.list(read()))
+
+  edits <- list(
+    server = c("example.invalid", "evil.example/x"),
+    checksum = c(fetcher_listing()$listing$checksum[1], "../../x"),
+    dataset = c('"dataset":"historical"', '"dataset":"elsewhere"'),
+    malformed = c("{", "[")
+  )
+  for (nm in names(edits)) {
+    writeLines(sub(edits[[nm]][1], edits[[nm]][2], good, fixed = TRUE), path)
+    expect_error(read(), "unreadable", label = nm)
+  }
+})
+
+test_that("the persisted cache setting is JSON and validated on read", {
+  config_dir <- withr::local_tempdir()
+  local_mocked_bindings(cache_config_dir = function() config_dir)
+  withr::local_options(rlib_warning_verbosity = "verbose")
+
+  cache_config_write(FALSE)
+  expect_identical(
+    jsonlite::read_json(file.path(config_dir, "config.json")),
+    list(cache_enabled = FALSE)
+  )
+  expect_false(cache_config_read())
+
+  writeLines('{"cache_enabled": "yes"}', file.path(config_dir, "config.json"))
+  expect_warning(expect_null(cache_config_read()), "not valid gtropic metadata")
+  writeLines("not json", file.path(config_dir, "config.json"))
+  expect_warning(expect_null(cache_config_read()), "not valid gtropic metadata")
+})
+
+test_that("cache directories are private to the user", {
+  skip_on_os("windows")
+  dir <- file.path(withr::local_tempdir(), "cache")
+  cache_ensure_dirs(dir)
+  mode <- function(p) format(file.info(p)$mode)
+  expect_identical(mode(dir), "700")
+  expect_identical(mode(file.path(dir, "blobs")), "700")
+})
+
+test_that("a cache directory others can write to is reported once", {
+  skip_on_os("windows")
+  withr::local_options(rlib_warning_verbosity = "verbose")
+  dir <- withr::local_tempdir()
+  Sys.chmod(dir, "0777", use_umask = FALSE)
+  withr::local_options(gtropic.cache_dir = dir, gtropic.cache_enabled = TRUE)
+
+  expect_warning(cache_resolve(), "writable by other users")
+  Sys.chmod(dir, "0700", use_umask = FALSE)
+  expect_no_warning(cache_resolve())
+})

@@ -258,18 +258,16 @@ test_that(":latest discovery bypasses the session memo", {
 
 test_that("offline discovery uses a persisted snapshot and reports staleness", {
   dir <- withr::local_tempdir()
-  discovery <- list(
-    server = "example.org",
-    historical = list(version = "1.0"),
-    current = NULL,
-    year_index = tibble::tibble(year = integer(), dataset = character())
-  )
+  discovery <- fetcher_discovery(dv_listing_from_records(list(list(
+    label = "2001.parquet", directoryLabel = "yearly",
+    dataFile = list(id = 1L, md5 = strrep("a", 32L), filesize = 10)
+  ))))
   cache_discovery_write(dir, discovery, "x")
 
   expect_warning(
     restored <- discover_datasets(
       list(historical = ":latest", current = ":latest"),
-      server = "example.org", collection = "x", offline = TRUE,
+      server = "example.invalid", collection = "x", offline = TRUE,
       cache_dir = dir, quiet = TRUE
     ),
     "offline G-TROPIC discovery snapshot"

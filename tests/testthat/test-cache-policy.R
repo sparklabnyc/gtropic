@@ -53,7 +53,7 @@ test_that("cache enable and disable persist only when requested", {
 
   expect_silent(gtropic_cache_disable(persist = TRUE))
   expect_false(getOption("gtropic.cache_enabled"))
-  expect_true(file.exists(file.path(config_dir, "cache.rds")))
+  expect_true(file.exists(file.path(config_dir, "config.json")))
   expect_identical(cache_config_read(), FALSE)
 
   withr::local_options(list(gtropic.cache_enabled = NULL))

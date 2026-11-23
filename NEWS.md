@@ -1,5 +1,14 @@
 # gtropic 0.0.0.9002
 
+## Breaking changes
+
+* The cache index, the offline discovery snapshot and the persisted cache
+  setting are now stored as JSON (`index.json`, `discovery.json` and
+  `config.json`). Files written by earlier development versions
+  (`index.rds`, `discovery.rds`, `cache.rds`) are ignored and never read.
+  Testers can delete their old cache directory (`gtropic_cache_dir()`) and
+  the old `cache.rds` under `tools::R_user_dir("gtropic", "config")`.
+
 ## New features
 
 * `gtropic_example()` returns a small synthetic `gtropic_data` object, so
@@ -54,3 +63,13 @@
 * Replaying a manifest that names a server other than
   `getOption("gtropic.server")` warns once, naming both hosts, before any
   request is made.
+
+* Cache metadata is no longer read with `readRDS()`. Reading an R
+  serialisation file that someone else can write may run their code
+  (CVE-2024-27322 on R < 4.4.0), and a cache can sit on a shared disk. The
+  JSON files are checked field by field when read; an invalid file is ignored
+  with a warning (the index then counts as empty, and an invalid discovery
+  snapshot cannot be used offline).
+* Cache and configuration directories are created readable and writable by
+  the user only. On Unix, a cache directory that other users can write to is
+  reported once per session.
