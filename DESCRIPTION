@@ -26,12 +26,13 @@ Description: A retrieval, filtering, and plotting client for the live
     performs no scientific recomputation, published exposure columns are
     authoritative.
 License: GPL (>= 3)
-URL: https://github.com/sparklabnyc/gtropic, https://sparklabnyc.github.io/gtropic/
+URL: https://github.com/sparklabnyc/gtropic,
+    https://sparklabnyc.github.io/gtropic/
 BugReports: https://github.com/sparklabnyc/gtropic/issues
 Depends:
     R (>= 4.1.0)
 Imports:
-    arrow,
+    arrow (>= 17.0.0),
     cli,
     dataverse,
     digest,
@@ -65,10 +66,10 @@ Suggests:
     withr
 VignetteBuilder: 
     knitr
+Config/Needs/website: ggplot2, sf, sfarrow, rnaturalearth,
+    rnaturalearthdata, leaflet, scales, memoise, ggnewscale
 Config/roxygen2/version: 8.1.1
 Config/testthat/edition: 3
-Config/Needs/website: ggplot2, sf, sfarrow, rnaturalearth, rnaturalearthdata,
-    leaflet, scales, memoise, ggnewscale
 Encoding: UTF-8
 LazyData: false
 Roxygen: list(markdown = TRUE)
