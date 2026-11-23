@@ -74,7 +74,7 @@ that gets rendered reminds us of this by examining the data present in `katrina`
 gtropic_plot(katrina)
 ```
 
-<img src="figs/katrina plot-1.png" alt="" width="100%" />
+<img src="figs/katrina-plot-1.png" alt="" width="100%" />
 
 Specifying none of the optional arguments by default renders an exposure map (implicitly, `type = "exposure"`),
 summarizing a selected published metric for each ADM2. With

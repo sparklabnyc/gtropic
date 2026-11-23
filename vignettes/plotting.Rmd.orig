@@ -60,7 +60,7 @@ We're also implicitly using the default precipitation and flood temporal windows
 When we call the `gtropic_plot()` function and pass in `katrina`, the default caption
 that gets rendered reminds us of this by examining the data present in `katrina`:
 
-```{r katrina plot}
+```{r katrina-plot}
 gtropic_plot(katrina)
 ```
 
