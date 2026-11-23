@@ -1,5 +1,5 @@
 # Run from the repository root with Rscript data-raw/make_plot_fixtures.R.
-# The project .Rprofile activates renv. These fixtures use the live column names
+# These fixtures use the live column names
 # and are independent of the historical retrieval fixtures.
 rlang::check_installed(c("sf", "tibble", "dplyr"))
 
