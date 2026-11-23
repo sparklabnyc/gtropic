@@ -7,6 +7,14 @@
 # Handing it back to gtropic_data() reproduces that result byte for byte.
 # ---------------------------------------------------------------------------
 
+#' Format version of `gtropic_manifest` objects
+#'
+#' Bump when the structure changes. Manifests with any other version are
+#' rejected (pre-1.0: no reading of older versions).
+#' @keywords internal
+#' @noRd
+MANIFEST_SCHEMA_VERSION <- 1L
+
 #' Start an empty manifest
 #'
 #' @param discovery Output of `discover_datasets()`.
@@ -38,7 +46,7 @@ manifest_new <- function(discovery) {
       resolved_query = NULL,
       availability = NULL,
       retrieved_at = as.POSIXct(NA),
-      schema_version = 1L,
+      schema_version = MANIFEST_SCHEMA_VERSION,
       gtropic_version = as.character(utils::packageVersion("gtropic"))
     ),
     class = "gtropic_manifest"
@@ -134,10 +142,17 @@ manifest_order_datasets <- function(datasets) {
 
 #' Validate a user-supplied manifest
 #'
+#' A manifest may come from someone else, so its contents are checked, not
+#' only its shape: the server is a host name, file ids are positive whole
+#' numbers, labels and directories are plain relative names, checksums are
+#' hexadecimal digests, DOIs and versions look like Dataverse ones, and the
+#' resolved query has the types a direct call would produce. Manifests made by
+#' [gtropic_manifest()] always pass.
+#'
 #' @param manifest Object passed to the `manifest` argument.
 #' @param call Calling environment.
 #'
-#' @return The manifest, invisibly.
+#' @return The manifest, with its server name normalised, invisibly.
 #' @keywords internal
 #' @noRd
 manifest_validate <- function(manifest, call = rlang::caller_env()) {
@@ -195,11 +210,210 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
       call = call
     )
   }
-  if ("make_valid" %in% names(manifest$resolved_query)) {
-    check_make_valid(manifest$resolved_query$make_valid, call = call)
+  schema <- manifest$schema_version
+  if (!is.numeric(schema) || length(schema) != 1L || is.na(schema) ||
+    schema != MANIFEST_SCHEMA_VERSION) {
+    cli::cli_abort(
+      c("{.arg manifest} has an unsupported format version.",
+        x = "Expected {.val {MANIFEST_SCHEMA_VERSION}}, got
+             {.val {format(schema)}}.",
+        i = "Re-create it with this version of gtropic."
+      ),
+      class = "gtropic_error_manifest",
+      call = call
+    )
   }
 
+  manifest$server <- tryCatch(
+    validate_server(manifest$server, arg = "manifest$server", call = NULL),
+    error = function(e) {
+      cli::cli_abort("{.arg manifest} names an invalid server.",
+        parent = e, class = "gtropic_error_manifest", call = call
+      )
+    }
+  )
+
+  files <- manifest$files
+  id <- files$file_id
+  id_ok <- if (is.numeric(id)) {
+    !is.na(id) & id > 0 & id == round(id)
+  } else {
+    rep(FALSE, length(id))
+  }
+  manifest_check_field(id, id_ok, "file_id", call)
+  manifest_check_field(
+    files$label, grepl(paste0("^", MANIFEST_PATH_SEGMENT, "$"), files$label),
+    "label", call
+  )
+  manifest_check_field(
+    files$directory_label,
+    grepl(
+      paste0("^(", MANIFEST_PATH_SEGMENT, "(/", MANIFEST_PATH_SEGMENT, ")*)?$"),
+      files$directory_label
+    ),
+    "directory_label", call
+  )
+  checksum <- files$checksum
+  manifest_check_field(
+    checksum, is.na(checksum) | checksum == "" | is_hex_checksum(checksum),
+    "checksum", call
+  )
+  doi <- c(files$dataset_doi, manifest$datasets$dataset_doi)
+  manifest_check_field(
+    doi, grepl("^doi:10\\.[0-9]{4,9}/[A-Za-z0-9._;()/:-]+$", doi),
+    "dataset_doi", call
+  )
+  version <- c(files$dataset_version, manifest$datasets$dataset_version)
+  manifest_check_field(
+    version,
+    grepl("^[0-9]+(\\.[0-9]+)?$", version) | version %in% c(":latest", ":draft"),
+    "dataset_version", call
+  )
+
+  tryCatch(
+    manifest_validate_query(manifest$resolved_query),
+    error = function(e) {
+      cli::cli_abort("{.arg manifest} has an invalid resolved query.",
+        parent = e, class = "gtropic_error_manifest", call = call
+      )
+    }
+  )
+
   invisible(manifest)
+}
+
+#' One path component of a manifest file: no separators, no leading dot
+#' @keywords internal
+#' @noRd
+MANIFEST_PATH_SEGMENT <- "[A-Za-z0-9][A-Za-z0-9._-]*"
+
+#' Abort unless every value of a manifest field is valid
+#'
+#' @param values Field values.
+#' @param ok Logical vector, `TRUE` where the value is valid.
+#' @param field Field name, for the message.
+#' @param call Calling environment.
+#'
+#' @return Invisibly `TRUE`.
+#' @keywords internal
+#' @noRd
+manifest_check_field <- function(values, ok, field, call) {
+  ok <- !is.na(ok) & ok
+  if (length(ok) == length(values) && all(ok)) {
+    return(invisible(TRUE))
+  }
+  bad <- unique(as.character(values[!ok]))
+  cli::cli_abort(
+    c("{.arg manifest} has an invalid {.field {field}}.",
+      x = "Offending value{?s}: {.val {truncate_display(bad, 5L)}}.",
+      i = "Manifests made by {.code gtropic_manifest()} always pass this
+           check; this one may have been edited."
+    ),
+    class = "gtropic_error_manifest",
+    call = call
+  )
+}
+
+#' Check the types of a manifest's resolved query
+#'
+#' Applies the same validators as a direct call to `gtropic_data()`, so a
+#' replayed query can only contain values a real call could have produced.
+#'
+#' @param q The `resolved_query` list.
+#'
+#' @return Invisibly `TRUE`; errors name the offending field.
+#' @keywords internal
+#' @noRd
+manifest_validate_query <- function(q) {
+  is_chr <- function(x) is.character(x) && !anyNA(x)
+  is_years <- function(x) {
+    is.numeric(x) && !anyNA(x) && all(x == round(x))
+  }
+  is_flag <- function(x) is.logical(x) && length(x) == 1L && !is.na(x)
+  is_filters <- function(x, allowed) {
+    is.list(x) && all(names(x) %in% allowed) &&
+      all(vapply(x, is_chr, logical(1)))
+  }
+  expect <- function(ok, field) {
+    if (!isTRUE(ok)) {
+      cli::cli_abort("{.field {field}} has an unexpected type or value.", call = NULL)
+    }
+  }
+
+  expect(is_filters(q$geo_filters, c(
+    "ADM2_ID", "ADM2_NAME", "ADM2_GROUP", "WHO_ENTITY", "WHO_REGION"
+  )), "geo_filters")
+  expect(is_filters(q$storm_filters, c("STORM_ID", "STORM_NAME", "USA_ATCF_ID")), "storm_filters")
+  expect(is.null(q$storm_name_years) || is_years(q$storm_name_years), "storm_name_years")
+  check_wind_radius_km(q$wind_radius_km, call = NULL)
+  expect(is.null(q$polygon) || inherits(q$polygon, c("sf", "sfc")), "polygon")
+  expect(is_flag(q$reproject), "reproject")
+  expect(
+    is.null(q$date_range) ||
+      (is.atomic(q$date_range) && length(q$date_range) %in% 1:2),
+    "date_range"
+  )
+  expect(is.null(q$date_list) || is.atomic(q$date_list), "date_list")
+  expect(
+    is.null(q$date_format) ||
+      (is.character(q$date_format) && length(q$date_format) == 1L),
+    "date_format"
+  )
+  expect(is_chr(q$tables), "tables")
+  normalize_tables(q$tables, call = NULL)
+  for (field in c(
+    "precip_days_before", "precip_days_after", "flood_days_before",
+    "flood_days_after"
+  )) {
+    check_nonneg_int(q[[field]], field, call = NULL)
+  }
+  check_positive_num(q$precip_radius_km, "precip_radius_km", call = NULL)
+  check_positive_num(q$flood_radius_km, "flood_radius_km", call = NULL)
+  expect(
+    is.character(q$flood_match) && length(q$flood_match) == 1L &&
+      q$flood_match %in% c("start", "overlap"),
+    "flood_match"
+  )
+  expect(
+    is.character(q$geometry_resolution) &&
+      length(q$geometry_resolution) == 1L &&
+      q$geometry_resolution %in% c("simplified", "full"),
+    "geometry_resolution"
+  )
+  if ("make_valid" %in% names(q)) check_make_valid(q$make_valid, call = NULL)
+  expect(is.null(q$resolved_adm2_ids) || is_chr(q$resolved_adm2_ids), "resolved_adm2_ids")
+  expect(is.null(q$resolved_storm_ids) || is_chr(q$resolved_storm_ids), "resolved_storm_ids")
+  expect(
+    is.null(q$storm_metadata_years) || is_years(q$storm_metadata_years),
+    "storm_metadata_years"
+  )
+  invisible(TRUE)
+}
+
+#' Warn when a manifest points at a server other than the configured one
+#'
+#' Replay downloads from the server recorded in the manifest. Say so before any
+#' request is made, naming both hosts.
+#'
+#' @param manifest A validated manifest.
+#'
+#' @return Invisibly `TRUE` if the servers differ.
+#' @keywords internal
+#' @noRd
+manifest_warn_server <- function(manifest) {
+  configured <- opt_server()
+  recorded <- manifest$server
+  differs <- !identical(tolower(recorded), tolower(configured))
+  if (differs) {
+    cli::cli_warn(c(
+      "This manifest was made against {.val {recorded}}, not the configured
+       server {.val {configured}}.",
+      i = "Its files will be downloaded from {.val {recorded}}.",
+      i = "Set {.code options(gtropic.server = \"{recorded}\")} to silence
+           this warning if that is intended."
+    ))
+  }
+  invisible(differs)
 }
 
 #' Fields that define a data-shaped G-TROPIC query

@@ -320,8 +320,9 @@ gtropic_data <- function(ADM2_ID = NULL,
   call <- match.call()
 
   if (!is.null(manifest)) {
-    manifest_validate(manifest)
+    manifest <- manifest_validate(manifest)
     manifest_assert_replay_arguments(call)
+    manifest_warn_server(manifest)
   }
 
   if (!is.null(date_range) && length(date_range) == 1L) {
@@ -391,7 +392,12 @@ gtropic_data <- function(ADM2_ID = NULL,
   )
 
   if (!is.null(manifest)) {
-    args[names(manifest$resolved_query)] <- manifest$resolved_query
+    # Only the data-shaping query is replayed. How it is executed (`cache`,
+    # `as`, `confirm`, `quiet`, `offline`) stays the caller's choice, whatever
+    # the manifest contains.
+    q <- manifest$resolved_query
+    replayed <- intersect(names(q), manifest_query_fields())
+    args[replayed] <- q[replayed]
     args$manifest <- manifest
   }
   args$resolved_query <- manifest_query_from_args(args)

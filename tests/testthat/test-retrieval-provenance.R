@@ -76,6 +76,7 @@ test_that("manifest replay rejects only explicitly supplied data-shaping argumen
 })
 
 test_that("gtropic_data replays the stored canonical query", {
+  withr::local_options(gtropic.server = "example.org")
   query <- list(
     geo_filters = list(WHO_ENTITY = "Example"), storm_filters = list(),
     storm_name_years = NULL, wind_radius_km = 500, polygon = NULL,
@@ -92,7 +93,7 @@ test_that("gtropic_data replays the stored canonical query", {
     manifest, "doi:10.0000/HIST", "1.0",
     tibble::tibble(
       directory_label = "metadata", label = "adm2.parquet", file_id = 1L,
-      checksum = "abc", checksum_type = "MD5", size_bytes = 1
+      checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
     ),
     downloaded_at = as.POSIXct("2026-01-01", tz = "UTC"),
     source_role = "historical"
@@ -118,6 +119,7 @@ test_that("gtropic_data replays the stored canonical query", {
 })
 
 test_that("canonical manifest queries retain resolved IDs and metadata years", {
+  withr::local_options(gtropic.server = "example.org")
   args <- list(
     geo_filters = list(WHO_ENTITY = "Example"),
     storm_filters = list(STORM_NAME = "Example-2026"),
@@ -150,7 +152,7 @@ test_that("canonical manifest queries retain resolved IDs and metadata years", {
     manifest, "doi:10.0000/CURRENT", "2.0",
     tibble::tibble(
       directory_label = "02_wind/storm_metadata", label = "2026.parquet",
-       file_id = 1L, checksum = "fixture", checksum_type = "SHA-256",
+       file_id = 1L, checksum = strrep("a", 64L), checksum_type = "SHA-256",
        size_bytes = 1
     ), as.POSIXct("2026-01-01", tz = "UTC"), source_role = "current"
   )

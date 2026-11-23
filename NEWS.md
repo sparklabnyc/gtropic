@@ -39,3 +39,18 @@
   `dataverse.harvard.edu`, the same as the default set at load time (it was
   `demo.dataverse.org`). Transport errors name the host that was actually
   contacted.
+
+* Replaying a manifest (`gtropic_data(manifest = )`) now takes only the
+  data-shaping query from it. `cache`, `as`, `confirm`, `quiet` and `offline`
+  are always the caller's choice, so a manifest can no longer switch off the
+  large-download confirmation or silence messages.
+* Manifests are now checked for content as well as shape before replay: the
+  format version, a valid server host name, positive whole file ids, plain
+  relative file and directory names, hexadecimal checksums, Dataverse-style
+  DOIs and versions, and a resolved query with the same types a direct call
+  produces. Manifests made by `gtropic_manifest()` always pass; hand-edited
+  ones with out-of-contract values are rejected with an error of class
+  `gtropic_error_manifest`.
+* Replaying a manifest that names a server other than
+  `getOption("gtropic.server")` warns once, naming both hosts, before any
+  request is made.
