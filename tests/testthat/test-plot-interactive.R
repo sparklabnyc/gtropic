@@ -74,3 +74,35 @@ test_that("interactive arguments are validated and text is escaped", {
     "support only"
   )
 })
+
+test_that("interactive maps escape HTML in names, category labels and units", {
+  payload <- "<img src=x onerror=alert(1)>"
+  x <- gtropic_example()
+  x$adm2$ADM2_NAME[] <- payload
+  key <- saffir_simpson()
+  key$category[] <- paste(payload, seq_len(nrow(key)))
+
+  p <- gtropic_plot(x,
+    type = "exposure", metric = "VMAX_SUST_MS", wind_categories = key,
+    track = TRUE, interactive = TRUE, basemap = "none"
+  )
+  widget <- as.character(jsonlite::toJSON(unclass(p$x), auto_unbox = TRUE, force = TRUE))
+
+  expect_false(grepl("<img", widget, fixed = TRUE))
+  expect_match(widget, "&lt;img src=x onerror=alert(1)&gt;", fixed = TRUE)
+  legend <- Filter(
+    function(call) identical(call$method, "addLegend"), p$x$calls
+  )[[1L]]$args[[1L]]$labels
+  expect_match(legend[1L], "^&lt;img", perl = TRUE)
+
+  # A track unit cannot carry markup: the key accepts four units only.
+  track_key <- saffir_simpson()
+  track_key$unit[] <- payload
+  expect_error(
+    gtropic_plot(x,
+      type = "exposure", metric = "VMAX_SUST_MS", track = TRUE,
+      track_map_key = track_key, interactive = TRUE, basemap = "none"
+    ),
+    "track_map_key"
+  )
+})

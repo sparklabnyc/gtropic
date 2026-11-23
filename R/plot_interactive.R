@@ -240,6 +240,8 @@ plot_interactive_legend <- function(map, scale, values, group, spec, info,
     labels <- c(labels, "NA")
     colors <- c(colors, scale$na.value)
   }
+  # Leaflet inserts legend labels as HTML; category names are user-supplied.
+  labels <- plot_interactive_escape(labels)
   leaflet::addLegend(map,
     colors = colors, labels = labels, title = title, group = group,
     position = "bottomright", opacity = 0.8
@@ -318,7 +320,7 @@ plot_interactive_tracks <- function(map, tracks, track_map_key, track_interval) 
         "<br/><b>ISO_TIME (UTC):</b> ",
         plot_interactive_escape(format(part$ISO_TIME, tz = "UTC")),
         "<br/><b>USA_WIND:</b> ", plot_interactive_escape(plot_format_number(wind)),
-        " ", key$unit[1L],
+        " ", plot_interactive_escape(key$unit[1L]),
         "<br/><b>Category:</b> ", plot_interactive_escape(category)
       )
     )

@@ -79,3 +79,8 @@
   longer redirect a cache write, a failed write is reported instead of being
   silently ignored, and temporary files left by interrupted writes are
   removed after a day.
+
+* Interactive maps (`gtropic_plot(interactive = TRUE)`) now HTML-escape
+  legend labels, which can come from user-supplied `wind_categories` or
+  `track_map_key` category names, and the wind unit in track popups. Labels
+  that intentionally contained HTML now show literally.
