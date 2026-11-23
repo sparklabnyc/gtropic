@@ -3,7 +3,8 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 #
 # Installs only the "hard" dependencies (Depends, Imports, LinkingTo) plus
-# testthat, knitr and rmarkdown, and checks with _R_CHECK_DEPENDS_ONLY_=true.
+# testthat, knitr and rmarkdown, and checks with _R_CHECK_DEPENDS_ONLY_=true
+# (except for re-building the precomputed vignettes).
 # Proves every use of a Suggests package is guarded. The cache is never used,
 # so no suggested package can be restored from it.
 on:
@@ -31,6 +32,9 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       _R_CHECK_DEPENDS_ONLY_: true
+      # The vignettes are precomputed; rebuilding them needs only the
+      # VignetteBuilder packages (knitr, rmarkdown), which are installed here.
+      _R_CHECK_DEPENDS_ONLY_VIGNETTES_: false
       _R_CHECK_FORCE_SUGGESTS_: false
       _R_CHECK_CRAN_INCOMING_: false
       _R_CHECK_DONTTEST_EXAMPLES_: false
@@ -41,16 +45,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Sandbox R user directories
-        shell: bash
-        run: |
-          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
-          {
-            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
-            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
-            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
-          } >> "$GITHUB_ENV"
 
       - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
 
@@ -69,6 +63,18 @@ jobs:
             any::knitr
             any::rmarkdown
           needs: check
+
+      # Sandboxed user directories (Plan 06 G3), set only now so that pak's
+      # own package cache is not written there; checked for files below.
+      - name: Sandbox R user directories
+        shell: bash
+        run: |
+          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
+          {
+            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
+            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
+            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
+          } >> "$GITHUB_ENV"
 
       - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:

@@ -58,17 +58,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # Sandboxed user directories (Plan 06 G3); checked for files below.
-      - name: Sandbox R user directories
-        shell: bash
-        run: |
-          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
-          {
-            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
-            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
-            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
-          } >> "$GITHUB_ENV"
-
       - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
@@ -81,6 +70,18 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+
+      # Sandboxed user directories (Plan 06 G3), set only now so that pak's
+      # own package cache is not written there; checked for files below.
+      - name: Sandbox R user directories
+        shell: bash
+        run: |
+          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
+          {
+            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
+            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
+            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
+          } >> "$GITHUB_ENV"
 
       - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
@@ -95,7 +96,8 @@ jobs:
         if: ${{ !cancelled() }}
         shell: bash
         run: |
-          f=$(find check -maxdepth 1 -name "*.tar.gz" | head -n1)
+          f=""
+          if [ -d check ]; then f=$(find check -maxdepth 1 -name "*.tar.gz" | head -n1); fi
           if [ -z "$f" ]; then echo "::warning::No tarball found in check/"; exit 0; fi
           s=$(wc -c < "$f" | tr -d ' ')
           echo "Tarball: $s bytes" >> "$GITHUB_STEP_SUMMARY"
@@ -108,6 +110,7 @@ jobs:
         if: ${{ !cancelled() }}
         shell: bash
         run: |
+          if [ ! -d "$RUNNER_TEMP/r-user" ]; then exit 0; fi
           files=$(find "$RUNNER_TEMP/r-user" -type f)
           if [ -n "$files" ]; then
             echo "::error::Files were written to the R user directories during the check:"
