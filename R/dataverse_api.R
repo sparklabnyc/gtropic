@@ -107,6 +107,19 @@ dv_list_files <- function(doi,
     quiet = quiet
   )
 
+  dv_listing_from_records(raw_files)
+}
+
+#' Build a file listing from Dataverse file records
+#'
+#' Kept separate from the transport so it can be tested without a server.
+#'
+#' @param raw_files List of per-file records as returned by the Dataverse API.
+#'
+#' @return A tibble as described for `dv_list_files()`.
+#' @keywords internal
+#' @noRd
+dv_listing_from_records <- function(raw_files) {
   if (length(raw_files) == 0L) {
     return(dv_empty_listing())
   }
@@ -140,7 +153,11 @@ dv_list_files <- function(doi,
     )
   })
 
-  dplyr::bind_rows(rows)
+  out <- dplyr::bind_rows(rows)
+  # Checksums later name files in the cache. Anything that is not a plain
+  # hexadecimal digest is treated as "no checksum published".
+  out$checksum[!is_hex_checksum(out$checksum)] <- NA_character_
+  out
 }
 
 #' @keywords internal
@@ -316,6 +333,22 @@ dv_version_label <- function(doi,
 dv_key <- function() {
   key <- Sys.getenv("DATAVERSE_KEY", unset = "")
   if (nzchar(key)) key else ""
+}
+
+#' Is a string a hexadecimal digest of a supported length?
+#'
+#' MD5, SHA-1, SHA-256 and SHA-512 digests are 32, 40, 64 and 128 hexadecimal
+#' characters. Checksums are used to build cache file names, so nothing else
+#' (in particular no path separator or `..`) may pass.
+#'
+#' @param x Character vector.
+#' @return Logical vector, `FALSE` for `NA`.
+#' @keywords internal
+#' @noRd
+is_hex_checksum <- function(x) {
+  x <- as.character(x)
+  !is.na(x) & grepl("^[0-9a-fA-F]+$", x) &
+    nchar(x) %in% c(32L, 40L, 64L, 128L)
 }
 
 #' Identify the hashing algorithm used by a published checksum

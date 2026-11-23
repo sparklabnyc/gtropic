@@ -176,7 +176,7 @@ gtropic_cache_clear <- function(confirm = TRUE) {
     }
   }
 
-  unlink(blobs)
+  unlink(blobs, recursive = FALSE, force = FALSE)
   cache_index_write(dir, cache_index_empty())
   cli::cli_alert_success("Removed {length(blobs)} cached file{?s}.")
   invisible(length(blobs))
@@ -244,7 +244,7 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   # A blob may be referenced by more than one index entry (the same bytes at two
   # dataset versions). Only delete blobs no surviving entry still points at.
   orphans <- setdiff(unique(removed$checksum), unique(kept$checksum))
-  unlink(file.path(dir, "blobs", paste0(orphans, ".blob")))
+  unlink(cache_blob_path(dir, orphans))
 
   cache_index_write(dir, kept)
   cli::cli_alert_success(
@@ -274,6 +274,34 @@ cache_index_empty <- function() {
 #' @keywords internal
 #' @noRd
 cache_index_path <- function(dir) file.path(dir, "index.rds")
+
+#' Path of the cached file content for a checksum
+#'
+#' Blobs are named by checksum. A checksum read from a tampered cache index
+#' could otherwise point outside the cache (`"../../x"`), so anything that is
+#' not a plain hexadecimal digest is refused.
+#'
+#' @param dir Cache directory.
+#' @param checksum Character vector of checksums.
+#' @param call Calling environment for error reporting.
+#'
+#' @return Character vector of paths under `<dir>/blobs`.
+#' @keywords internal
+#' @noRd
+cache_blob_path <- function(dir, checksum, call = rlang::caller_env()) {
+  ok <- is_hex_checksum(checksum)
+  if (!all(ok)) {
+    cli::cli_abort(
+      c("Refusing to use an invalid checksum as a cache file name.",
+        x = "Got {.val {checksum[!ok]}}.",
+        i = "The cache index may be corrupt; {.code gtropic_cache_clear()}
+             resets it."
+      ),
+      call = call
+    )
+  }
+  file.path(dir, "blobs", paste0(tolower(checksum), ".blob", recycle0 = TRUE))
+}
 
 #' @keywords internal
 #' @noRd
@@ -420,7 +448,7 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
     return(NULL)
   }
 
-  blob <- file.path(cache$dir, "blobs", paste0(hit$checksum[1], ".blob"))
+  blob <- cache_blob_path(cache$dir, hit$checksum[1])
   if (!file.exists(blob)) {
     # Index and blobs out of step: drop the dangling entry and miss.
     cache_index_write(cache$dir, idx[!(idx$checksum %in% hit$checksum[1]), , drop = FALSE])
@@ -489,7 +517,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
   if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_raw(raw)
 
   cache_ensure_dirs(cache$dir)
-  blob <- file.path(cache$dir, "blobs", paste0(checksum, ".blob"))
+  blob <- cache_blob_path(cache$dir, checksum)
 
   # Content-addressed: identical bytes at two dataset versions share one blob.
   if (!file.exists(blob)) {
@@ -539,7 +567,7 @@ cache_has <- function(cache, key, expected_checksum = NA_character_) {
   if (!is.na(expected_checksum) && nzchar(expected_checksum)) {
     hit <- hit & tolower(idx$checksum) == tolower(expected_checksum)
   }
-  any(hit & file.exists(file.path(cache$dir, "blobs", paste0(idx$checksum, ".blob"))))
+  any(file.exists(cache_blob_path(cache$dir, idx$checksum[hit])))
 }
 
 # --- persisted discovery snapshots -----------------------------------------

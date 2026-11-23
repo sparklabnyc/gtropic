@@ -20,3 +20,9 @@
   DOI or version containing `{` or `}` now prints literally instead of causing
   an error. Error messages that list unmatched filter values and suggested
   names are protected in the same way.
+
+* Checksums are validated before they are used to name files in the cache.
+  A checksum that is not a hexadecimal MD5, SHA-1, SHA-256 or SHA-512 digest
+  is treated as "no checksum published" when it comes from a file listing,
+  and a cache index entry with such a checksum can no longer make the cache
+  read or delete a file outside its own directory.
