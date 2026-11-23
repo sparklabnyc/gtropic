@@ -1,7 +1,19 @@
-# Run from the repository root with Rscript data-raw/make_plot_fixtures.R.
-# These fixtures use the live column names
-# and are independent of the historical retrieval fixtures.
-rlang::check_installed(c("sf", "tibble", "dplyr"))
+# Build the small synthetic example object returned by gtropic_example().
+#
+# Run from the repository root with: Rscript data-raw/make_plot_fixtures.R
+#
+# Writes inst/extdata/gtropic-example.rds, a complete `gtropic_data` object
+# (tables, manifest, resolved filters, availability) built from invented values.
+# It is the single source of truth for offline examples and for the plotting
+# tests (tests/testthat/helper-plot.R reads it through gtropic_example()).
+#
+# Everything is obviously fake: the server is `example.invalid`, the DOI is
+# `doi:10.0000/EXAMPLE`, places are "Example Coast" and "Example Pacific".
+# Geometry is stored as WKT text so the object can be read without `sf`;
+# gtropic_example() rebuilds the `sf` table when `sf` is installed.
+# Budget: < 20 KB (hard limit 50 KB, Plan 06 CRAN-07).
+rlang::check_installed(c("pkgload", "sf", "tibble", "dplyr"))
+pkgload::load_all(".", quiet = TRUE)
 
 local({
   adm2 <- tibble::tibble(
@@ -18,15 +30,13 @@ local({
     lon[lon > 180] <- lon[lon > 180] - 360
     sf::st_polygon(list(cbind(lon, c(y, y, y + 1, y + 1, y))))
   }
-  geometry <- sf::st_sf(
+  geometry <- tibble::tibble(
     ADM2_ID = adm2$ADM2_ID,
-    geometry = sf::st_sfc(
+    geometry_wkt = sf::st_as_text(sf::st_sfc(
       square(-81, 25), square(-80, 25), square(-81, 26), square(-80, 24),
-      square(179.5, -17), square(179.5, -15),
-      crs = 4326
-    )
+      square(179.5, -17), square(179.5, -15)
+    ))
   )
-  attr(geometry, "geometry_resolution") <- "simplified"
   storm_metadata <- tibble::tibble(
     STORM_ID = c("PLOT_A", "PLOT_B", "PLOT_C"),
     STORM_NAME = c("Alpha", "Beta", "Dateline"),
@@ -100,19 +110,99 @@ local({
     USA_RMW = rep(20, 8), BASIN = rep(c("NA", "SP"), each = 4),
     SEASON = rep(2020L, 8)
   )
-  fixture <- list(
-    adm2 = adm2, geometry = geometry, storm_metadata = storm_metadata,
-    wind = wind, zero_pairs = zero_pairs, links = links, precip = precip,
-    flood = flood, tracks = tracks,
-    codebook = list(variables = list(PRECIP_MM = list(units = "mm")))
+  codebook <- list(variables = list(PRECIP_MM = list(units = "mm")))
+
+  tables <- list(
+    wind = wind, precip = precip, flood = flood, zero_pairs = zero_pairs,
+    tracks = tracks, storm_metadata = storm_metadata, adm2 = adm2,
+    geometry = geometry, codebook = codebook, links = links
   )
-  attr(fixture, "filters_resolved") <- list(
+
+  # --- manifest ---------------------------------------------------------------
+  # One invented file per source table, as a real retrieval would record.
+  downloaded_at <- as.POSIXct("2026-01-05 12:00:00", tz = "UTC")
+  files <- tibble::tibble(
+    directory_label = c(
+      "02_wind/exposures", "02_wind/zero_pairs", "02_wind/storm_metadata",
+      "02_wind/storm_tracks", "04_precip", "03_flood", "metadata",
+      "metadata", "metadata"
+    ),
+    label = c(
+      rep("2020.parquet", 6), "adm2.parquet", "codebook.json",
+      "adm2_geometry_simplified.parquet"
+    )
+  )
+  files$file_id <- seq_len(nrow(files))
+  files$checksum <- vapply(
+    file.path(files$directory_label, files$label),
+    digest::digest, character(1),
+    algo = "md5", serialize = FALSE
+  )
+  files$checksum_type <- "MD5"
+  files$size_bytes <- 1000 * files$file_id
+  manifest <- manifest_new(list(server = "example.invalid"))
+  for (i in seq_len(nrow(files))) {
+    manifest <- manifest_add(
+      manifest, "doi:10.0000/EXAMPLE", "1.0", files[i, ],
+      downloaded_at = downloaded_at, source_role = "historical"
+    )
+  }
+
+  args <- list(
+    geo_filters = list(WHO_ENTITY = c("Example Coast", "Example Pacific")),
+    storm_filters = list(), storm_name_years = NULL, wind_radius_km = 500,
+    polygon = NULL, reproject = TRUE,
+    date_range = c("2020-08-01", "2020-08-31"), date_list = NULL,
+    date_format = NULL,
+    tables = setdiff(VALID_TABLES, "pop"),
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start"
+    flood_match = "start", geometry_resolution = "simplified",
+    make_valid = TRUE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
+    storm_metadata_years = NULL
   )
-  saveRDS(fixture,
-    file.path("tests", "testthat", "fixtures", "plotting.rds"),
-    version = 2
+  date_spec <- parse_date_input(args$date_range)
+  availability <- availability_metadata(
+    date_spec, args$tables,
+    storm_metadata = storm_metadata, links = links,
+    today = as.Date("2026-01-05")
   )
+  manifest <- manifest_finalize(
+    manifest,
+    resolved_query = manifest_query_from_args(
+      args,
+      resolved_adm2_ids = adm2$ADM2_ID,
+      resolved_storm_ids = storm_metadata$STORM_ID,
+      storm_metadata_years = 2020L
+    ),
+    availability = availability
+  )
+
+  example <- new_gtropic_data(
+    tables = tables,
+    manifest = manifest,
+    query = NULL,
+    filters_resolved = list(
+      adm2_ids = adm2$ADM2_ID,
+      storm_ids = storm_metadata$STORM_ID,
+      date_start = date_spec$start,
+      date_end = date_spec$end,
+      date_order = date_spec$inferred_order,
+      years_scanned = 2020L,
+      wind_radius_km = 500,
+      precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
+      flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
+      flood_match = "start",
+      inconsistent_adm2_ids = character(0)
+    ),
+    warnings = list(),
+    availability = availability,
+    retrieved_at = manifest$retrieved_at
+  )
+  attr(example, "gtropic_version") <- NULL
+
+  path <- file.path("inst", "extdata", "gtropic-example.rds")
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  saveRDS(example, path, version = 3, compress = "xz")
+  message("Wrote ", path, " (", file.size(path), " bytes)")
 })

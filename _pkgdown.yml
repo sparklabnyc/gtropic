@@ -34,6 +34,7 @@ reference:
   - print.gtropic_filters
   - summary.gtropic_data
   - print.gtropic_manifest
+  - gtropic_example
 - title: Discovery
   desc: |
     Functions to explore the available administrative units, storms, years and column definitions.
