@@ -7,7 +7,7 @@
 .onLoad <- function(libname, pkgname) {
   persisted_cache_enabled <- cache_config_read()
   defaults <- list(
-    gtropic.server = "dataverse.harvard.edu",
+    gtropic.server = DEFAULT_SERVER,
     gtropic.doi_historical = "doi:10.7910/DVN/EAVWC3",
     gtropic.doi_current = "doi:10.7910/DVN/FZBAKO",
     gtropic.collection = "gtropic",

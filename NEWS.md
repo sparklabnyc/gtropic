@@ -26,3 +26,16 @@
   is treated as "no checksum published" when it comes from a file listing,
   and a cache index entry with such a checksum can no longer make the cache
   read or delete a file outside its own directory.
+
+* `DATAVERSE_KEY` is now sent only to the configured server
+  (`getOption("gtropic.server")`). Requests to any other host, for example
+  when replaying a manifest that names another server, are made without the
+  token, and a warning explains how to authenticate against that host.
+* `options(gtropic.server = )` must be a bare host name with an optional
+  port. Paths, queries, user information and spaces are rejected with an
+  error that names the option. A leading `https://` and trailing slashes are
+  still stripped.
+* The fallback server, used when `gtropic.server` is unset, is now
+  `dataverse.harvard.edu`, the same as the default set at load time (it was
+  `demo.dataverse.org`). Transport errors name the host that was actually
+  contacted.

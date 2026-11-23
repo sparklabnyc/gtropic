@@ -55,14 +55,55 @@ opt <- function(name, default = NULL) {
   getOption(paste0("gtropic.", name), default = default)
 }
 
+#' Default Dataverse host
+#'
+#' The single definition used by `.onLoad()` and `opt_server()`.
+#' @keywords internal
+#' @noRd
+DEFAULT_SERVER <- "dataverse.harvard.edu"
+
 #' @keywords internal
 #' @noRd
 opt_server <- function() {
-  server <- opt("server", "demo.dataverse.org")
-  # Strip any scheme the user may have pasted in; the dataverse package expects
-  # a bare host and we force HTTPS ourselves.
-  server <- sub("^https?://", "", server)
-  sub("/+$", "", server)
+  validate_server(opt("server", DEFAULT_SERVER), arg = "gtropic.server")
+}
+
+#' Validate and normalise a Dataverse host name
+#'
+#' Any scheme and trailing slash are stripped (requests are always HTTPS);
+#' what remains must be a bare host name with an optional port. Paths, queries,
+#' user information, spaces and control characters are rejected, because the
+#' host is pasted into request URLs.
+#'
+#' @param x Value to check.
+#' @param arg Where the value came from, for the error message.
+#' @param call Calling environment for error reporting.
+#'
+#' @return The normalised host name.
+#' @keywords internal
+#' @noRd
+validate_server <- function(x, arg = "server", call = rlang::caller_env()) {
+  ok <- is.character(x) && length(x) == 1L && !is.na(x)
+  if (ok) {
+    x <- sub("/+$", "", sub("^https?://", "", x, ignore.case = TRUE))
+    ok <- nchar(x) <= 253L && grepl(
+      "^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?$", x
+    )
+  }
+  if (!ok) {
+    cli::cli_abort(
+      c("{.code {arg}} must be a Dataverse host name, such as
+         {.val {DEFAULT_SERVER}}.",
+        x = if (is.character(x) && length(x) == 1L) {
+          "Got {.val {x}}."
+        } else {
+          "Got an object of class {.cls {class(x)}} and length {length(x)}."
+        }
+      ),
+      call = call
+    )
+  }
+  x
 }
 
 #' @keywords internal

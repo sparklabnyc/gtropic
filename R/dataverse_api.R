@@ -22,6 +22,7 @@
 #' @param max_tries Maximum attempts.
 #' @param what Short description used in the failure message.
 #' @param quiet Suppress the retry notices.
+#' @param server Host the request is sent to, named in the failure message.
 #' @param call Calling environment for error reporting.
 #'
 #' @return The value of `expr`.
@@ -31,6 +32,7 @@ with_retry <- function(expr,
                        max_tries = opt_max_tries(),
                        what = "request",
                        quiet = FALSE,
+                       server = opt_server(),
                        call = rlang::caller_env()) {
   expr <- rlang::enquo(expr)
   last_err <- NULL
@@ -55,22 +57,24 @@ with_retry <- function(expr,
     }
   }
 
-  abort_dataverse(last_err, what = what, call = call)
+  abort_dataverse(last_err, what = what, server = server, call = call)
 }
 
 #' Turn a low-level failure into an informative message
 #'
 #' @param err The captured condition.
 #' @param what Description of the operation that failed.
+#' @param server Host the request was sent to.
 #' @param call Calling environment.
 #'
 #' @return Never returns.
 #' @keywords internal
 #' @noRd
-abort_dataverse <- function(err, what = "request", call = rlang::caller_env()) {
+abort_dataverse <- function(err, what = "request", server = opt_server(),
+                            call = rlang::caller_env()) {
   cli::cli_abort(
     c(
-      "Could not complete {what} against {.val {opt_server()}}.",
+      "Could not complete {what} against {.val {server}}.",
       x = "{conditionMessage(err)}",
       i = "Common causes: no network connection; the DOI has moved; the
            requested dataset version does not exist; or the server is down.",
@@ -101,8 +105,9 @@ dv_list_files <- function(doi,
       dataset = doi,
       version = version,
       server = server,
-      key = dv_key()
+      key = dv_key(server)
     ),
+    server = server,
     what = glue::glue("file listing for {doi}"),
     quiet = quiet
   )
@@ -231,8 +236,9 @@ dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE) {
       file = file_id,
       server = server,
       format = "original",
-      key = dv_key()
+      key = dv_key(server)
     ),
+    server = server,
     what = glue::glue("download of file {file_id}"),
     quiet = quiet
   )
@@ -254,8 +260,9 @@ dv_list_datasets <- function(collection = opt_collection(),
     dataverse::dataverse_contents(
       dataverse = collection,
       server = server,
-      key = dv_key()
+      key = dv_key(server)
     ),
+    server = server,
     what = glue::glue("listing of collection {collection}"),
     quiet = quiet
   )
@@ -305,8 +312,9 @@ dv_version_label <- function(doi,
       dataset = doi,
       version = version,
       server = server,
-      key = dv_key()
+      key = dv_key(server)
     ),
+    server = server,
     what = glue::glue("metadata for {doi}"),
     quiet = quiet
   )
@@ -320,19 +328,37 @@ dv_version_label <- function(doi,
   paste0(major, ".", minor %||% 0L)
 }
 
-#' API key, if the user has one
+#' API key for a Dataverse host, if the user has one
 #'
-#' No key is needed for the demo repository, but honouring `DATAVERSE_KEY`
-#' means the same code works against a restricted staging repository. The
-#' Dataverse client expects a character scalar either way, so we pass an empty
-#' string when no key is configured.
+#' `DATAVERSE_KEY` is sent only to the configured server
+#' (`getOption("gtropic.server")`). A manifest can name another host, and the
+#' token must not leak to it; for any other host an empty key is returned and,
+#' if a token is set, a warning says so once per host and session. The
+#' Dataverse client expects a character scalar either way.
 #'
-#' @return A character scalar.
+#' @param server Host the request is sent to.
+#'
+#' @return A character scalar: the token, or `""`.
 #' @keywords internal
 #' @noRd
-dv_key <- function() {
+dv_key <- function(server) {
   key <- Sys.getenv("DATAVERSE_KEY", unset = "")
-  if (nzchar(key)) key else ""
+  if (!nzchar(key)) {
+    return("")
+  }
+  configured <- opt_server()
+  if (!identical(tolower(server), tolower(configured))) {
+    cli::cli_warn(
+      c("Not sending {.envvar DATAVERSE_KEY} to {.val {server}}.",
+        i = "Set {.code options(gtropic.server = \"{server}\")} to authenticate
+             against it."
+      ),
+      .frequency = "once",
+      .frequency_id = paste0("gtropic_dv_key_", tolower(server))
+    )
+    return("")
+  }
+  key
 }
 
 #' Is a string a hexadecimal digest of a supported length?
