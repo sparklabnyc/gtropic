@@ -46,6 +46,13 @@ new_gtropic_data <- function(tables,
 #' a later [gtropic_data()] call requests those same source files, provided they
 #' remain available.
 #'
+#' Every file is checked against its published checksum when it is downloaded
+#' and again before a cached copy is used; the manifest records each checksum
+#' and its algorithm (`checksum_type`). The checksums are published by the same
+#' server as the files, and are usually MD5, so they detect truncated or
+#' corrupted transfers and silent changes to a published file, but they do not
+#' prove who published it.
+#'
 #' `gtropic_filters()` reports the filters as resolved by the package, including
 #' selected ADM2 and storm identifiers, genesis-date bounds, years represented
 #' by the selected storms, the wind radius, and precipitation and flood window

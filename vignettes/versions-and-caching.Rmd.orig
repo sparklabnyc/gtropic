@@ -84,12 +84,17 @@ mf <- gtropic_manifest_read("usa-2005-manifest.json")
 usa_05 <- gtropic_data(manifest = mf)
 ```
 
-A replay uses the recorded files, verifying each checksum, and the recorded
-query: resolved units and storms, filters, tables, windows and the metadata
+A replay uses the recorded files and the recorded query: resolved units and storms, filters, tables, windows and the metadata
 years scanned. Do not repeat data-shaping arguments such as `version`,
 `tables`, geography, storm filters or radii; that is an error. Only `cache`,
 `confirm`, `quiet` and `offline` may change, since they affect how the data
 are fetched, not which data.
+
+Each file is checked against its published checksum when it is downloaded,
+when a replay fetches it again, and before a cached copy is used. The
+checksums come from the same server as the files and are usually MD5: they
+detect truncated or corrupted transfers and silent changes to a published
+file, but they do not prove who published it.
 
 ## Asking for a specific version
 
