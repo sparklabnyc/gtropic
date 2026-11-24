@@ -27,24 +27,15 @@ estimate_download <- function(plan, cache, discovery) {
     return(list(bytes = 0, n_files = 0L, n_cached = 0L))
   }
 
-  cached <- vapply(seq_len(nrow(plan)), function(i) {
-    slot <- discovery[[plan$dataset[i]]]
-    if (is.null(slot)) {
-      return(FALSE)
-    }
-    row <- slot$listing[
-      slot$listing$directory_label == plan$directory_label[i] &
-        slot$listing$label == plan$label[i], ,
-      drop = FALSE
-    ]
-    if (nrow(row) == 0L) {
-      return(FALSE)
-    }
-    cache_has(cache, list(
-      server = discovery$server, doi = slot$doi, version = slot$version,
-      directory_label = plan$directory_label[i], label = plan$label[i]
-    ), expected_checksum = row$checksum[1])
-  }, logical(1))
+  # Planned files the listing does not hold cannot be cached.
+  keys <- dplyr::left_join(
+    plan[c("dataset", "directory_label", "label")],
+    discovery_files(discovery),
+    by = c("dataset", "directory_label", "label"),
+    relationship = "many-to-one"
+  )
+  keys$server <- rep(discovery$server, nrow(keys))
+  cached <- !is.na(keys$doi) & cache_has(cache, keys)
 
   list(
     bytes = sum(plan$size_bytes[!cached], na.rm = TRUE),

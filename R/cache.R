@@ -446,15 +446,17 @@ cache_config_write <- function(enabled) {
 
 #' Find a cached file and verify it
 #'
-#' The blob is hashed from disk (in chunks, never read into an R vector) and
-#' its path returned.
+#' The blob is hashed from disk (in chunks, never read into an R vector), at
+#' most once per session (see `cache_blob_verified()`).
 #'
-#' @param cache Resolved cache list from `cache_resolve()`.
+#' @param cache Resolved cache list from `cache_resolve()`, possibly carrying
+#'   a query's index handle (see `cache_index_handle()`).
 #' @param key Named list with `server`, `doi`, `version`, `directory_label`,
 #'   `label`.
 #' @param expected_checksum Checksum from the live listing, when known.
 #'
-#' @return The path of the verified blob, or `NULL` on a miss.
+#' @return `NULL` on a miss, otherwise a list with `path`, the verified blob,
+#'   and `downloaded_at`, the original acquisition time stored in the index.
 #' @keywords internal
 #' @noRd
 cache_get <- function(cache, key, expected_checksum = NA_character_) {
@@ -462,21 +464,17 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
     return(NULL)
   }
 
-  idx <- cache_index_read(cache$dir)
-  hit <- idx[
-    idx$server == key$server & idx$doi == key$doi &
-      idx$version == key$version &
-      idx$directory_label == key$directory_label & idx$label == key$label, ,
-    drop = FALSE
-  ]
+  idx <- cache_index_get(cache)
+  hit <- idx[cache_key_match(idx, key), , drop = FALSE]
   if (nrow(hit) == 0L) {
     return(NULL)
   }
 
-  blob <- cache_blob_path(cache$dir, hit$checksum[1])
+  checksum <- hit$checksum[1]
+  blob <- cache_blob_path(cache$dir, checksum)
   if (!file.exists(blob)) {
     # Index and blobs out of step: drop the dangling entry and miss.
-    cache_index_write(cache$dir, idx[!(idx$checksum %in% hit$checksum[1]), , drop = FALSE])
+    cache_index_drop(cache, checksum)
     return(NULL)
   }
 
@@ -487,28 +485,26 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
   reference <- if (!is.na(expected_checksum) && nzchar(expected_checksum)) {
     expected_checksum
   } else {
-    hit$checksum[1]
+    checksum
   }
-  if (cache_blob_verified(blob, reference)) {
-    return(blob)
-  }
-  got <- checksum_file(blob, reference)
-
-  if (!identical(tolower(got), tolower(reference))) {
-    cli::cli_warn(
-      c("Cached copy of {.path {file.path(key$directory_label, key$label)}}
-         failed checksum verification.",
-        i = "Discarding it and downloading a fresh copy."
+  if (!cache_blob_verified(blob, reference)) {
+    got <- checksum_file(blob, reference)
+    if (!identical(tolower(got), tolower(reference))) {
+      cli::cli_warn(
+        c("Cached copy of {.path {file.path(key$directory_label, key$label)}}
+           failed checksum verification.",
+          i = "Discarding it and downloading a fresh copy."
+        )
       )
-    )
-    unlink(blob)
-    cache_blob_forget(blob)
-    cache_index_write(cache$dir, idx[idx$checksum != hit$checksum[1], , drop = FALSE])
-    return(NULL)
+      unlink(blob)
+      cache_blob_forget(blob)
+      cache_index_drop(cache, checksum)
+      return(NULL)
+    }
+    cache_blob_mark_verified(blob, reference)
   }
 
-  cache_blob_mark_verified(blob, reference)
-  blob
+  list(path = blob, downloaded_at = hit$fetched_at[1L])
 }
 
 #' Remember which cached blobs were verified in this session
@@ -558,27 +554,6 @@ cache_blob_forget <- function(blob) {
     rm(list = blob, envir = verified)
   }
   invisible(blob)
-}
-
-#' Find a cached file together with its original acquisition time
-#'
-#' @inheritParams cache_get
-#' @return `NULL` on a miss, otherwise a list with `path` (see `cache_get()`)
-#'   and `downloaded_at`.
-#' @keywords internal
-#' @noRd
-cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
-  path <- cache_get(cache, key, expected_checksum)
-  if (is.null(path)) return(NULL)
-  idx <- cache_index_read(cache$dir)
-  hit <- idx[
-    idx$server == key$server & idx$doi == key$doi &
-      idx$version == key$version &
-      idx$directory_label == key$directory_label & idx$label == key$label, ,
-    drop = FALSE
-  ]
-  if (nrow(hit) == 0L) return(NULL)
-  list(path = path, downloaded_at = hit$fetched_at[1L])
 }
 
 #' Where to download a file before it is verified
@@ -656,48 +631,181 @@ cache_put <- function(cache, key, path, checksum = NA_character_,
     if (stored) cache_blob_mark_verified(blob, checksum)
   }
 
-  idx <- cache_index_read(cache$dir)
-  entry <- tibble::tibble(
+  cache_index_upsert(cache, tibble::tibble(
     server = key$server, doi = key$doi, version = key$version,
     directory_label = key$directory_label, label = key$label,
     checksum = checksum, size_bytes = size_bytes, fetched_at = downloaded_at
-  )
-  idx <- dplyr::bind_rows(
-    idx[!(idx$server == key$server & idx$doi == key$doi &
-      idx$version == key$version &
-      idx$directory_label == key$directory_label &
-      idx$label == key$label), , drop = FALSE],
-    entry
-  )
-  cache_index_write(cache$dir, idx)
+  ))
 
   list(path = blob, downloaded_at = downloaded_at)
 }
 
-#' Is a planned file already cached?
+#' Which planned files are already cached?
 #'
 #' Used by the download guardrail so the size estimate reflects what will
-#' actually be transferred.
+#' actually be transferred. One lookup for the whole plan.
 #'
 #' @param cache Resolved cache list.
-#' @param key Named list as for `cache_get()`.
-#' @param expected_checksum Checksum from the resolved dataset listing, when known.
+#' @param keys A data frame (or a list of scalars) with the key columns
+#'   `server`, `doi`, `version`, `directory_label` and `label`, and optionally
+#'   `checksum`: the checksum from the resolved dataset listing, when known.
+#'   An entry with a known checksum counts as cached only when the cached
+#'   copy has that checksum.
 #'
-#' @return Logical scalar.
+#' @return Logical vector, one element per row of `keys`.
 #' @keywords internal
 #' @noRd
-cache_has <- function(cache, key, expected_checksum = NA_character_) {
-  if (!isTRUE(cache$enabled)) {
-    return(FALSE)
+cache_has <- function(cache, keys) {
+  keys <- tibble::as_tibble(keys)
+  out <- rep(FALSE, nrow(keys))
+  if (!isTRUE(cache$enabled) || nrow(keys) == 0L) {
+    return(out)
   }
-  idx <- cache_index_read(cache$dir)
-  hit <- idx$server == key$server & idx$doi == key$doi &
+  idx <- cache_index_get(cache)
+  key_of <- function(x) {
+    cache_key_string(x$server, x$doi, x$directory_label, x$label, x$version)
+  }
+  wanted <- key_of(keys)
+  # Only entries for planned files, and only those whose blob is present.
+  idx <- idx[key_of(idx) %in% wanted, , drop = FALSE]
+  idx <- idx[file.exists(cache_blob_path(cache$dir, idx$checksum)), , drop = FALSE]
+  if (nrow(idx) == 0L) {
+    return(out)
+  }
+
+  have <- key_of(idx)
+  expected <- keys$checksum %||% rep(NA_character_, nrow(keys))
+  known <- !is.na(expected) & nzchar(expected)
+  ifelse(known,
+    paste(wanted, tolower(expected)) %in% paste(have, tolower(idx$checksum)),
+    wanted %in% have
+  )
+}
+
+#' Which index entries have a given key?
+#'
+#' @param idx The cache index.
+#' @param key Named list (or one-row data frame) with `server`, `doi`,
+#'   `version`, `directory_label` and `label`.
+#' @return Logical vector over the rows of `idx`.
+#' @keywords internal
+#' @noRd
+cache_key_match <- function(idx, key) {
+  idx$server == key$server & idx$doi == key$doi &
     idx$version == key$version &
     idx$directory_label == key$directory_label & idx$label == key$label
-  if (!is.na(expected_checksum) && nzchar(expected_checksum)) {
-    hit <- hit & tolower(idx$checksum) == tolower(expected_checksum)
+}
+
+# --- the index of one query (PERF-04) ---------------------------------------
+
+#' An in-memory view of the cache index for one query
+#'
+#' A query used to read `index.json` for every file it looked up and rewrite
+#' it for every file it stored. A fetch context instead carries one handle:
+#' the index is read once, on first use, lookups are answered from memory,
+#' and the query's changes are collected and written once, by
+#' `cache_index_flush()`, when the query ends (`cache_manage_ctx()`, run on
+#' exit, so an interrupted query still records what it downloaded).
+#'
+#' The flush re-reads the file and applies the query's changes to it, rather
+#' than writing the query's snapshot back, so entries another R session added
+#' in the meantime are kept.
+#'
+#' Without a handle (a bare `cache_resolve()` list), `cache_get()` and
+#' `cache_put()` read and write the file directly.
+#'
+#' @param dir Cache directory.
+#' @return An environment: `idx` (the index, `NULL` until first use),
+#'   `upserts` (entries this query stored), `dropped` (checksums whose entries
+#'   it removed) and `dirty`.
+#' @keywords internal
+#' @noRd
+cache_index_handle <- function(dir) {
+  handle <- new.env(parent = emptyenv())
+  handle$dir <- dir
+  handle$idx <- NULL
+  handle$upserts <- cache_index_empty()
+  handle$dropped <- character(0)
+  handle$dirty <- FALSE
+  handle
+}
+
+#' The current index of a cache, from its handle when it has one
+#' @keywords internal
+#' @noRd
+cache_index_get <- function(cache) {
+  handle <- cache$index
+  if (is.null(handle)) {
+    return(cache_index_read(cache$dir))
   }
-  any(file.exists(cache_blob_path(cache$dir, idx$checksum[hit])))
+  if (is.null(handle$idx)) handle$idx <- cache_index_read(handle$dir)
+  handle$idx
+}
+
+#' Add an index entry, replacing any entry with the same key
+#' @keywords internal
+#' @noRd
+cache_index_upsert <- function(cache, entry) {
+  handle <- cache$index
+  if (is.null(handle)) {
+    idx <- cache_index_read(cache$dir)
+    idx <- dplyr::bind_rows(idx[!cache_key_match(idx, entry), , drop = FALSE], entry)
+    cache_index_write(cache$dir, idx)
+    return(invisible(idx))
+  }
+  idx <- cache_index_get(cache)
+  handle$idx <- dplyr::bind_rows(idx[!cache_key_match(idx, entry), , drop = FALSE], entry)
+  up <- handle$upserts
+  handle$upserts <- dplyr::bind_rows(up[!cache_key_match(up, entry), , drop = FALSE], entry)
+  handle$dirty <- TRUE
+  invisible(handle$idx)
+}
+
+#' Remove the index entries for a blob
+#' @keywords internal
+#' @noRd
+cache_index_drop <- function(cache, checksum) {
+  handle <- cache$index
+  if (is.null(handle)) {
+    idx <- cache_index_read(cache$dir)
+    idx <- idx[!(idx$checksum %in% checksum), , drop = FALSE]
+    cache_index_write(cache$dir, idx)
+    return(invisible(idx))
+  }
+  idx <- cache_index_get(cache)
+  handle$idx <- idx[!(idx$checksum %in% checksum), , drop = FALSE]
+  # A later upsert of the same blob is applied after the drop at flush time,
+  # so an earlier one must not survive it.
+  up <- handle$upserts
+  handle$upserts <- up[!(up$checksum %in% checksum), , drop = FALSE]
+  handle$dropped <- union(handle$dropped, checksum)
+  handle$dirty <- TRUE
+  invisible(handle$idx)
+}
+
+#' Write a query's index changes to `index.json` (see `cache_index_handle()`)
+#' @keywords internal
+#' @noRd
+cache_index_flush <- function(cache) {
+  handle <- cache$index
+  if (is.null(handle) || !isTRUE(handle$dirty)) {
+    return(invisible(FALSE))
+  }
+  idx <- cache_index_read(handle$dir)
+  idx <- idx[!(idx$checksum %in% handle$dropped), , drop = FALSE]
+  up <- handle$upserts
+  if (nrow(up) > 0L) {
+    replaced <- cache_key_string(
+      idx$server, idx$doi, idx$directory_label, idx$label, idx$version
+    ) %in% cache_key_string(up$server, up$doi, up$directory_label, up$label, up$version)
+    idx <- dplyr::bind_rows(idx[!replaced, , drop = FALSE], up)
+  }
+  cache_index_write(handle$dir, idx)
+  handle$idx <- idx
+  handle$upserts <- cache_index_empty()
+  handle$dropped <- character(0)
+  handle$dirty <- FALSE
+  invisible(TRUE)
 }
 
 # --- persisted discovery snapshots -----------------------------------------
@@ -856,13 +964,14 @@ version_older <- function(a, b) {
 #'   `server`, `doi`, `directory_label`, `label` and `version`.
 #' @param quiet Suppress the summary message.
 #' @param now Current time.
+#' @param idx The cache index, if already read.
 #'
 #' @return The removed entries, invisibly.
 #' @keywords internal
 #' @noRd
 cache_manage <- function(dir, keep = character(0), latest = NULL,
-                         quiet = FALSE, now = Sys.time()) {
-  idx <- cache_index_read(dir)
+                         quiet = FALSE, now = Sys.time(),
+                         idx = cache_index_read(dir)) {
   if (nrow(idx) == 0L) {
     return(invisible(idx))
   }
@@ -914,16 +1023,18 @@ cache_manage <- function(dir, keep = character(0), latest = NULL,
   invisible(removed)
 }
 
-#' Automatic cache management for a fetch context
+#' Finish a fetch context's use of the cache
 #'
-#' Runs `cache_manage()` when the retrieval behind `ctx` wrote to the cache,
-#' protecting every file it used.
+#' Run on exit by every retrieval. Writes the query's changes to the cache
+#' index (`cache_index_flush()`), then runs `cache_manage()` when the
+#' retrieval wrote to the cache, protecting every file it used.
 #'
 #' @param ctx A fetch context.
 #' @return The removed entries, invisibly, or `NULL` when nothing ran.
 #' @keywords internal
 #' @noRd
 cache_manage_ctx <- function(ctx) {
+  cache_index_flush(ctx$cache)
   if (!isTRUE(ctx$cache$enabled) || !isTRUE(ctx$cache_state$written)) {
     return(invisible(NULL))
   }
@@ -942,6 +1053,6 @@ cache_manage_ctx <- function(ctx) {
     version = at_latest$dataset_version
   )
   cache_manage(ctx$cache$dir, keep = keep, latest = latest,
-    quiet = ctx$notice_quiet
+    quiet = ctx$notice_quiet, idx = cache_index_get(ctx$cache)
   )
 }

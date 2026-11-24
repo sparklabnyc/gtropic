@@ -5,7 +5,7 @@ test_that("cache hits retain original download times in file provenance", {
   downloaded <- as.POSIXct("2026-01-02 03:04:05", tz = "UTC")
 
   cache_put_bytes(cache, key, bytes, checksum_raw(bytes), downloaded_at = downloaded)
-  cached <- cache_get_record(cache, key, checksum_raw(bytes))
+  cached <- cache_get(cache, key, checksum_raw(bytes))
 
   expect_equal(cached$downloaded_at, downloaded)
 

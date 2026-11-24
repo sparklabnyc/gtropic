@@ -365,6 +365,42 @@ discovery_slot <- function(discovery, which) {
   slot
 }
 
+#' Every listed file of both datasets, in one table
+#'
+#' @param discovery Output of `discover_datasets()`.
+#' @return A tibble with `dataset`, `doi`, `version`, `directory_label`,
+#'   `label`, `checksum` and `size_bytes`; one row per `(dataset,
+#'   directory_label, label)`, the first listed when a path repeats.
+#' @keywords internal
+#' @noRd
+discovery_files <- function(discovery) {
+  parts <- lapply(c("historical", "current"), function(dataset) {
+    slot <- discovery[[dataset]]
+    listing <- slot$listing
+    if (is.null(listing)) {
+      return(NULL)
+    }
+    tibble::tibble(
+      dataset = dataset,
+      doi = slot$doi,
+      version = slot$version,
+      directory_label = listing$directory_label,
+      label = listing$label,
+      checksum = listing$checksum,
+      size_bytes = as.numeric(listing$size_bytes)
+    )
+  })
+  files <- dplyr::bind_rows(parts)
+  if (nrow(files) == 0L) {
+    return(tibble::tibble(
+      dataset = character(0), doi = character(0), version = character(0),
+      directory_label = character(0), label = character(0),
+      checksum = character(0), size_bytes = numeric(0)
+    ))
+  }
+  files[!duplicated(files[c("dataset", "directory_label", "label")]), , drop = FALSE]
+}
+
 #' DOIs of the datasets requested at `":latest"`
 #'
 #' @param discovery Output of `discover_datasets()`.

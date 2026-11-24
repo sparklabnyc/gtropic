@@ -134,7 +134,7 @@ test_that("a cached blob is hashed once per session, not on every use", {
   hashes <- local_hash_counter()
 
   for (i in 1:3) {
-    expect_identical(read_bytes(cache_get(cache, key, checksum)), bytes)
+    expect_identical(read_bytes(cache_get(cache, key, checksum)$path), bytes)
   }
   expect_identical(hashes$n, 1L)
 })
@@ -147,7 +147,7 @@ test_that("a blob stored after a verified download needs no hash on first use", 
   cache_put_bytes(cache, key, bytes, checksum)
   hashes <- local_hash_counter()
 
-  expect_identical(read_bytes(cache_get(cache, key, checksum)), bytes)
+  expect_identical(read_bytes(cache_get(cache, key, checksum)$path), bytes)
   expect_identical(hashes$n, 0L)
 })
 
@@ -197,7 +197,7 @@ test_that("a cached SHA-256 blob is verified using SHA-256", {
   cache_put_bytes(cache, key, bytes, checksum)
 
   expect_identical(
-    read_bytes(cache_get(cache, key, expected_checksum = checksum)), bytes
+    read_bytes(cache_get(cache, key, expected_checksum = checksum)$path), bytes
   )
 })
 
@@ -216,6 +216,7 @@ test_that("cold, warm, and overlapping fetches download only missing years", {
 
   fetch_year <- function(year) {
     context <- fetch_context(discovery, cache, quiet = TRUE)
+    on.exit(cache_manage_ctx(context), add = TRUE)
     fetch_file(
       "historical", "yearly", paste0(year, ".parquet"), context,
       kind = "json"
@@ -244,8 +245,8 @@ test_that("content-addressed cache deduplicates bytes across versions", {
   expect_equal(nrow(cache_index_read(cache_dir)), 2L)
   expect_length(list.files(file.path(cache_dir, "blobs")), 1L)
   expect_identical(
-    cache_get(cache, fetcher_key(version = "1.0"), checksum),
-    cache_get(cache, fetcher_key(version = "2.0"), checksum)
+    cache_get(cache, fetcher_key(version = "1.0"), checksum)$path,
+    cache_get(cache, fetcher_key(version = "2.0"), checksum)$path
   )
 })
 

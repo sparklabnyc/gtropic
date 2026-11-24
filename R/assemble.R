@@ -90,7 +90,7 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     directory_label = directory_label, label = label
   )
 
-  cached <- cache_get_record(ctx$cache, key, expected_checksum = checksum)
+  cached <- cache_get(ctx$cache, key, expected_checksum = checksum)
   local_file <- cached$path
   downloaded_at <- cached$downloaded_at
 
@@ -225,12 +225,15 @@ ZERO_PAIRS_LINK_COLS <- c(
 #'
 #' @return A list; `manifest_out` and `cache_state` are environments so
 #'   accumulation across nested calls does not depend on returning them
-#'   everywhere.
+#'   everywhere. With the cache enabled, `cache` carries the query's index
+#'   handle (`cache_index_handle()`); whoever creates the context must run
+#'   `cache_manage_ctx()` on exit, which writes the index.
 #' @keywords internal
 #' @noRd
 fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE,
                           offline = FALSE, latest_dois = character(0),
                           notice_quiet = quiet) {
+  if (isTRUE(cache$enabled)) cache$index <- cache_index_handle(cache$dir)
   out <- new.env(parent = emptyenv())
   out$value <- manifest_new(discovery)
   cache_state <- new.env(parent = emptyenv())
@@ -434,7 +437,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   )
   plan <- attach_plan_sizes(plan, discovery)
 
-  apply_guardrail(estimate_download(plan, cache, discovery),
+  apply_guardrail(estimate_download(plan, ctx$cache, discovery),
     confirm = args$confirm, quiet = quiet
   )
 

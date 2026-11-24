@@ -104,6 +104,11 @@
   session uses it (or not at all, if this session just downloaded and
   verified it), and again only if it has changed on disk since.
 
+* The cache index is read once per query and written at most once, when the
+  query ends, instead of once for every file looked up or stored. A query
+  that is interrupted still records the files it downloaded, and entries that
+  another R session adds to the index meanwhile are kept.
+
 * When precipitation or flood is requested without the `zero_pairs` table,
   only the four `zero_pairs` columns that linkage needs are read. A `polygon`
   filter tests each distinct population centroid against the polygon once,

@@ -57,6 +57,7 @@ test_that("recorded downloads verify, cache and read", {
     ctx <- fetch_context(discovery, fetcher_cache(dir), quiet = TRUE)
     hist <- fetch_file("historical", "02_wind/excluded_storms", "2007.parquet", ctx)
     curr <- fetch_file("current", "02_wind/excluded_storms", "2026.parquet", ctx)
+    cache_manage_ctx(ctx)
   })
 
   expect_s3_class(hist, "Table")

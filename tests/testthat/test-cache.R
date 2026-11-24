@@ -36,7 +36,7 @@ test_that("a tampered index cannot make the cache read or delete other files", {
   key <- fetcher_key()
 
   got <- try(suppressWarnings(cache_get(cache, key)), silent = TRUE)
-  expect_false(is.character(got))
+  expect_null(got)
   expect_true(file.exists(victim))
 
   expect_false(isTRUE(try(cache_has(cache, key), silent = TRUE)))
@@ -139,7 +139,7 @@ test_that("cache hits report the download time stored in the index", {
   )$downloaded_at
 
   expect_identical(stored, as.POSIXct("2026-01-02 03:04:05", tz = "UTC"))
-  expect_identical(cache_get_record(cache, fetcher_key())$downloaded_at, stored)
+  expect_identical(cache_get(cache, fetcher_key())$downloaded_at, stored)
 })
 
 test_that("an invalid discovery snapshot cannot be used offline", {
@@ -224,7 +224,7 @@ test_that("a file planted at a predictable temp name is not written through", {
 
   expect_identical(readLines(victim), "keep me")
   expect_identical(cache_index_read(dir)$checksum, checksum)
-  expect_identical(read_bytes(cache_get(fetcher_cache(dir), fetcher_key())), bytes)
+  expect_identical(read_bytes(cache_get(fetcher_cache(dir), fetcher_key())$path), bytes)
 })
 
 test_that("writes leave no temporary files behind", {
@@ -262,4 +262,147 @@ test_that("stale temporary files are removed when the cache is next written", {
 
   expect_false(any(file.exists(stale)))
   expect_true(file.exists(fresh))
+})
+
+# --- one index read and write per query (PERF-04) ----------------------------
+
+# Counts reads and writes of index.json.
+local_index_io_counter <- function(env = parent.frame()) {
+  counter <- new.env(parent = emptyenv())
+  counter$reads <- 0L
+  counter$writes <- 0L
+  read <- cache_index_read
+  write <- cache_index_write
+  local_mocked_bindings(
+    cache_index_read = function(...) {
+      counter$reads <- counter$reads + 1L
+      read(...)
+    },
+    cache_index_write = function(...) {
+      counter$writes <- counter$writes + 1L
+      write(...)
+    },
+    .env = env
+  )
+  counter
+}
+
+test_that("a query reads the index once, and writes it at most once", {
+  local_golden_collection()
+  withr::local_options(gtropic.cache_dir = withr::local_tempdir())
+  query <- function() {
+    gtropic_data(
+      STORM_ID = "2002BBB", tables = c("wind", "precip", "storm_metadata"),
+      cache = TRUE, quiet = TRUE, confirm = FALSE
+    )
+  }
+
+  cold <- local_index_io_counter()
+  query()
+  # Read once when first used, and once more to merge the query's entries
+  # into whatever is on disk by then; written once.
+  expect_identical(c(cold$reads, cold$writes), c(2L, 1L))
+
+  warm <- local_index_io_counter()
+  query()
+  expect_identical(c(warm$reads, warm$writes), c(1L, 0L))
+})
+
+test_that("an interrupted query still records what it downloaded", {
+  log <- local_golden_collection()
+  dir <- withr::local_tempdir()
+  withr::local_options(gtropic.cache_dir = dir)
+  local_mocked_bindings(build_links = function(...) stop("interrupted"))
+
+  expect_error(
+    gtropic_data(
+      STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
+      cache = TRUE, quiet = TRUE, confirm = FALSE
+    ),
+    "interrupted"
+  )
+
+  idx <- cache_index_read(dir)
+  expect_gt(length(log$downloads), 0L)
+  expect_identical(nrow(idx), length(log$downloads))
+  expect_true(all(file.exists(cache_blob_path(dir, idx$checksum))))
+})
+
+index_entry <- function(label, checksum, version = "1.0") {
+  tibble::tibble(
+    server = "example.invalid", doi = "doi:10.0000/HIST", version = version,
+    directory_label = "yearly", label = label, checksum = checksum,
+    size_bytes = 1, fetched_at = as.POSIXct("2026-01-01", tz = "UTC")
+  )
+}
+
+test_that("flushing a query's index keeps entries other sessions added", {
+  dir <- withr::local_tempdir()
+  cache <- fetcher_cache(dir)
+  cache$index <- cache_index_handle(dir)
+  a <- strrep("a", 32L)
+  b <- strrep("b", 32L)
+
+  expect_identical(nrow(cache_index_get(cache)), 0L)
+  cache_index_upsert(cache, index_entry("2001.parquet", a))
+  # Meanwhile another R session stores a file.
+  cache_index_write(dir, index_entry("2002.parquet", b))
+  cache_index_flush(cache)
+
+  expect_setequal(cache_index_read(dir)$label, c("2001.parquet", "2002.parquet"))
+})
+
+test_that("a query's drops and upserts reach the index in the order made", {
+  dir <- withr::local_tempdir()
+  a <- strrep("a", 32L)
+  b <- strrep("b", 32L)
+  cache_index_write(dir, dplyr::bind_rows(
+    index_entry("2001.parquet", a), index_entry("2002.parquet", b)
+  ))
+  cache <- fetcher_cache(dir)
+  cache$index <- cache_index_handle(dir)
+
+  # Stored, then found corrupt: gone.
+  cache_index_upsert(cache, index_entry("2003.parquet", a))
+  cache_index_drop(cache, a)
+  # Found corrupt, then downloaded again: present.
+  cache_index_drop(cache, b)
+  cache_index_upsert(cache, index_entry("2002.parquet", b))
+  expect_identical(cache_index_get(cache)$label, "2002.parquet")
+  cache_index_flush(cache)
+
+  expect_identical(cache_index_read(dir)$label, "2002.parquet")
+  expect_false(cache_index_flush(cache))
+})
+
+test_that("the download estimate checks the whole plan in one lookup", {
+  dir <- withr::local_tempdir()
+  cache <- fetcher_cache(dir)
+  fixture <- fetcher_listing(2001:2004)
+  discovery <- fetcher_discovery(fixture$listing)
+  # 2001 cached with the listed checksum; 2002 cached with other bytes.
+  cache_put_bytes(cache, fetcher_key(label = "2001.parquet"),
+    fixture$bytes[[1]], fixture$listing$checksum[1]
+  )
+  other <- charToRaw("other")
+  cache_put_bytes(cache, fetcher_key(label = "2002.parquet"), other, checksum_raw(other))
+  plan <- tibble::tibble(
+    dataset = c("historical", "historical", "historical", "current"),
+    directory_label = "yearly",
+    label = c("2001.parquet", "2002.parquet", "1999.parquet", "2003.parquet"),
+    size_bytes = c(10, 20, 30, 40)
+  )
+  lookups <- 0L
+  has <- cache_has
+  local_mocked_bindings(cache_has = function(...) {
+    lookups <<- lookups + 1L
+    has(...)
+  })
+
+  estimate <- estimate_download(plan, cache, discovery)
+
+  expect_identical(lookups, 1L)
+  expect_identical(estimate$n_cached, 1L)
+  expect_identical(estimate$n_files, 3L)
+  expect_identical(estimate$bytes, 90)
 })
