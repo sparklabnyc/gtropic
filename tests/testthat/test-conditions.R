@@ -64,21 +64,24 @@ test_that("classed warnings inherit from gtropic_warning", {
   expect_s3_class(w, c("gtropic_warning_availability", "gtropic_warning"))
 })
 
-test_that("multi-year polygon warnings are gtropic_warning_polygon", {
+test_that("units moving across a polygon boundary are gtropic_warning_polygon", {
   skip_if_not_installed("sf")
-  local_golden_collection()
   polygon <- sf::st_as_sfc(sf::st_bbox(
     c(xmin = 124, ymin = 10, xmax = 126, ymax = 12),
     crs = 4326
   ))
-  expect_warning(
-    gtropic_data(
-      polygon = polygon, date_range = c("2002-01-01", "2003-12-31"),
-      tables = c("wind", "zero_pairs", "pop", "adm2", "storm_metadata"),
-      cache = FALSE, quiet = TRUE, confirm = FALSE
+  pop <- function(lat) {
+    tibble::tibble(
+      ADM2_ID = "PHL.1.1", POP_CENTROID_LAT = lat, POP_CENTROID_LON = 125
+    )
+  }
+  w <- expect_warning(
+    resolve_polygon(polygon, list("2001" = pop(11), "2002" = pop(13)),
+      candidate_ids = "PHL.1.1", quiet = TRUE
     ),
     class = "gtropic_warning_polygon"
   )
+  expect_s3_class(w, "gtropic_warning")
 })
 
 test_that("accessors reject objects that are not gtropic_data", {

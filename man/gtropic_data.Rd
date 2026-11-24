@@ -34,7 +34,7 @@ gtropic_data(
   manifest = NULL,
   cache = NULL,
   confirm = TRUE,
-  quiet = FALSE,
+  quiet = getOption("gtropic.quiet", FALSE),
   offline = FALSE
 )
 }
@@ -157,7 +157,9 @@ guardrail applies the configured threshold. \code{FALSE} permits the transfer
 without interactive confirmation.}
 
 \item{quiet}{Logical. If \code{TRUE}, progress and informational messages are
-suppressed. Warnings and errors are still reported.}
+suppressed. Warnings and errors are still reported. Defaults to
+\code{getOption("gtropic.quiet", FALSE)}, so \code{options(gtropic.quiet = TRUE)}
+silences every call in a session.}
 
 \item{offline}{Logical. If \code{TRUE}, use only cached source files and a
 persisted discovery snapshot; no Dataverse update check is made and the

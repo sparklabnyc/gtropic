@@ -65,13 +65,14 @@ test_that("golden: a polygon filter", {
     crs = 4326
   ))
 
-  expect_warning(
+  # Membership is evaluated over two years, which is reported as a message
+  # (suppressed by quiet = TRUE); no unit changes membership, so no warning.
+  expect_no_warning(
     res <- golden_query(
       polygon = polygon,
       date_range = c("2002-01-01", "2003-12-31"),
       tables = c("wind", "zero_pairs", "pop", "adm2", "storm_metadata")
-    ),
-    "year-dependent"
+    )
   )
 
   expect_golden(res, "polygon")

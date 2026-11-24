@@ -161,17 +161,16 @@ gtropic_cache_clear <- function(confirm = TRUE) {
   blobs <- list.files(file.path(dir, "blobs"), full.names = TRUE)
 
   if (length(blobs) == 0L) {
-    cli::cli_alert_info("Cache is already empty.")
+    inform_unless_quiet(c(i = "Cache is already empty."), quiet = opt("quiet"))
     return(invisible(0L))
   }
 
   if (confirm && is_interactive()) {
-    cli::cli_inform(
+    proceed <- confirm_action(
       "About to delete {length(blobs)} cached file{?s}
        ({format_bytes(gtropic_cache_size())}) from {.path {dir}}."
     )
-    ans <- readline("Proceed? [y/N] ")
-    if (!tolower(trimws(ans)) %in% c("y", "yes")) {
+    if (!proceed) {
       cli::cli_alert_info("Cancelled.")
       return(invisible(0L))
     }
@@ -179,7 +178,9 @@ gtropic_cache_clear <- function(confirm = TRUE) {
 
   unlink(blobs, recursive = FALSE, force = FALSE)
   cache_index_write(dir, cache_index_empty())
-  cli::cli_alert_success("Removed {length(blobs)} cached file{?s}.")
+  inform_unless_quiet(c(v = "Removed {length(blobs)} cached file{?s}."),
+    quiet = opt("quiet")
+  )
   invisible(length(blobs))
 }
 
@@ -214,7 +215,9 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   dir <- gtropic_cache_dir()
   idx <- cache_index_read(dir)
   if (nrow(idx) == 0L) {
-    cli::cli_alert_info("Cache is empty; nothing to prune.")
+    inform_unless_quiet(c(i = "Cache is empty; nothing to prune."),
+      quiet = opt("quiet")
+    )
     return(invisible(idx[0, , drop = FALSE]))
   }
 
@@ -235,7 +238,7 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   }
 
   if (!any(drop)) {
-    cli::cli_alert_info("Nothing to prune.")
+    inform_unless_quiet(c(i = "Nothing to prune."), quiet = opt("quiet"))
     return(invisible(idx[0, , drop = FALSE]))
   }
 
@@ -248,9 +251,10 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   unlink(cache_blob_path(dir, orphans))
 
   cache_index_write(dir, kept)
-  cli::cli_alert_success(
-    "Pruned {nrow(removed)} entr{?y/ies}, freeing
-     {format_bytes(sum(removed$size_bytes, na.rm = TRUE))}."
+  inform_unless_quiet(
+    c(v = "Pruned {nrow(removed)} entr{?y/ies}, freeing
+           {format_bytes(sum(removed$size_bytes, na.rm = TRUE))}."),
+    quiet = opt("quiet")
   )
   invisible(removed)
 }

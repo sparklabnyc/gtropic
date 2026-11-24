@@ -55,6 +55,12 @@
 
 ## New features
 
+* New option `gtropic.quiet` (default `FALSE`): `options(gtropic.quiet = TRUE)`
+  silences progress and informational messages from every call in a session.
+  It is the default of `quiet` in `gtropic_data()` and `gtropic_plot()`, and
+  it also silences the messages of `gtropic_cache_clear()` and
+  `gtropic_cache_prune()`.
+
 * Errors and warnings that scripts may want to handle now have classes, all
   inheriting from `gtropic_error` or `gtropic_warning`: network failures
   (`gtropic_error_network`), checksum mismatches, filters that match nothing,
@@ -71,6 +77,15 @@
 
 ## Improvements
 
+* Data-availability warnings for recent periods are shown once per session
+  for each kind of warning; the full detail is still kept in
+  `gtropic_diagnostics()`.
+* A multi-year `polygon` query now reports that membership is year-dependent
+  as a message (silenced by `quiet`). It warns only when an ADM2 unit actually
+  moves in or out of the polygon across the years evaluated.
+* The large-download guardrail and `gtropic_cache_clear()` ask for
+  confirmation the same way.
+
 * `format()` methods for results, summaries, manifests and filters return
   the lines their `print()` methods display, as a character vector.
 
@@ -80,6 +95,10 @@
   Naming `"geometry"` in `tables` still requires both packages.
 
 ## Bug fixes
+
+* The warning for ADM2 units that move in or out of a `polygon` across years
+  no longer fails with "Cannot pluralize without a quantity" instead of
+  warning.
 
 * `gtropic_saffir_simpson()` writes the tropical-storm colour as `"#55FFFF"`
   instead of the shorthand `"#5FF"` (the same colour). R before 4.3.0 does not

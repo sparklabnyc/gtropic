@@ -100,16 +100,15 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
     )
   }
 
-  cli::cli_inform(c(
+  proceed <- confirm_action(c(
     "This query will download about {format_bytes(estimate$bytes)} across
      {estimate$n_files} file{?s}.",
     i = if (estimate$n_cached > 0) {
       "{estimate$n_cached} further file{?s} {?is/are} already cached."
     }
   ))
-  ans <- readline("Proceed? [y/N] ")
 
-  if (!tolower(trimws(ans)) %in% c("y", "yes")) {
+  if (!proceed) {
     gtropic_abort(
       c("Download cancelled.",
         i = "Narrow the query, or pass {.code confirm = FALSE} to skip this

@@ -84,3 +84,12 @@ test_that("the storm helpers have no year argument", {
   expect_false("year" %in% names(formals(gtropic_storms)))
   expect_false("year" %in% names(formals(gtropic_excluded_storms)))
 })
+
+test_that("options(gtropic.quiet = TRUE) is the default for quiet", {
+  capture_args()
+  withr::local_options(gtropic.quiet = TRUE)
+  expect_true(gtropic_data(WHO_ENTITY = "Jamaica", tables = "wind")$quiet)
+  expect_false(
+    gtropic_data(WHO_ENTITY = "Jamaica", tables = "wind", quiet = FALSE)$quiet
+  )
+})

@@ -316,7 +316,8 @@ assemble_gtropic_data <- function(args, call = NULL) {
       pop_by_year = pop_by_year,
       filters = args$geo_filters,
       polygon = args$polygon,
-      reproject = args$reproject
+      reproject = args$reproject,
+      quiet = args$quiet
     )
   } else {
     list(adm2_ids = NULL, inconsistent_adm2_ids = character(0), warnings = list())
@@ -491,9 +492,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   )
   availability_messages <- availability_warnings(availability)
   warnings <- c(warnings, availability_messages)
-  for (msg in unname(availability_messages)) {
-    gtropic_warn("{msg}", class = "gtropic_warning_availability")
-  }
+  warn_availability(availability_messages)
 
   precip <- NULL
   if ("precip" %in% args$tables) {

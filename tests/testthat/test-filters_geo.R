@@ -108,7 +108,7 @@ test_that("reproject = FALSE with a non-4326 CRS errors", {
   )
 })
 
-test_that("polygon membership across multiple years warns", {
+test_that("polygon membership across multiple years is reported, not warned", {
   skip_if_no_sf()
   poly <- sf::st_sfc(
     sf::st_polygon(list(rbind(
@@ -116,14 +116,12 @@ test_that("polygon membership across multiple years warns", {
     ))),
     crs = 4326
   )
-  expect_warning(
-    resolve_geography(
-      adm2,
-      list("2001" = make_pop(11.24), "2002" = make_pop(11.24)),
-      polygon = poly
-    ),
+  pops <- list("2001" = make_pop(11.24), "2002" = make_pop(11.24))
+  expect_no_warning(expect_message(
+    resolve_geography(adm2, pops, polygon = poly),
     "year-dependent"
-  )
+  ))
+  expect_no_message(resolve_geography(adm2, pops, polygon = poly, quiet = TRUE))
 })
 
 # --- guardrail --------------------------------------------------------------

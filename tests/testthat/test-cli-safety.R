@@ -80,7 +80,7 @@ cli_template_sinks <- c(
   "format_message", "format_warning", "format_error",
   # The package's own wrappers around cli::cli_inform(), cli::cli_abort() and
   # cli::cli_warn().
-  "inform_unless_quiet", "gtropic_abort", "gtropic_warn"
+  "inform_unless_quiet", "gtropic_abort", "gtropic_warn", "confirm_action"
 )
 
 is_literal_template <- function(e) {

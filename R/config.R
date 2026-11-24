@@ -86,6 +86,11 @@ gtropic_default_options <- function() {
     max_tries = option_spec(
       3L, "count",
       "Maximum attempts per request before giving up."
+    ),
+    quiet = option_spec(
+      FALSE, "flag",
+      "Session-wide default for `quiet`: `TRUE` suppresses progress and
+       informational messages from every call."
     )
   )
 }

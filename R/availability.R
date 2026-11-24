@@ -154,3 +154,23 @@ availability_window_coverage <- function(links, prefix) {
 availability_reaches <- function(coverage, threshold) {
   !is.null(coverage) && !is.na(coverage$end) && coverage$end >= threshold
 }
+
+#' Emit availability warnings, each kind once per session
+#'
+#' Current-period queries would otherwise repeat the same warnings on every
+#' call. The full detail stays in the result's diagnostics.
+#'
+#' @param messages Output of `availability_warnings()`.
+#' @return `messages`, invisibly.
+#' @keywords internal
+#' @noRd
+warn_availability <- function(messages) {
+  for (nm in names(messages)) {
+    msg <- messages[[nm]]
+    gtropic_warn("{msg}",
+      class = "gtropic_warning_availability",
+      .frequency = "once", .frequency_id = paste0("gtropic_availability_", nm)
+    )
+  }
+  invisible(messages)
+}

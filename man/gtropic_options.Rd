@@ -24,6 +24,7 @@ it caches and confirms downloads, without needing a package update.
    \code{gtropic.confirm_threshold_gb} \tab \code{1} \tab Download size, in gigabytes, above which you are asked to confirm. \cr
    \code{gtropic.timeout} \tab \code{600} \tab Per-request timeout in seconds. \cr
    \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request before giving up. \cr
+   \code{gtropic.quiet} \tab \code{FALSE} \tab Session-wide default for \code{quiet}: \code{TRUE} suppresses progress and informational messages from every call. \cr
 }
 
 

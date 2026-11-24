@@ -19,6 +19,7 @@
 #' @param filters Named list of the named geographic filter arguments.
 #' @param polygon An `sf`/`sfc` object, or `NULL`.
 #' @param reproject Whether to transform `polygon` to EPSG:4326.
+#' @param quiet Suppress informational messages.
 #' @param call Calling environment for error reporting.
 #'
 #' @return A list with `adm2_ids`, `inconsistent_adm2_ids` and `warnings`.
@@ -29,6 +30,7 @@ resolve_geography <- function(adm2,
                               filters = list(),
                               polygon = NULL,
                               reproject = TRUE,
+                              quiet = FALSE,
                               call = rlang::caller_env()) {
   filters <- compact(filters)
   warnings <- list()
@@ -94,6 +96,7 @@ resolve_geography <- function(adm2,
       pop_by_year = pop_by_year,
       candidate_ids = adm2_ids,
       reproject = reproject,
+      quiet = quiet,
       call = call
     )
     inconsistent <- poly_result$inconsistent
@@ -123,6 +126,7 @@ resolve_geography <- function(adm2,
 #' @param pop_by_year Named list of yearly `pop` tables.
 #' @param candidate_ids ADM2 ids surviving the named filters.
 #' @param reproject Whether to transform to EPSG:4326.
+#' @param quiet Suppress the informational message.
 #' @param call Calling environment.
 #'
 #' @return A list with `adm2_ids`, `inconsistent` and `warnings`.
@@ -132,6 +136,7 @@ resolve_polygon <- function(polygon,
                             pop_by_year,
                             candidate_ids,
                             reproject = TRUE,
+                            quiet = FALSE,
                             call = rlang::caller_env()) {
   check_installed_geo(what = "The {.arg polygon} filter", call = call)
 
@@ -207,18 +212,18 @@ resolve_polygon <- function(polygon,
   inconsistent <- setdiff(all_in, always_in %||% character(0))
 
   if (length(years) > 1L) {
-    # Warn on every multi-year polygon query, not only when membership actually
-    # varies, so users understand that the possibility exists at all.
+    # Say so on every multi-year polygon query, so users know the possibility
+    # exists; only an actual change in membership (below) is a warning.
     warnings$polygon_multiyear <- glue::glue(
       "Polygon membership was evaluated across {length(years)} years; ",
       "population-weighted centroids move between years."
     )
-    gtropic_warn(c(
-      "Polygon membership is year-dependent.",
-      i = "Centroids were evaluated for {length(years)} year{?s}
-           ({years[1]}-{years[length(years)]}); an ADM2 unit is included if its
-           centroid fell inside the polygon in any of them."
-    ), class = "gtropic_warning_polygon")
+    inform_unless_quiet(c(
+      i = "Polygon membership is year-dependent.",
+      " " = "Centroids were evaluated for {length(years)} year{?s}
+             ({years[1]}-{years[length(years)]}); an ADM2 unit is included if
+             its centroid fell inside the polygon in any of them."
+    ), quiet = quiet)
   }
 
   if (length(inconsistent) > 0L) {
@@ -227,8 +232,8 @@ resolve_polygon <- function(polygon,
       "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
        across years.",
       "!" = "{truncate_display(inconsistent)}",
-      i = "{?It was/They were} included. The full vector is available via
-           {.code gtropic_diagnostics()}."
+      i = "{cli::qty(length(inconsistent))}{?It was/They were} included. The
+           full vector is available via {.code gtropic_diagnostics()}."
     ), class = "gtropic_warning_polygon")
   }
 

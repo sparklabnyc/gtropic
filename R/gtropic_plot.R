@@ -128,7 +128,8 @@
 #' @param title,subtitle,caption Plot labels. Each defaults to `NULL`, which uses
 #'   an automatic title/subtitle/caption. A supplied caption replaces the automatic
 #'   provenance and method caption.
-#' @param quiet Logical; if `FALSE` (the default), report data-preparation progress.
+#' @param quiet Logical; if `FALSE`, report data-preparation progress. Defaults
+#'   to `getOption("gtropic.quiet", FALSE)`.
 #' @param ... For static exposure and count maps, named arguments passed to
 #'   [ggplot2::geom_sf()] for the ADM2 polygons. For interactive maps, named
 #'   arguments passed to [leaflet::addPolygons()]. Track plots accept none.
@@ -169,7 +170,7 @@ gtropic_plot <- function(
   palette = NULL, direction = NULL, gridlines = TRUE,
   make_valid = TRUE,
   title = NULL, subtitle = NULL, caption = NULL,
-  quiet = FALSE, ...
+  quiet = getOption("gtropic.quiet", FALSE), ...
 ) {
   type <- rlang::arg_match(type)
   count_unit <- rlang::arg_match(count_unit)

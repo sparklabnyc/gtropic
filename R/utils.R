@@ -118,6 +118,30 @@ inform_unless_quiet <- function(..., quiet = FALSE,
   invisible(NULL)
 }
 
+#' Ask the user to confirm an action
+#'
+#' The single prompt style used by the download guardrail and
+#' `gtropic_cache_clear()`: the message, then `Proceed? [y/N]`. Callers check
+#' `is_interactive()` first.
+#'
+#' @param ... The message template, passed to [cli::cli_inform()].
+#' @param .envir Environment in which the template is evaluated.
+#' @return `TRUE` if the answer is yes.
+#' @keywords internal
+#' @noRd
+confirm_action <- function(..., .envir = parent.frame()) {
+  cli::cli_inform(..., .envir = .envir)
+  answer <- read_answer("Proceed? [y/N] ")
+  tolower(trimws(answer)) %in% c("y", "yes")
+}
+
+#' Read one line from the console
+#'
+#' Wrapped so tests can stub it.
+#' @keywords internal
+#' @noRd
+read_answer <- function(prompt) readline(prompt)
+
 #' Is this an interactive session?
 #'
 #' Wrapped so tests can stub it.

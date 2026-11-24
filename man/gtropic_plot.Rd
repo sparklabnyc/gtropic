@@ -33,7 +33,7 @@ gtropic_plot(
   title = NULL,
   subtitle = NULL,
   caption = NULL,
-  quiet = FALSE,
+  quiet = getOption("gtropic.quiet", FALSE),
   ...
 )
 }
@@ -187,7 +187,8 @@ Repair can change geometry types. This argument is ignored for track maps.}
 an automatic title/subtitle/caption. A supplied caption replaces the automatic
 provenance and method caption.}
 
-\item{quiet}{Logical; if \code{FALSE} (the default), report data-preparation progress.}
+\item{quiet}{Logical; if \code{FALSE}, report data-preparation progress. Defaults
+to \code{getOption("gtropic.quiet", FALSE)}.}
 
 \item{...}{For static exposure and count maps, named arguments passed to
 \code{\link[ggplot2:geom_sf]{ggplot2::geom_sf()}} for the ADM2 polygons. For interactive maps, named

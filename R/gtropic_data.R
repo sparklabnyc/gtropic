@@ -225,7 +225,9 @@
 #'   guardrail applies the configured threshold. `FALSE` permits the transfer
 #'   without interactive confirmation.
 #' @param quiet Logical. If `TRUE`, progress and informational messages are
-#'   suppressed. Warnings and errors are still reported.
+#'   suppressed. Warnings and errors are still reported. Defaults to
+#'   `getOption("gtropic.quiet", FALSE)`, so `options(gtropic.quiet = TRUE)`
+#'   silences every call in a session.
 #' @param offline Logical. If `TRUE`, use only cached source files and a
 #'   persisted discovery snapshot; no Dataverse update check is made and the
 #'   snapshot age is reported. Requires an enabled cache. Defaults to `FALSE`.
@@ -317,7 +319,7 @@ gtropic_data <- function(ADM2_ID = NULL,
                          manifest = NULL,
                          cache = NULL,
                          confirm = TRUE,
-                         quiet = FALSE,
+                         quiet = getOption("gtropic.quiet", FALSE),
                          offline = FALSE) {
   call <- match.call()
   if (missing(tables) && is.null(manifest)) {
