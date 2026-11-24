@@ -98,3 +98,66 @@ fetcher_key <- function(version = "1.0", label = "2001.parquet") {
     label = label
   )
 }
+
+# --- a local stand-in for a Dataverse server --------------------------------
+
+#' Serve a webfakes app in place of the Dataverse host
+#'
+#' Requests that would go to `https://<server>/api` go to the app instead, and
+#' retries wait 0.05 s instead of 1 s or more. Skipped on CRAN: the app runs
+#' in a separate process.
+#' @noRd
+local_dataverse_app <- function(app, env = parent.frame()) {
+  testthat::skip_on_cran()
+  testthat::skip_if_not_installed("webfakes")
+  web <- webfakes::local_app_process(app, .local_envir = env)
+  testthat::local_mocked_bindings(
+    dv_api_url = function(server) sub("/$", "", web$url("/api")),
+    dv_backoff = function(i) 0.05,
+    .env = env
+  )
+  web
+}
+
+#' A webfakes app with a few Dataverse-like routes
+#'
+#' `GET /hits/<name>` reports how often route `<name>` was requested.
+#' @noRd
+dataverse_test_app <- function() {
+  app <- webfakes::new_app()
+  app$locals$hits <- list()
+  count <- function(req, name) {
+    n <- req$app$locals$hits[[name]]
+    n <- if (is.null(n)) 1L else n + 1L
+    req$app$locals$hits[[name]] <- n
+    n
+  }
+  dv_json <- function(res, status, body) {
+    res$set_status(status)$set_type("application/json")$send(body)
+  }
+  app$get("/hits/:name", function(req, res) {
+    n <- req$app$locals$hits[[req$params$name]]
+    res$send_json(if (is.null(n)) 0L else n, auto_unbox = TRUE)
+  })
+  # 503 the first time, then an empty collection.
+  app$get("/api/dataverses/flaky/contents", function(req, res) {
+    if (count(req, "flaky") == 1L) {
+      dv_json(res, 503L, '{"status":"ERROR","message":"Try again later"}')
+    } else {
+      dv_json(res, 200L, '{"status":"OK","data":[]}')
+    }
+  })
+  app$get("/api/dataverses/missing/contents", function(req, res) {
+    count(req, "missing")
+    dv_json(res, 404L, '{"status":"ERROR","message":"Collection not found"}')
+  })
+  app
+}
+
+#' How often a route of `dataverse_test_app()` was requested
+#' @noRd
+app_hits <- function(web, name) {
+  as.integer(httr2::resp_body_json(
+    httr2::req_perform(httr2::request(web$url(paste0("/hits/", name))))
+  ))
+}

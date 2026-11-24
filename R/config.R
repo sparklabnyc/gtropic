@@ -97,7 +97,9 @@ gtropic_default_options <- function() {
     ),
     max_tries = option_spec(
       3L, "count",
-      "Maximum attempts per request before giving up."
+      "Maximum attempts per request. Only transient failures are retried: a
+       lost or refused connection, a timeout, and HTTP 408, 429 and 5xx
+       responses."
     ),
     quiet = option_spec(
       FALSE, "flag",

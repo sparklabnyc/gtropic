@@ -25,7 +25,7 @@ it caches and confirms downloads, without needing a package update.
    \code{gtropic.cache_max_gb} \tab \code{10} \tab Size cap, in gigabytes, for the cache: after a retrieval that adds to it, the least recently downloaded files are removed until it fits. \code{Inf} disables the cap. \cr
    \code{gtropic.confirm_threshold_gb} \tab \code{1} \tab Download size, in gigabytes, above which you are asked to confirm. \cr
    \code{gtropic.timeout} \tab \code{600} \tab Per-request timeout in seconds. \cr
-   \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request before giving up. \cr
+   \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request. Only transient failures are retried: a lost or refused connection, a timeout, and HTTP 408, 429 and 5xx responses. \cr
    \code{gtropic.quiet} \tab \code{FALSE} \tab Session-wide default for \code{quiet}: \code{TRUE} suppresses progress and informational messages from every call. \cr
 }
 

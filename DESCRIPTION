@@ -58,6 +58,7 @@ Suggests:
     sf,
     sfarrow,
     testthat (>= 3.0.0),
+    webfakes,
     withr
 VignetteBuilder: 
     knitr

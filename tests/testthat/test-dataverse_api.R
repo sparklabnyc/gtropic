@@ -225,3 +225,80 @@ test_that("path segments from options cannot leave their segment", {
   expect_error(dv_file_id("1/../2"), "whole positive number")
   expect_identical(dv_file_id(14430328), "14430328")
 })
+
+# --- retries (Plan 04 PERF-09) -----------------------------------------------
+
+test_that("only transient HTTP statuses are retried", {
+  transient <- function(status) dv_is_transient(httr2::response(status))
+  for (status in c(408L, 429L, 500L, 502L, 503L, 504L)) {
+    expect_true(transient(status), label = status)
+  }
+  for (status in c(400L, 401L, 403L, 404L, 410L, 422L)) {
+    expect_false(transient(status), label = status)
+  }
+})
+
+test_that("retry waits grow and are capped", {
+  expect_identical(vapply(1:6, dv_backoff, numeric(1)), c(1, 2, 4, 8, 8, 8))
+  wait <- function(value) {
+    dv_retry_after(httr2::response(503, headers = list(`Retry-After` = value)))
+  }
+  expect_identical(wait("5"), 5)
+  expect_identical(wait("3600"), 60)
+  expect_identical(dv_retry_after(httr2::response(503)), NA_real_)
+})
+
+test_that("requests carry the retry policy", {
+  withr::local_options(gtropic.max_tries = 4L)
+  req <- dv_request("example.invalid", "info", "version")
+  expect_identical(req$policies$retry_max_tries, 4L)
+  expect_true(req$policies$retry_on_failure)
+})
+
+test_that("a transient failure is retried and a permanent one fails at once", {
+  web <- local_dataverse_app(dataverse_test_app())
+  withr::local_options(gtropic.max_tries = 3L)
+
+  expect_message(
+    out <- dv_list_datasets("flaky", server = "dv.invalid"),
+    "Retrying listing of collection flaky (1/2 retries used)",
+    fixed = TRUE
+  )
+  expect_identical(nrow(out), 0L)
+  expect_identical(app_hits(web, "flaky"), 2L)
+
+  err <- expect_error(
+    dv_list_datasets("missing", server = "dv.invalid"),
+    class = "gtropic_error_network"
+  )
+  expect_match(conditionMessage(err), "Collection not found")
+  expect_identical(app_hits(web, "missing"), 1L)
+})
+
+test_that("a refused connection is retried, then reported once", {
+  skip_on_cran()
+  local_mocked_bindings(
+    dv_api_url = function(server) "http://127.0.0.1:9/api",
+    dv_backoff = function(i) 0.05
+  )
+  withr::local_options(gtropic.max_tries = 3L)
+  notices <- 0L
+  err <- expect_error(
+    withCallingHandlers(
+      dv_list_datasets("gtropic", server = "dv.invalid"),
+      message = function(m) {
+        if (grepl("Retrying", conditionMessage(m))) notices <<- notices + 1L
+        invokeRestart("muffleMessage")
+      }
+    ),
+    class = "gtropic_error_network"
+  )
+  expect_identical(notices, 2L)
+  expect_match(conditionMessage(err), "dv.invalid")
+})
+
+test_that("retry notices respect quiet", {
+  web <- local_dataverse_app(dataverse_test_app())
+  withr::local_options(gtropic.max_tries = 2L)
+  expect_no_message(dv_list_datasets("flaky", server = "dv.invalid", quiet = TRUE))
+})

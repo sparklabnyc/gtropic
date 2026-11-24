@@ -19,50 +19,6 @@
 #     arrives, hashed from disk, and read from disk.
 # ---------------------------------------------------------------------------
 
-#' Retry an expression with bounded exponential backoff
-#'
-#' @param expr Expression to evaluate.
-#' @param max_tries Maximum attempts.
-#' @param what Short description used in the failure message.
-#' @param quiet Suppress the retry notices.
-#' @param server Host the request is sent to, named in the failure message.
-#' @param call Calling environment for error reporting.
-#'
-#' @return The value of `expr`.
-#' @keywords internal
-#' @noRd
-with_retry <- function(expr,
-                       max_tries = opt_max_tries(),
-                       what = "request",
-                       quiet = FALSE,
-                       server = opt_server(),
-                       call = rlang::caller_env()) {
-  expr <- rlang::enquo(expr)
-  last_err <- NULL
-
-  for (attempt in seq_len(max_tries)) {
-    result <- tryCatch(rlang::eval_tidy(expr), error = function(e) e)
-    if (!inherits(result, "error")) {
-      return(result)
-    }
-    last_err <- result
-
-    if (attempt < max_tries) {
-      # Exponential backoff, capped. Politeness to the server matters more than
-      # shaving a second off a failing request.
-      wait <- min(2^(attempt - 1), 8)
-      inform_unless_quiet(
-        "Retrying {what} ({attempt}/{max_tries - 1} retries used);
-         waiting {wait}s.",
-        quiet = quiet
-      )
-      Sys.sleep(wait)
-    }
-  }
-
-  abort_dataverse(last_err, what = what, server = server, call = call)
-}
-
 #' Turn a low-level failure into an informative message
 #'
 #' @param err The captured condition.
@@ -128,13 +84,111 @@ dv_path_segment <- function(x) {
 
 #' A request with the settings every gtropic request shares
 #'
+#' Only transient failures are retried, up to `getOption("gtropic.max_tries")`
+#' attempts in all: a lost or refused connection, a timeout, and HTTP 408,
+#' 429 and 5xx responses. Anything else (a mistyped DOI, a missing version)
+#' fails at once.
+#'
 #' @param url Full URL.
 #' @keywords internal
 #' @noRd
 gtropic_request <- function(url) {
   req <- httr2::request(url)
   req <- httr2::req_user_agent(req, gtropic_user_agent())
+  req <- httr2::req_retry(req,
+    max_tries = opt_max_tries(),
+    retry_on_failure = TRUE,
+    is_transient = dv_is_transient,
+    backoff = dv_backoff,
+    after = dv_retry_after
+  )
   httr2::req_error(req, body = dv_error_body)
+}
+
+#' Is an HTTP response worth retrying?
+#'
+#' @param resp An `httr2` response.
+#' @keywords internal
+#' @noRd
+dv_is_transient <- function(resp) {
+  status <- httr2::resp_status(resp)
+  status %in% c(408L, 429L) || status >= 500L
+}
+
+#' Seconds to wait before retry `i`: 1, 2, 4, then 8 at most
+#'
+#' Politeness to the server matters more than shaving a second off a failing
+#' request.
+#'
+#' @param i Number of attempts made so far.
+#' @keywords internal
+#' @noRd
+dv_backoff <- function(i) {
+  min(2^(i - 1), 8)
+}
+
+#' Seconds a server asked us to wait (`Retry-After`), at most 60
+#'
+#' @param resp An `httr2` response.
+#' @return A number, or `NA` to use `dv_backoff()`.
+#' @keywords internal
+#' @noRd
+dv_retry_after <- function(resp) {
+  wait <- httr2::resp_retry_after(resp)
+  if (is.na(wait)) NA_real_ else min(max(wait, 0), 60)
+}
+
+#' Run a request and report a failure in gtropic's terms
+#'
+#' Retries happen inside `httr2` (see `gtropic_request()`); each is announced
+#' unless `quiet`. Any failure becomes one `gtropic_error_network` error that
+#' names the server; errors gtropic raised itself (such as the download size
+#' bound) pass through unchanged.
+#'
+#' @param expr The request and its processing.
+#' @param what Description of the operation, used in messages.
+#' @param server Host the request is sent to.
+#' @param quiet Suppress retry notices.
+#' @param call Calling environment for error reporting.
+#'
+#' @return The value of `expr`.
+#' @keywords internal
+#' @noRd
+dv_perform <- function(expr, what, server, quiet = FALSE,
+                       call = rlang::caller_env()) {
+  max_tries <- opt_max_tries()
+  # httr2 announces its own waits too, with a progress bar when interactive.
+  # The notice below says which request is waiting; httr2's is dropped.
+  old <- options(httr2_progress = FALSE)
+  on.exit(options(old), add = TRUE)
+  tryCatch(
+    withCallingHandlers(
+      expr,
+      httr2_retry = function(cnd) {
+        # Also signalled after the last attempt, when nothing is retried.
+        if (cnd$tries >= max_tries) {
+          return()
+        }
+        wait <- round(cnd$delay, 1)
+        inform_unless_quiet(
+          "Retrying {what} ({cnd$tries}/{max_tries - 1} retries used);
+           waiting {wait}s.",
+          quiet = quiet
+        )
+      },
+      message = function(m) {
+        if (grepl("for retry backoff", conditionMessage(m), fixed = TRUE)) {
+          invokeRestart("muffleMessage")
+        }
+      }
+    ),
+    error = function(e) {
+      if (inherits(e, "gtropic_error")) {
+        stop(e)
+      }
+      abort_dataverse(e, what = what, server = server, call = call)
+    }
+  )
 }
 
 #' A request to the Dataverse native API
@@ -185,7 +239,7 @@ dv_error_body <- function(resp) {
 #' @keywords internal
 #' @noRd
 dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
-  with_retry(
+  dv_perform(
     {
       resp <- httr2::req_perform(req)
       body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
@@ -195,7 +249,7 @@ dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
       }
       body$data
     },
-    what = what, quiet = quiet, server = server, call = call
+    what = what, server = server, quiet = quiet, call = call
   )
 }
 
@@ -356,10 +410,10 @@ dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE,
   req <- httr2::req_url_query(req, format = "original")
   done <- FALSE
   on.exit(if (!done) unlink(dest), add = TRUE)
-  with_retry(
+  dv_perform(
     dv_download(req, dest),
     what = glue::glue("download of file {file_id}"),
-    quiet = quiet, server = server
+    server = server, quiet = quiet
   )
   done <- TRUE
   invisible(dest)

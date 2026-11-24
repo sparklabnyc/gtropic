@@ -101,6 +101,13 @@
   every download, and reading a dataset's version number no longer transfers
   its whole file list.
 
+* Only transient failures are retried: a lost or refused connection, a
+  timeout, and HTTP 408, 429 and 5xx responses, up to
+  `getOption("gtropic.max_tries")` attempts, waiting as a server's
+  `Retry-After` asks (at most 60 seconds). A permanent error, such as a
+  mistyped DOI or a version that does not exist, is reported at once instead
+  of after two retries and three seconds of waiting.
+
 * Fewer dependencies: `stringr` is no longer imported, and the unused
   suggested packages `curl`, `memoise` and `scales` are gone. User-supplied
   plot captions are now wrapped with base `strwrap()`, which fills lines
