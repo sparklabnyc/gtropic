@@ -34,6 +34,7 @@ reference:
   - print.gtropic_filters
   - summary.gtropic_data
   - print.gtropic_manifest
+  - gtropic_manifest_write
   - format.gtropic_data
   - gtropic_example
 - title: Discovery

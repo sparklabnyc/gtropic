@@ -61,5 +61,6 @@ diagnostics <- gtropic_diagnostics(res)
 
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}
+\code{\link[=gtropic_data]{gtropic_data()}}; \code{\link[=gtropic_manifest_write]{gtropic_manifest_write()}} to save a manifest as
+JSON.
 }

@@ -79,7 +79,8 @@ new_gtropic_data <- function(tables,
 #' diagnostics <- gtropic_diagnostics(res)
 #' }
 #'
-#' @seealso [gtropic_data()]
+#' @seealso [gtropic_data()]; [gtropic_manifest_write()] to save a manifest as
+#'   JSON.
 #' @export
 gtropic_manifest <- function(x) {
   check_gtropic_data(x)

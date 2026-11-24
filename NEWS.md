@@ -55,6 +55,13 @@
 
 ## New features
 
+* `gtropic_manifest_write()` and `gtropic_manifest_read()` save a manifest as
+  a JSON file and read it back. JSON is the safe way to share a manifest:
+  reading it cannot run code, unlike `readRDS()` on an `.rds` file from
+  someone else, and it is readable and diffs cleanly in version control.
+  Reading checks every field and then applies the replay validation, so an
+  edited or foreign file is rejected with a `gtropic_error_manifest`.
+
 * The cache now manages itself (CRAN policy on user cache files). The first
   file cached in a session prints where the cache is. After each retrieval
   that adds to the cache, files downloaded more than
