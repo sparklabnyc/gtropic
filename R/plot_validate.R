@@ -125,16 +125,6 @@ plot_requirements <- function(type, metrics, track = FALSE,
   req
 }
 
-#' Validate a scalar logical argument
-#' @keywords internal
-#' @noRd
-plot_flag <- function(x, name) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    cli::cli_abort("{.arg {name}} must be TRUE or FALSE.")
-  }
-  invisible(x)
-}
-
 #' Validate an optional character selector
 #'
 #' @param x Value supplied: `NULL` or a nonempty character vector.

@@ -408,8 +408,8 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   }
   type <- rlang::arg_match(type, c("exposure", "count", "track"))
   count_unit <- rlang::arg_match(count_unit, c("storms", "days"))
-  plot_flag(binary, "binary")
-  plot_flag(make_valid, "make_valid")
+  check_flag(binary)
+  check_flag(make_valid)
   if (binary && !type %in% c("exposure", "count")) {
     cli::cli_abort("{.arg binary} applies only to exposure and count maps.")
   }
@@ -421,7 +421,7 @@ prepare_plot_data <- function(data, type, metric = NULL, storm = NULL,
   track_default <- !is.null(data$tracks)
   track <- track %||% track_default
   if (type == "track") track <- TRUE
-  plot_flag(track, "track")
+  check_flag(track)
   metrics <- resolve_plot_metrics(
     data, type, metric,
     aggregate, threshold, binary, dots$palette, dots$direction

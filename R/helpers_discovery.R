@@ -139,36 +139,14 @@ gtropic_storms <- function(date_range = NULL,
   on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
-
-  years <- if (!identical(date_spec$type, "none")) {
-    year_span(date_spec$start, date_spec$end)
-  } else {
-    ctx$discovery$year_index$year
-  }
-  if (!is.null(storm_name_year)) {
-    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none")) {
-      intersect(years, storm_genesis_year)
-    } else {
-      storm_genesis_year
-    }
-  }
-  years <- intersect(years, ctx$discovery$year_index$year)
+  years <- resolve_helper_years(date_spec, storm_name_year, ctx)
 
   meta <- fetch_yearly("storm_metadata", years, ctx)
   if (is.null(meta)) {
     cli::cli_warn("No storm metadata found for the years requested.")
     return(tibble::tibble())
   }
-
-  if (!identical(date_spec$type, "none")) {
-    genesis <- as.Date(meta$STORM_GENESIS_DATE_UTC)
-    meta <- meta[
-      !is.na(genesis) &
-        genesis >= date_spec$start & genesis <= date_spec$end, ,
-      drop = FALSE
-    ]
-  }
+  meta <- filter_genesis_dates(meta, date_spec)
 
   if (!is.null(storm_name)) {
     canonical <- match_storm_values(storm_name, meta$STORM_NAME,
@@ -244,35 +222,14 @@ gtropic_excluded_storms <- function(date_range = NULL,
   on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
-  years <- if (!identical(date_spec$type, "none")) {
-    year_span(date_spec$start, date_spec$end)
-  } else {
-    ctx$discovery$year_index$year
-  }
-  if (!is.null(storm_name_year)) {
-    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none")) {
-      intersect(years, storm_genesis_year)
-    } else {
-      storm_genesis_year
-    }
-  }
-  years <- intersect(years, ctx$discovery$year_index$year)
+  years <- resolve_helper_years(date_spec, storm_name_year, ctx)
 
   excluded <- fetch_excluded_storms(years, ctx)
   if (nrow(excluded) == 0L) {
     cli::cli_warn("No excluded-storm records found for the years requested.")
     return(tibble::tibble())
   }
-
-  if (!identical(date_spec$type, "none")) {
-    genesis <- as.Date(excluded$STORM_GENESIS_DATE_UTC)
-    excluded <- excluded[
-      !is.na(genesis) &
-        genesis >= date_spec$start & genesis <= date_spec$end, ,
-      drop = FALSE
-    ]
-  }
+  excluded <- filter_genesis_dates(excluded, date_spec)
 
   if (!is.null(storm_name)) {
     canonical <- match_values(storm_name, excluded$STORM_NAME,
@@ -288,6 +245,48 @@ gtropic_excluded_storms <- function(date_range = NULL,
   }
 
   excluded
+}
+
+#' Genesis-year partitions a discovery helper reads
+#'
+#' Years come from the date filter (or every published year), narrowed to the
+#' genesis years a `Name-YYYY` season suffix allows, then to what is published.
+#'
+#' @param date_spec Output of `parse_date_input()`.
+#' @param storm_name_year Season years from `storm_name_years()`, or `NULL`.
+#' @param ctx Fetch context.
+#'
+#' @return Integer years.
+#' @keywords internal
+#' @noRd
+resolve_helper_years <- function(date_spec, storm_name_year, ctx) {
+  published <- ctx$discovery$year_index$year
+  has_dates <- !identical(date_spec$type, "none")
+  years <- if (has_dates) year_span(date_spec$start, date_spec$end) else published
+  if (!is.null(storm_name_year)) {
+    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
+    years <- if (has_dates) intersect(years, storm_genesis_year) else storm_genesis_year
+  }
+  intersect(years, published)
+}
+
+#' Keep rows whose genesis date lies in the requested range
+#'
+#' @param x A tibble with `STORM_GENESIS_DATE_UTC`.
+#' @param date_spec Output of `parse_date_input()`.
+#'
+#' @return `x`, filtered when a date range was given.
+#' @keywords internal
+#' @noRd
+filter_genesis_dates <- function(x, date_spec) {
+  if (identical(date_spec$type, "none")) {
+    return(x)
+  }
+  genesis <- as.Date(x$STORM_GENESIS_DATE_UTC)
+  x[
+    !is.na(genesis) & genesis >= date_spec$start & genesis <= date_spec$end, ,
+    drop = FALSE
+  ]
 }
 
 #' Fetch excluded-storm records for selected years

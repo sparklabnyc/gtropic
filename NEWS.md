@@ -170,6 +170,10 @@
   left out and a message says so once per session. Naming `"geometry"` in
   `tables` still requires `sf`.
 
+* `gtropic_plot()` and `plot()` report an invalid logical argument (for
+  example `interactive = "yes"`) with the same message as the retrieval
+  functions: "must be a single `TRUE` or `FALSE` value".
+
 ## Bug fixes
 
 * When a published file lacks a column the query asks for, the warning that
