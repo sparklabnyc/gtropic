@@ -1,0 +1,79 @@
+{
+    "status": "OK",
+    "totalCount": 8,
+    "data": [
+        {
+            "description": "IBTrACS storms excluded from final wind products because fewer than two observations contain every field required by the parametric best-track wind workflow. Dataset ID: wind_excluded_storms. Grain: one row per IBTrACS storm excluded from all final wind products. Primary key: STORM_ID. Codebook path pattern: 02_wind/excluded_storms/YYYY.parquet. Published file path: 02_wind/excluded_storms/2026.parquet.",
+            "label": "2026.parquet",
+            "restricted": false,
+            "directoryLabel": "02_wind/excluded_storms",
+            "version": 1,
+            "datasetVersionId": 783992,
+            "categories": [
+                "Data"
+            ],
+            "dataFile": {
+                "id": 14430635,
+                "persistentId": "",
+                "filename": "2026.parquet",
+                "contentType": "application/octet-stream",
+                "friendlyType": "Unknown",
+                "filesize": 1282,
+                "description": "IBTrACS storms excluded from final wind products because fewer than two observations contain every field required by the parametric best-track wind workflow. Dataset ID: wind_excluded_storms. Grain: one row per IBTrACS storm excluded from all final wind products. Primary key: STORM_ID. Codebook path pattern: 02_wind/excluded_storms/YYYY.parquet. Published file path: 02_wind/excluded_storms/2026.parquet.",
+                "categories": [
+                    "Data"
+                ],
+                "storageIdentifier": "s3://dvn-cloud-iqss:1a1d180c842-7a5c5d0c3279",
+                "rootDataFileId": -1,
+                "md5": "11ce86885fb0e9b065a69882a9e64fe6",
+                "checksum": {
+                    "type": "MD5",
+                    "value": "11ce86885fb0e9b065a69882a9e64fe6"
+                },
+                "tabularData": false,
+                "creationDate": "2026-11-12",
+                "publicationDate": "2026-11-12",
+                "directoryLabel": "02_wind/excluded_storms",
+                "lastUpdateTime": "2026-11-22T07:46:47Z",
+                "fileAccessRequest": true
+            }
+        },
+        {
+            "description": "Storm names, ATCF identifiers, and UTC genesis dates for evaluated wind-table storms. Dataset ID: wind_storm_metadata. Grain: one row per storm evaluated by the wind workflow. Primary key: STORM_ID. Codebook path pattern: 02_wind/storm_metadata/YYYY.parquet. Published file path: 02_wind/storm_metadata/2026.parquet.",
+            "label": "2026.parquet",
+            "restricted": false,
+            "directoryLabel": "02_wind/storm_metadata",
+            "version": 1,
+            "datasetVersionId": 783992,
+            "categories": [
+                "Data"
+            ],
+            "dataFile": {
+                "id": 14469093,
+                "persistentId": "",
+                "filename": "2026.parquet",
+                "contentType": "application/octet-stream",
+                "friendlyType": "Unknown",
+                "filesize": 5266,
+                "description": "Storm names, ATCF identifiers, and UTC genesis dates for evaluated wind-table storms. Dataset ID: wind_storm_metadata. Grain: one row per storm evaluated by the wind workflow. Primary key: STORM_ID. Codebook path pattern: 02_wind/storm_metadata/YYYY.parquet. Published file path: 02_wind/storm_metadata/2026.parquet.",
+                "categories": [
+                    "Data"
+                ],
+                "storageIdentifier": "s3://dvn-cloud-iqss:1a202384259-e0f89c2be38a",
+                "rootDataFileId": 14430637,
+                "previousDataFileId": 14430637,
+                "md5": "477f4f6250750610044484499d792056",
+                "checksum": {
+                    "type": "MD5",
+                    "value": "477f4f6250750610044484499d792056"
+                },
+                "tabularData": false,
+                "creationDate": "2026-11-22",
+                "publicationDate": "2026-11-22",
+                "directoryLabel": "02_wind/storm_metadata",
+                "lastUpdateTime": "2026-11-22T07:46:47Z",
+                "fileAccessRequest": true
+            }
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "status": "OK",
+    "data": {
+        "versionNumber": 1,
+        "versionMinorNumber": 0,
+        "versionState": "RELEASED",
+        "datasetPersistentId": "doi:10.7910/DVN/EAVWC3"
+    }
+}
