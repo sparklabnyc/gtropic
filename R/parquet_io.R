@@ -6,11 +6,14 @@
 # filesystem. The working pattern is therefore:
 #
 #   path <- dv_get_file(id, dest = <file>)       # streamed to disk
-#   tbl <- read_parquet_file(path, cols)         # Arrow Table
-#   out <- tibble::as_tibble(tbl)                # then filtered in R
+#   tbl <- read_parquet_file(path, cols, keep)   # projected, filtered Table
+#   out <- tibble::as_tibble(tbl)                # only the rows we need
 #
-# Column projection saves memory and R-side conversion time. It does NOT save
-# bandwidth: Dataverse serves whole files regardless.
+# Only the requested columns are decoded, and rows are filtered on the Arrow
+# side, one row group at a time, before anything is converted to R. A query
+# for one storm in one country therefore materialises its own rows, not the
+# global year-file. None of this saves bandwidth: Dataverse serves whole
+# files regardless.
 # ---------------------------------------------------------------------------
 
 #' Read a parquet file into an Arrow Table
@@ -19,20 +22,29 @@
 #' is deleted as soon as it has been read, and Windows cannot delete a file
 #' that is still mapped.
 #'
+#' Rows are filtered with Table-level kernels, row group by row group in file
+#' order, so the result has the same rows in the same order as filtering the
+#' whole table in R would give (invariant G6). A multi-threaded Acero query
+#' would not guarantee the order.
+#'
 #' @param path Parquet file.
 #' @param col_select Character vector of columns to project, or `NULL` for all.
 #'   Columns absent from the file are dropped with a warning rather than an
 #'   error, so a schema addition upstream never breaks a query.
+#' @param keep Named list of row filters, `list(<column> = <values>)`, applied
+#'   as `column %in% values`. `NULL` entries, and columns absent from the
+#'   file, are skipped silently. Use only for identifier columns whose type is
+#'   the same in every year-file (`STORM_ID`, `ADM2_ID`).
 #' @param label Path used in error messages.
 #' @param call Calling environment.
 #'
 #' @return An `arrow::Table`.
 #' @keywords internal
 #' @noRd
-read_parquet_file <- function(path, col_select = NULL, label = "file",
-                              call = rlang::caller_env()) {
+read_parquet_file <- function(path, col_select = NULL, keep = NULL,
+                              label = "file", call = rlang::caller_env()) {
   tbl <- tryCatch(
-    arrow::read_parquet(path, as_data_frame = FALSE, mmap = FALSE),
+    read_parquet_table(path, col_select = col_select, keep = keep),
     error = function(e) {
       cli::cli_abort(
         c("Could not read {.path {label}} as parquet.",
@@ -46,19 +58,76 @@ read_parquet_file <- function(path, col_select = NULL, label = "file",
   )
 
   if (!is.null(col_select)) {
-    present <- intersect(col_select, names(tbl))
     missing <- setdiff(col_select, names(tbl))
     if (length(missing) > 0L) {
+      n <- length(missing)
       cli::cli_warn(
-        c("Column{?s} {.field {missing}} not found in {.path {label}}.",
-          i = "Continuing without {?it/them}; the published schema may have
-               changed."
+        c("{cli::qty(n)}Column{?s} {.field {missing}} not found in {.path {label}}.",
+          i = "{cli::qty(n)}Continuing without {?it/them}; the published
+               schema may have changed."
         )
       )
     }
+    present <- intersect(col_select, names(tbl))
     if (length(present) > 0L) tbl <- tbl[, present, drop = FALSE]
   }
 
+  tbl
+}
+
+#' Read the projected, filtered columns of a parquet file
+#'
+#' @inheritParams read_parquet_file
+#' @return An `arrow::Table` holding the projection (in file order) plus the
+#'   filter columns; `read_parquet_file()` puts the projection in order.
+#' @keywords internal
+#' @noRd
+read_parquet_table <- function(path, col_select = NULL, keep = NULL) {
+  file <- arrow::ReadableFile$create(path)
+  on.exit(file$close(), add = TRUE)
+  reader <- arrow::ParquetFileReader$create(file)
+  columns <- names(reader$GetSchema())
+
+  present <- intersect(col_select, columns)
+  keep <- compact(keep[intersect(names(keep), columns)])
+  # Decode the projection plus the filter columns, and nothing else.
+  read_cols <- if (length(present) > 0L) union(present, names(keep)) else columns
+  indices <- match(read_cols, columns) - 1L
+
+  if (length(keep) == 0L || reader$num_row_groups == 0L) {
+    return(reader$ReadTable(indices))
+  }
+  # One row group at a time, so the whole file is never decoded at once.
+  parts <- lapply(seq_len(reader$num_row_groups) - 1L, function(i) {
+    arrow_keep_rows(reader$ReadRowGroup(i, indices), keep)
+  })
+  do.call(arrow::concat_tables, parts)
+}
+
+#' Keep the rows of an Arrow Table whose identifiers are in a set
+#'
+#' `is_in` with `skip_nulls = FALSE` has the semantics of R's `%in%`: a
+#' missing value matches only when `values` contains `NA`.
+#'
+#' @param tbl An `arrow::Table`.
+#' @param keep Named list of `column = values`, every column present in `tbl`.
+#'
+#' @return The filtered `arrow::Table`, rows in their original order.
+#' @keywords internal
+#' @noRd
+arrow_keep_rows <- function(tbl, keep) {
+  for (column in names(keep)) {
+    values <- unique(keep[[column]])
+    value_set <- tryCatch(
+      arrow::Array$create(values, type = tbl$schema[[column]]$type),
+      # e.g. a dictionary column: let the kernel cast the plain values.
+      error = function(e) arrow::Array$create(values)
+    )
+    mask <- arrow::call_function("is_in", tbl[[column]],
+      options = list(value_set = value_set, skip_nulls = FALSE)
+    )
+    tbl <- tbl$Filter(mask)
+  }
   tbl
 }
 

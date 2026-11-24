@@ -33,6 +33,8 @@
 #' @param directory_label,label File path components.
 #' @param ctx Fetch context from `fetch_context()`.
 #' @param col_select Columns to project.
+#' @param keep Row filters for parquet files, `list(<column> = <values>)`,
+#'   applied on the Arrow Table before conversion (see `read_parquet_file()`).
 #' @param kind `"parquet"`, `"json"` or `"geoparquet"`.
 #' @param optional When `TRUE`, a missing file yields `NULL` instead of an error.
 #'
@@ -40,8 +42,8 @@
 #' @keywords internal
 #' @noRd
 fetch_file <- function(dataset, directory_label, label, ctx,
-                        col_select = NULL, kind = "parquet",
-                        optional = FALSE) {
+                       col_select = NULL, keep = NULL, kind = "parquet",
+                       optional = FALSE) {
   path <- file.path(directory_label, label)
 
   # Reproducibility path: resolve against what was recorded, not what is live.
@@ -133,7 +135,9 @@ fetch_file <- function(dataset, directory_label, label, ctx,
   )
 
   switch(kind,
-    parquet = read_parquet_file(local_file, col_select = col_select, label = path),
+    parquet = read_parquet_file(local_file,
+      col_select = col_select, keep = keep, label = path
+    ),
     json = read_json_file(local_file, label = path),
     geoparquet = read_geoparquet_file(local_file, label = path),
     cli::cli_abort("Unknown file kind {.val {kind}}.")
@@ -146,13 +150,14 @@ fetch_file <- function(dataset, directory_label, label, ctx,
 #' @param years Integer years.
 #' @param ctx Fetch context.
 #' @param col_select Columns to project.
+#' @param keep Row filters passed to `fetch_file()`.
 #' @param tag_year Add a `.gtropic_file_year` column recording the source file.
 #' @param year_col Optional column name in which to record the source file year.
 #'
 #' @return A tibble, or `NULL` when no years were requested.
 #' @keywords internal
 #' @noRd
-fetch_yearly <- function(table, years, ctx, col_select = NULL,
+fetch_yearly <- function(table, years, ctx, col_select = NULL, keep = NULL,
                          tag_year = FALSE, year_col = NULL) {
   years <- sort(unique(as.integer(years)))
   if (length(years) == 0L) {
@@ -172,6 +177,7 @@ fetch_yearly <- function(table, years, ctx, col_select = NULL,
       label = paste0(y, ".parquet"),
       ctx = ctx,
       col_select = col_select,
+      keep = keep,
       optional = TRUE
     )
     if (is.null(tbl)) next
@@ -422,15 +428,20 @@ assemble_gtropic_data <- function(args, call = NULL) {
   )
 
   # --- 7. wind and zero pairs ----------------------------------------------
+  # Rows are filtered on the Arrow side (PERF-02); the subsetting below is a
+  # no-op safety net, kept until the pushdown has been stable for a release.
+  pair_keep <- list(STORM_ID = storm_ids, ADM2_ID = geo$adm2_ids)
   wind_cols <- NULL # full schema: users want the exposure columns
-  wind_links <- fetch_yearly("wind", storm_years, ctx, col_select = wind_cols)
+  wind_links <- fetch_yearly("wind", storm_years, ctx,
+    col_select = wind_cols, keep = pair_keep
+  )
 
   zero <- NULL
   if (needs_zero_pairs(args$tables)) {
     # Downloaded whenever precip or flood is requested, regardless of whether
     # the user asked for the table itself. STORM_DIST_KM for far-field ADM2s
     # exists nowhere else, and those are the compound-hazard cases.
-    zero <- fetch_yearly("zero_pairs", storm_years, ctx)
+    zero <- fetch_yearly("zero_pairs", storm_years, ctx, keep = pair_keep)
   }
 
   if (!is.null(wind_links)) {
@@ -531,7 +542,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
 
   precip <- NULL
   if ("precip" %in% args$tables) {
-    precip <- fetch_yearly("precip", real_years$precip, ctx)
+    precip <- fetch_yearly("precip", real_years$precip, ctx,
+      keep = list(ADM2_ID = geo$adm2_ids)
+    )
     if (!is.null(precip)) {
       precip <- precip[precip$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
       precip <- select_precip(links, precip)
@@ -550,7 +563,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
 
   flood <- NULL
   if ("flood" %in% args$tables) {
-    flood <- fetch_yearly("flood", real_years$flood, ctx)
+    flood <- fetch_yearly("flood", real_years$flood, ctx,
+      keep = list(ADM2_ID = geo$adm2_ids)
+    )
     if (!is.null(flood)) {
       flood <- flood[flood$ADM2_ID %in% geo$adm2_ids, , drop = FALSE]
       flood <- select_flood(links, flood, match = args$flood_match)
@@ -565,7 +580,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
       year_span(scoped_links$PRECIP_WINDOW_START, scoped_links$PRECIP_WINDOW_END),
       year_span(scoped_links$FLOOD_WINDOW_START, scoped_links$FLOOD_WINDOW_END)
     )))
-    pop <- fetch_yearly("pop", returned_years, ctx, year_col = "YEAR")
+    pop <- fetch_yearly("pop", returned_years, ctx,
+      keep = list(ADM2_ID = hazard_scope$adm2_ids), year_col = "YEAR"
+    )
     if (!is.null(pop)) {
       pop <- pop[pop$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
     }
@@ -574,7 +591,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
   # --- 11. remaining requested tables ---------------------------------------
   tracks <- NULL
   if ("tracks" %in% args$tables) {
-    tracks <- fetch_yearly("tracks", storm_years, ctx)
+    tracks <- fetch_yearly("tracks", storm_years, ctx,
+      keep = list(STORM_ID = hazard_scope$storm_ids)
+    )
     if (!is.null(tracks)) {
       tracks <- tracks[tracks$STORM_ID %in% hazard_scope$storm_ids, , drop = FALSE]
     }

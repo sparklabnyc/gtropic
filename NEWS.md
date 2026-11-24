@@ -93,6 +93,12 @@
 
 ## Improvements
 
+* Queries use much less memory. Rows are filtered to the requested storms and
+  ADM2 units, and files are read only for the columns a query uses, before
+  anything is converted to R. Each file is filtered one row group at a time,
+  so a whole year-file of global precipitation is never decoded at once. The
+  returned tables are unchanged, row order included.
+
 * Data is downloaded with `httr2` directly; the `dataverse` package is no
   longer a dependency (`httr2 (>= 1.2.0)` is now imported). Each file is
   streamed to disk as it arrives and then checked and read from disk, so a
@@ -132,6 +138,10 @@
   Naming `"geometry"` in `tables` still requires both packages.
 
 ## Bug fixes
+
+* When a published file lacks a column the query asks for, the warning that
+  says so is now shown. Before, building the warning failed with a
+  pluralisation error that stopped the query.
 
 * A failed request is reported once. When automatic dataset discovery fails,
   gtropic still falls back to the configured DOI options, but warns only if
