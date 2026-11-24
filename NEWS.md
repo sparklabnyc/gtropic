@@ -261,8 +261,8 @@
   contacted.
 
 * Replaying a manifest (`gtropic_data(manifest = )`) now takes only the
-  data-shaping query from it. `cache`, `as`, `confirm`, `quiet` and `offline`
-  are always the caller's choice, so a manifest can no longer switch off the
+  data-shaping query from it. `cache`, `confirm`, `quiet` and `offline` are
+  always the caller's choice, so a manifest can no longer switch off the
   large-download confirmation or silence messages.
 * Manifests are now checked for content as well as shape before replay: the
   format version, a valid server host name, positive whole file ids, plain

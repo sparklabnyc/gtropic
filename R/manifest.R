@@ -4,7 +4,8 @@
 # A single `version` argument cannot describe a query, because a query can span
 # two datasets whose version numbers advance independently. The manifest records
 # exactly which file, at which version, with which checksum, went into a result.
-# Handing it back to gtropic_data() reproduces that result byte for byte.
+# Handing it back to gtropic_data() retrieves the same source files and replays
+# the resolved query.
 # ---------------------------------------------------------------------------
 
 #' Format version of `gtropic_manifest` objects
