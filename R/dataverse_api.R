@@ -72,7 +72,7 @@ with_retry <- function(expr,
 #' @noRd
 abort_dataverse <- function(err, what = "request", server = opt_server(),
                             call = rlang::caller_env()) {
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "Could not complete {what} against {.val {server}}.",
       x = "{conditionMessage(err)}",
@@ -81,6 +81,7 @@ abort_dataverse <- function(err, what = "request", server = opt_server(),
       i = "Check {.code getOption('gtropic.server')} and the DOI options
            (see {.code ?gtropic_options})."
     ),
+    class = "gtropic_error_network",
     call = call
   )
 }
@@ -446,13 +447,14 @@ verify_checksum <- function(raw, expected_checksum, label = "file",
 
   got <- checksum_raw(raw, expected_checksum, checksum_type)
   if (!identical(tolower(got), tolower(expected_checksum))) {
-    cli::cli_abort(
+    gtropic_abort(
       c("Checksum mismatch for {.path {label}}.",
         x = "Expected {.val {expected_checksum}} but the download hashed to
              {.val {got}}.",
         i = "The download was likely truncated. Try again; if it persists the
              published file may have changed."
       ),
+      class = "gtropic_error_checksum",
       call = call
     )
   }

@@ -213,23 +213,23 @@ resolve_polygon <- function(polygon,
       "Polygon membership was evaluated across {length(years)} years; ",
       "population-weighted centroids move between years."
     )
-    cli::cli_warn(c(
+    gtropic_warn(c(
       "Polygon membership is year-dependent.",
       i = "Centroids were evaluated for {length(years)} year{?s}
            ({years[1]}-{years[length(years)]}); an ADM2 unit is included if its
            centroid fell inside the polygon in any of them."
-    ))
+    ), class = "gtropic_warning_polygon")
   }
 
   if (length(inconsistent) > 0L) {
     warnings$polygon_inconsistent <- inconsistent
-    cli::cli_warn(c(
+    gtropic_warn(c(
       "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
        across years.",
       "!" = "{truncate_display(inconsistent)}",
       i = "{?It was/They were} included. The full vector is available via
            {.code gtropic_diagnostics()}."
-    ))
+    ), class = "gtropic_warning_polygon")
   }
 
   list(adm2_ids = all_in, inconsistent = inconsistent, warnings = warnings)

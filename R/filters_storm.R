@@ -72,7 +72,7 @@ resolve_storms <- function(storm_metadata,
       as.character(genesis[!is.na(genesis)])
     )
     if (length(unmatched) > 0L) {
-      cli::cli_abort(
+      gtropic_abort(
         c("{length(unmatched)} date{?s} in {.arg date_list} matched no storm
            genesis date.",
           x = "{.val {truncate_display(unmatched)}}",
@@ -81,6 +81,7 @@ resolve_storms <- function(storm_metadata,
                record, not the date it made landfall.",
           i = "See {.code gtropic_storms()} for genesis dates."
         ),
+        class = "gtropic_error_no_match",
         call = call
       )
     }
@@ -135,13 +136,14 @@ resolve_storms <- function(storm_metadata,
   }
 
   if (!any(keep)) {
-    cli::cli_abort(
+    gtropic_abort(
       c("No storms satisfy all of the filters supplied.",
         x = "Filters in play: {.arg {used_args}}.",
         i = "Storm and date filters are combined with AND. A storm is selected
              by the date its track begins, not by when or where it struck.",
         i = "Use {.code gtropic_storms()} to explore the available storms."
       ),
+      class = "gtropic_error_no_match",
       call = call
     )
   }
@@ -194,7 +196,7 @@ warn_ambiguous_storm_names <- function(storm_metadata,
 
   ambiguous_names <- values[match(ambiguous_keys, norm_key(values))]
   if (isTRUE(excluded)) {
-    cli::cli_warn(
+    gtropic_warn(
       c(
         "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
         i = "The returned unique {.field STORM_ID}s distinguish these excluded records; excluded storms cannot be retrieved with {.code gtropic_data()}."
@@ -203,7 +205,7 @@ warn_ambiguous_storm_names <- function(storm_metadata,
       call = call
     )
   } else {
-    cli::cli_warn(
+    gtropic_warn(
       c(
         "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
         i = "{.field STORM_ID} is unique and preferred.",
@@ -291,7 +293,7 @@ abort_unavailable_storms <- function(values,
 
   excluded_matches <- values[is_excluded]
   absent_matches <- values[!is_excluded]
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "{length(values)} value{?s} in {.arg {arg}} did not match an available storm.",
       if (length(excluded_matches) > 0L) {
@@ -302,6 +304,7 @@ abort_unavailable_storms <- function(values,
       },
       i = "Use {.code gtropic_excluded_storms()} to review excluded storm records."
     ),
+    class = "gtropic_error_no_match",
     call = call
   )
 }

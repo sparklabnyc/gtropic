@@ -82,28 +82,28 @@ new_gtropic_data <- function(tables,
 #' @seealso [gtropic_data()]
 #' @export
 gtropic_manifest <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   attr(x, "manifest")
 }
 
 #' @rdname gtropic_manifest
 #' @export
 gtropic_filters <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   structure(attr(x, "filters_resolved"), class = c("gtropic_filters", "list"))
 }
 
 #' @rdname gtropic_manifest
 #' @export
 gtropic_diagnostics <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   attr(x, "warnings")
 }
 
 #' @rdname gtropic_manifest
 #' @export
 gtropic_availability <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   attr(x, "availability")
 }
 
@@ -363,4 +363,26 @@ table_dim_label <- function(x) {
     return(glue::glue("{length(x)} entries (list)"))
   }
   glue::glue("{nrow(x)} rows x {ncol(x)} columns")
+}
+
+#' Abort unless `x` is a `gtropic_data` object
+#'
+#' @param x Object to check.
+#' @param arg Argument name, for the error message.
+#' @param call Calling environment for error reporting.
+#' @return `x`, invisibly.
+#' @keywords internal
+#' @noRd
+check_gtropic_data <- function(x, arg = rlang::caller_arg(x),
+                               call = rlang::caller_env()) {
+  if (!inherits(x, "gtropic_data")) {
+    cli::cli_abort(
+      c("{.arg {arg}} must be a {.cls gtropic_data} object returned by
+         {.fn gtropic_data}.",
+        x = "Got {.obj_type_friendly {x}}."
+      ),
+      call = call
+    )
+  }
+  invisible(x)
 }

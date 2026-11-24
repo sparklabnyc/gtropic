@@ -135,6 +135,25 @@ plot_flag <- function(x, name) {
   invisible(x)
 }
 
+#' Validate an optional character selector
+#'
+#' @param x Value supplied: `NULL` or a nonempty character vector.
+#' @param name Argument name, for the error message.
+#' @param allow_empty_strings Whether `""` elements are accepted.
+#' @return `x`, invisibly.
+#' @keywords internal
+#' @noRd
+plot_check_strings <- function(x, name, allow_empty_strings = FALSE) {
+  if (is.null(x)) {
+    return(invisible(x))
+  }
+  if (!is.character(x) || !length(x) || anyNA(x) ||
+    (!allow_empty_strings && any(!nzchar(x)))) {
+    cli::cli_abort("{.arg {name}} must be a nonempty character vector or NULL.")
+  }
+  invisible(x)
+}
+
 #' Validate optional placement of per-panel metric scale strips
 #' @keywords internal
 #' @noRd

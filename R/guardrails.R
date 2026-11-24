@@ -83,7 +83,7 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
   }
 
   if (!is_interactive()) {
-    cli::cli_abort(
+    gtropic_abort(
       c("This query would download about {format_bytes(estimate$bytes)} across
          {estimate$n_files} file{?s}, above the
          {threshold_gb} GB confirmation threshold.",
@@ -95,6 +95,7 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
         i = "Narrowing {.arg date_range} or dropping {.val precip} from
              {.arg tables} is usually the better fix."
       ),
+      class = "gtropic_error_download_size",
       call = call
     )
   }
@@ -109,11 +110,12 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
   ans <- readline("Proceed? [y/N] ")
 
   if (!tolower(trimws(ans)) %in% c("y", "yes")) {
-    cli::cli_abort(
+    gtropic_abort(
       c("Download cancelled.",
         i = "Narrow the query, or pass {.code confirm = FALSE} to skip this
              check."
       ),
+      class = "gtropic_error_download_size",
       call = call
     )
   }

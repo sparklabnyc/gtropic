@@ -74,7 +74,7 @@ precip_all_missing_adm2_ids <- function(precip,
 warn_precip_all_missing <- function(adm2_ids, call = rlang::caller_env()) {
   if (!length(adm2_ids)) return(invisible(adm2_ids))
 
-  cli::cli_warn(
+  gtropic_warn(
     c(
       "No non-missing precipitation values were returned for
        {length(adm2_ids)} selected ADM2 unit{?s}.",

@@ -298,13 +298,8 @@ plot_categorize_wind_exposure <- function(value, key) {
 #' @keywords internal
 #' @noRd
 subset_plot_data <- function(data, storm = NULL, adm2 = NULL) {
-  for (nm in c("storm", "adm2")) {
-    value <- get(nm)
-    if (is.null(value)) next
-    if (!is.character(value) || !length(value) || anyNA(value)) {
-      cli::cli_abort("{.arg {nm}} must be a nonempty character vector or NULL.")
-    }
-  }
+  plot_check_strings(storm, "storm", allow_empty_strings = TRUE)
+  plot_check_strings(adm2, "adm2", allow_empty_strings = TRUE)
   ids <- storm
   if (!is.null(storm) && !is.null(data$storm_metadata)) {
     meta <- data$storm_metadata

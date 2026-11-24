@@ -106,12 +106,13 @@ match_values <- function(values,
   }, character(1))
   names(bullets) <- rep("x", length(bullets))
 
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "{length(missed)} value{?s} in {.arg {arg}} did not match any {what}.",
       cli_escape(bullets),
       i = "See {.code {helper}} for the full list of valid values."
     ),
+    class = "gtropic_error_no_match",
     call = call
   )
 }
@@ -128,7 +129,7 @@ match_values <- function(values,
 #' @keywords internal
 #' @noRd
 abort_empty_intersection <- function(args, call = rlang::caller_env()) {
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "No ADM2 units satisfy all of the geographic filters supplied.",
       x = "Filters in play: {.arg {args}}.",
@@ -136,6 +137,7 @@ abort_empty_intersection <- function(args, call = rlang::caller_env()) {
            {.emph across} arguments, so these conditions must hold together.",
       i = "Use {.code gtropic_adm2()} to explore valid combinations."
     ),
+    class = "gtropic_error_no_match",
     call = call
   )
 }

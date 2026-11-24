@@ -317,26 +317,26 @@ test_that("wind_radius_km defaults to 500 km", {
 })
 
 test_that("wind-radius validation accepts finite, Inf, and NULL values", {
-  expect_identical(check_wind_radius_km(500), 500)
-  expect_identical(check_wind_radius_km(Inf), Inf)
-  expect_identical(check_wind_radius_km(NULL), Inf)
+  expect_identical(check_radius_km(500), 500)
+  expect_identical(check_radius_km(Inf), Inf)
+  expect_identical(check_radius_km(NULL), Inf)
 
   for (x in list(0, -1, NA_real_, NaN, -Inf, c(100, 200), "500")) {
-    expect_error(check_wind_radius_km(x), "wind_radius_km")
+    expect_error(check_radius_km(x, "wind_radius_km"), "wind_radius_km")
   }
   expect_error(
-    check_wind_radius_km(-Inf),
+    check_radius_km(-Inf),
     "positive finite number, Inf, or"
   )
 })
 
 test_that("hazard-radius validation accepts finite, Inf, and NULL values", {
-  expect_identical(check_positive_num(500, "radius"), 500)
-  expect_identical(check_positive_num(Inf, "radius"), Inf)
-  expect_identical(check_positive_num(NULL, "radius"), Inf)
+  expect_identical(check_radius_km(500, "radius"), 500)
+  expect_identical(check_radius_km(Inf, "radius"), Inf)
+  expect_identical(check_radius_km(NULL, "radius"), Inf)
 
   for (x in list(0, -1, NA_real_, NaN, -Inf, c(100, 200), "500")) {
-    expect_error(check_positive_num(x, "radius"), "radius")
+    expect_error(check_radius_km(x, "radius"), "radius")
   }
 })
 

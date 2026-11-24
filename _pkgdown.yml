@@ -68,8 +68,10 @@ reference:
   - gtropic_save
 - title: Configuration
   desc: |
-    Options controlling the server, dataset identifiers, timeouts and the large query download guardrail.
-  contents: gtropic_options
+    Options controlling the server, dataset identifiers, timeouts and the large query download guardrail, and the classes of the errors and warnings gtropic signals.
+  contents:
+  - gtropic_options
+  - gtropic_conditions
 - title: Data notes
   desc: |
     Known limitations in the published G-TROPIC source data.

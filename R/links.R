@@ -156,19 +156,19 @@ build_links <- function(wind,
                           before = 2, after = 1,
                           radius_km = 500
                         )) {
-  wind_radius_km <- check_wind_radius_km(
+  wind_radius_km <- check_radius_km(
     wind_radius_km,
     arg = "wind_radius_km"
   )
-  link_radius_km <- check_wind_radius_km(
+  link_radius_km <- check_radius_km(
     link_radius_km,
     arg = "link_radius_km"
   )
-  precip_window$radius_km <- check_wind_radius_km(
+  precip_window$radius_km <- check_radius_km(
     precip_window$radius_km,
     arg = "precip_window$radius_km"
   )
-  flood_window$radius_km <- check_wind_radius_km(
+  flood_window$radius_km <- check_radius_km(
     flood_window$radius_km,
     arg = "flood_window$radius_km"
   )

@@ -174,11 +174,12 @@ gtropic_plot <- function(
   type <- rlang::arg_match(type)
   count_unit <- rlang::arg_match(count_unit)
   basemap <- rlang::arg_match(basemap)
-  for (nm in c(
-    "binary", "interactive", "quiet", "gridlines", "track_labels", "make_valid"
-  )) {
-    plot_flag(get(nm), nm)
-  }
+  plot_flag(binary, "binary")
+  plot_flag(interactive, "interactive")
+  plot_flag(quiet, "quiet")
+  plot_flag(gridlines, "gridlines")
+  plot_flag(track_labels, "track_labels")
+  plot_flag(make_valid, "make_valid")
   if (!is.null(track)) plot_flag(track, "track")
   if (interactive && !type %in% c("exposure", "count")) {
     cli::cli_abort("Interactive plots support only type = 'exposure' or 'count'.")
@@ -186,15 +187,12 @@ gtropic_plot <- function(
   if (binary && !type %in% c("exposure", "count")) {
     cli::cli_abort("{.arg binary} applies only to exposure and count maps.")
   }
-  for (nm in c("metric", "storm", "adm2", "facet_by")) {
-    value <- get(nm)
-    if (is.null(value)) next
-    if (!is.character(value) || !length(value) || anyNA(value) || any(!nzchar(value))) {
-      cli::cli_abort("{.arg {nm}} must be a nonempty character vector or NULL.")
-    }
-    if (nm == "facet_by" && length(value) != 1L) {
-      cli::cli_abort("{.arg facet_by} must be one string or NULL.")
-    }
+  plot_check_strings(metric, "metric")
+  plot_check_strings(storm, "storm")
+  plot_check_strings(adm2, "adm2")
+  plot_check_strings(facet_by, "facet_by")
+  if (!is.null(facet_by) && length(facet_by) != 1L) {
+    cli::cli_abort("{.arg facet_by} must be one string or NULL.")
   }
   if (!is.numeric(expand) || length(expand) != 1L || !is.finite(expand) || expand < 0) {
     cli::cli_abort("{.arg expand} must be one nonnegative finite number.")

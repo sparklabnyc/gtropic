@@ -50,6 +50,16 @@
 
 ## New features
 
+* Errors and warnings that scripts may want to handle now have classes, all
+  inheriting from `gtropic_error` or `gtropic_warning`: network failures
+  (`gtropic_error_network`), checksum mismatches, filters that match nothing,
+  unconfirmed large downloads, invalid manifests, and the availability,
+  polygon, missing-precipitation and ambiguous-storm-name warnings. See
+  `?gtropic_conditions`.
+* Accessors such as `gtropic_manifest()` give an informative error, not a
+  `stopifnot()` message, when passed something other than a `gtropic_data`
+  object.
+
 * `gtropic_example()` returns a small synthetic `gtropic_data` object, so
   examples and the plotting functions can be tried offline. Its values are
   invented.

@@ -328,11 +328,11 @@ assemble_gtropic_data <- function(args, call = NULL) {
     tag_year = TRUE
   )
   if (is.null(storm_metadata)) {
-    cli::cli_abort(c(
+    gtropic_abort(c(
       "No storm metadata was found for year{?s} {.val {candidate_years}}.",
       i = "Check the date filters, or run {.code gtropic_years()} to see what
            is published."
-    ))
+    ), class = "gtropic_error_no_match")
   }
 
   assertion <- assert_genesis_year_convention(storm_metadata, candidate_years)
@@ -491,7 +491,9 @@ assemble_gtropic_data <- function(args, call = NULL) {
   )
   availability_messages <- availability_warnings(availability)
   warnings <- c(warnings, availability_messages)
-  for (msg in unname(availability_messages)) cli::cli_warn("{msg}")
+  for (msg in unname(availability_messages)) {
+    gtropic_warn("{msg}", class = "gtropic_warning_availability")
+  }
 
   precip <- NULL
   if ("precip" %in% args$tables) {

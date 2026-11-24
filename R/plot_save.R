@@ -75,16 +75,9 @@ gtropic_save <- function(plot, filename, ..., dpi = 300,
   if (!inherits(plot, "ggplot")) {
     cli::cli_abort("{.arg plot} must be a ggplot or HTML widget.")
   }
-  for (nm in c("dpi", "width", "height")) {
-    value <- get(nm)
-    if (nm != "dpi" && is.null(value)) next
-    if (
-      !is.numeric(value) || length(value) != 1L ||
-        !is.finite(value) || value <= 0
-    ) {
-      cli::cli_abort("{.arg {nm}} must be one positive finite number.")
-    }
-  }
+  plot_save_positive(dpi, "dpi")
+  if (!is.null(width)) plot_save_positive(width, "width")
+  if (!is.null(height)) plot_save_positive(height, "height")
   units <- rlang::arg_match(units, c("in", "cm", "mm", "px"))
   path <- dots[["path"]]
   if (!is.null(path)) plot_save_string(path, "path")
@@ -181,4 +174,14 @@ plot_save_aspect <- function(bbox) {
   }
   aspect <- span[1] * cos(mean(bbox[c(2, 4)]) * pi / 180) / span[2]
   if (!is.finite(aspect) || aspect <= 0) fallback else aspect
+}
+
+#' Validate one positive finite number
+#' @keywords internal
+#' @noRd
+plot_save_positive <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0) {
+    cli::cli_abort("{.arg {name}} must be one positive finite number.")
+  }
+  invisible(x)
 }

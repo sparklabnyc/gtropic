@@ -78,8 +78,9 @@ cli_template_sinks <- c(
   "cli_alert_danger", "cli_h1", "cli_h2", "cli_h3", "cli_li", "cli_ul",
   "cli_ol", "cli_dl", "cli_blockquote", "cli_rule", "format_inline",
   "format_message", "format_warning", "format_error",
-  # The package's own wrapper around cli::cli_inform().
-  "inform_unless_quiet"
+  # The package's own wrappers around cli::cli_inform(), cli::cli_abort() and
+  # cli::cli_warn().
+  "inform_unless_quiet", "gtropic_abort", "gtropic_warn"
 )
 
 is_literal_template <- function(e) {

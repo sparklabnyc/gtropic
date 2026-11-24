@@ -353,7 +353,7 @@ gtropic_data <- function(ADM2_ID = NULL,
       USA_ATCF_ID = as_filter_chr(USA_ATCF_ID, "USA_ATCF_ID")
     )),
     storm_name_years = storm_name_years(storm_name),
-    wind_radius_km = check_wind_radius_km(wind_radius_km),
+    wind_radius_km = check_radius_km(wind_radius_km),
     polygon = polygon,
     reproject = check_flag(reproject),
     date_range = date_range,
@@ -368,7 +368,7 @@ gtropic_data <- function(ADM2_ID = NULL,
       precip_days_after,
       "precip_days_after"
     ),
-    precip_radius_km = check_positive_num(
+    precip_radius_km = check_radius_km(
       precip_radius_km,
       "precip_radius_km"
     ),
@@ -377,7 +377,7 @@ gtropic_data <- function(ADM2_ID = NULL,
       "flood_days_before"
     ),
     flood_days_after = check_nonneg_int(flood_days_after, "flood_days_after"),
-    flood_radius_km = check_positive_num(flood_radius_km, "flood_radius_km"),
+    flood_radius_km = check_radius_km(flood_radius_km, "flood_radius_km"),
     flood_match = flood_match,
     geometry_resolution = geometry_resolution,
     make_valid = check_flag(make_valid),
@@ -482,37 +482,10 @@ check_nonneg_int <- function(x, arg, call = rlang::caller_env()) {
   as.numeric(x)
 }
 
-#' Validate a positive numeric radius argument
+#' Validate a radius argument
 #'
-#' @param x Value supplied.
-#' @param arg Argument name.
-#' @param call Calling environment.
-#'
-#' @return `x` as a positive numeric scalar or `Inf`.
-#' @keywords internal
-#' @noRd
-check_positive_num <- function(x, arg, call = rlang::caller_env()) {
-  if (is.null(x)) {
-    return(Inf)
-  }
-
-  valid <- is.numeric(x) && length(x) == 1L &&
-    (is.infinite(x) && x > 0 || is.finite(x) && x > 0)
-  if (!valid) {
-    cli::cli_abort(
-      c("{.arg {arg}} must be a single positive finite number, {Inf}, or {.code NULL}.",
-        x = "Got {.val {x}}."
-      ),
-      call = call
-    )
-  }
-  as.numeric(x)
-}
-
-#' Validate the wind radius argument
-#'
-#' `NULL` is an explicit request for no wind-distance restriction. It is
-#' normalized to `Inf` so downstream filtering has one unbounded representation.
+#' `NULL` is an explicit request for no distance restriction. It is normalized
+#' to `Inf` so downstream filtering has one unbounded representation.
 #'
 #' @param x Value supplied.
 #' @param arg Argument name.
@@ -521,9 +494,8 @@ check_positive_num <- function(x, arg, call = rlang::caller_env()) {
 #' @return A positive finite numeric scalar or `Inf`.
 #' @keywords internal
 #' @noRd
-check_wind_radius_km <- function(x,
-                                 arg = "wind_radius_km",
-                                 call = rlang::caller_env()) {
+check_radius_km <- function(x, arg = rlang::caller_arg(x),
+                            call = rlang::caller_env()) {
   if (is.null(x)) {
     return(Inf)
   }

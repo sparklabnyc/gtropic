@@ -157,11 +157,12 @@ manifest_order_datasets <- function(datasets) {
 #' @noRd
 manifest_validate <- function(manifest, call = rlang::caller_env()) {
   if (!inherits(manifest, "gtropic_manifest")) {
-    cli::cli_abort(
+    gtropic_abort(
       c("{.arg manifest} must be a manifest produced by
          {.code gtropic_manifest()}.",
         x = "Got {.cls {class(manifest)[1]}}."
       ),
+      class = "gtropic_error_manifest",
       call = call
     )
   }
@@ -172,8 +173,9 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   )
   missing <- setdiff(required, names(manifest$files))
   if (length(missing) > 0L) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} is missing required source-file column{?s} {.field {missing}}.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
@@ -181,19 +183,23 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   dataset_required <- c("source_role", "dataset_doi", "dataset_version")
   missing_datasets <- setdiff(dataset_required, names(manifest$datasets))
   if (length(missing_datasets) > 0L) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} is missing required dataset column{?s} {.field {missing_datasets}}.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
 
   if (nrow(manifest$files) == 0L) {
-    cli::cli_abort("{.arg manifest} records no files.", call = call)
+    gtropic_abort("{.arg manifest} records no files.",
+      class = "gtropic_error_manifest", call = call
+    )
   }
 
   if (is.null(manifest$resolved_query)) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} does not contain a canonical resolved query.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
@@ -203,17 +209,18 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   query_required <- setdiff(manifest_query_fields(), "make_valid")
   missing_query <- setdiff(query_required, names(manifest$resolved_query))
   if (length(missing_query) > 0L) {
-    cli::cli_abort(
+    gtropic_abort(
       c("{.arg manifest} has an incomplete canonical query.",
         x = "Missing field{?s}: {.field {missing_query}}."
       ),
+      class = "gtropic_error_manifest",
       call = call
     )
   }
   schema <- manifest$schema_version
   if (!is.numeric(schema) || length(schema) != 1L || is.na(schema) ||
     schema != MANIFEST_SCHEMA_VERSION) {
-    cli::cli_abort(
+    gtropic_abort(
       c("{.arg manifest} has an unsupported format version.",
         x = "Expected {.val {MANIFEST_SCHEMA_VERSION}}, got
              {.val {format(schema)}}.",
@@ -227,7 +234,7 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   manifest$server <- tryCatch(
     validate_server(manifest$server, arg = "manifest$server", call = NULL),
     error = function(e) {
-      cli::cli_abort("{.arg manifest} names an invalid server.",
+      gtropic_abort("{.arg manifest} names an invalid server.",
         parent = e, class = "gtropic_error_manifest", call = call
       )
     }
@@ -273,7 +280,7 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   tryCatch(
     manifest_validate_query(manifest$resolved_query),
     error = function(e) {
-      cli::cli_abort("{.arg manifest} has an invalid resolved query.",
+      gtropic_abort("{.arg manifest} has an invalid resolved query.",
         parent = e, class = "gtropic_error_manifest", call = call
       )
     }
@@ -303,7 +310,7 @@ manifest_check_field <- function(values, ok, field, call) {
     return(invisible(TRUE))
   }
   bad <- unique(as.character(values[!ok]))
-  cli::cli_abort(
+  gtropic_abort(
     c("{.arg manifest} has an invalid {.field {field}}.",
       x = "Offending value{?s}: {.val {truncate_display(bad, 5L)}}.",
       i = "Manifests made by {.code gtropic_manifest()} always pass this
@@ -345,7 +352,7 @@ manifest_validate_query <- function(q) {
   )), "geo_filters")
   expect(is_filters(q$storm_filters, c("STORM_ID", "STORM_NAME", "USA_ATCF_ID")), "storm_filters")
   expect(is.null(q$storm_name_years) || is_years(q$storm_name_years), "storm_name_years")
-  check_wind_radius_km(q$wind_radius_km, call = NULL)
+  check_radius_km(q$wind_radius_km, "wind_radius_km", call = NULL)
   expect(is.null(q$polygon) || inherits(q$polygon, c("sf", "sfc")), "polygon")
   expect(is_flag(q$reproject), "reproject")
   expect(
@@ -367,8 +374,8 @@ manifest_validate_query <- function(q) {
   )) {
     check_nonneg_int(q[[field]], field, call = NULL)
   }
-  check_positive_num(q$precip_radius_km, "precip_radius_km", call = NULL)
-  check_positive_num(q$flood_radius_km, "flood_radius_km", call = NULL)
+  check_radius_km(q$precip_radius_km, "precip_radius_km", call = NULL)
+  check_radius_km(q$flood_radius_km, "flood_radius_km", call = NULL)
   expect(
     is.character(q$flood_match) && length(q$flood_match) == 1L &&
       q$flood_match %in% c("start", "overlap"),
