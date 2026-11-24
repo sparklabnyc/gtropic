@@ -107,6 +107,87 @@ test_that("a corrupt cached blob is invalidated", {
   expect_false(cache_has(cache, key))
 })
 
+# Counts the hashes cache_get() computes, by wrapping checksum_file().
+local_hash_counter <- function(env = parent.frame()) {
+  counter <- new.env(parent = emptyenv())
+  counter$n <- 0L
+  hash <- checksum_file
+  local_mocked_bindings(
+    checksum_file = function(...) {
+      counter$n <- counter$n + 1L
+      hash(...)
+    },
+    .env = env
+  )
+  counter
+}
+
+test_that("a cached blob is hashed once per session, not on every use", {
+  cache_dir <- withr::local_tempdir()
+  cache <- fetcher_cache(cache_dir)
+  key <- fetcher_key()
+  bytes <- charToRaw("valid bytes")
+  checksum <- checksum_raw(bytes)
+  cache_put_bytes(cache, key, bytes, checksum)
+  # A blob this session did not store itself must be verified on first use.
+  cache_blob_forget(cache_blob_path(cache_dir, checksum))
+  hashes <- local_hash_counter()
+
+  for (i in 1:3) {
+    expect_identical(read_bytes(cache_get(cache, key, checksum)), bytes)
+  }
+  expect_identical(hashes$n, 1L)
+})
+
+test_that("a blob stored after a verified download needs no hash on first use", {
+  cache <- fetcher_cache(withr::local_tempdir())
+  key <- fetcher_key()
+  bytes <- charToRaw("valid bytes")
+  checksum <- checksum_raw(bytes)
+  cache_put_bytes(cache, key, bytes, checksum)
+  hashes <- local_hash_counter()
+
+  expect_identical(read_bytes(cache_get(cache, key, checksum)), bytes)
+  expect_identical(hashes$n, 0L)
+})
+
+test_that("a verified blob that changes on disk is verified again", {
+  cache_dir <- withr::local_tempdir()
+  cache <- fetcher_cache(cache_dir)
+  key <- fetcher_key()
+  bytes <- charToRaw("valid bytes")
+  checksum <- checksum_raw(bytes)
+  cache_put_bytes(cache, key, bytes, checksum)
+  blob <- cache_blob_path(cache_dir, checksum)
+  expect_false(is.null(cache_get(cache, key, checksum)))
+
+  # Same size, so only the modification time gives the change away.
+  writeBin(charToRaw("other bytes"), blob)
+  Sys.setFileTime(blob, Sys.time() + 60)
+
+  expect_warning(
+    result <- cache_get(cache, key, checksum),
+    "failed checksum verification"
+  )
+  expect_null(result)
+})
+
+test_that("a session's verification holds only for the checksum it checked", {
+  cache_dir <- withr::local_tempdir()
+  cache <- fetcher_cache(cache_dir)
+  key <- fetcher_key()
+  bytes <- charToRaw("valid bytes")
+  checksum <- checksum_raw(bytes)
+  cache_put_bytes(cache, key, bytes, checksum)
+
+  # The listing now publishes a different checksum for the same entry.
+  other <- checksum_raw(charToRaw("new bytes"))
+  expect_warning(
+    expect_null(cache_get(cache, key, expected_checksum = other)),
+    "failed checksum verification"
+  )
+})
+
 test_that("a cached SHA-256 blob is verified using SHA-256", {
   cache_dir <- withr::local_tempdir()
   cache <- fetcher_cache(cache_dir)

@@ -481,11 +481,16 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
   }
 
   # Verify on read as well as on write: silent bit-rot in a cache would be
-  # indistinguishable from a data error in someone's analysis.
+  # indistinguishable from a data error in someone's analysis. Once per
+  # session is enough (PERF-03): later uses rely on that check while the file
+  # is unchanged on disk.
   reference <- if (!is.na(expected_checksum) && nzchar(expected_checksum)) {
     expected_checksum
   } else {
     hit$checksum[1]
+  }
+  if (cache_blob_verified(blob, reference)) {
+    return(blob)
   }
   got <- checksum_file(blob, reference)
 
@@ -497,11 +502,62 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
       )
     )
     unlink(blob)
+    cache_blob_forget(blob)
     cache_index_write(cache$dir, idx[idx$checksum != hit$checksum[1], , drop = FALSE])
     return(NULL)
   }
 
+  cache_blob_mark_verified(blob, reference)
   blob
+}
+
+#' Remember which cached blobs were verified in this session
+#'
+#' Hashing a cached file proves it intact when it is used. Hashing it again
+#' for every query of a session would re-read gigabytes, so each blob is
+#' verified at most once per session, against the checksum it was verified
+#' for. The record also holds the file's size and modification time, and a
+#' blob that has changed on disk since is verified again.
+#'
+#' @param blob Blob path.
+#' @param checksum Checksum the blob was verified against.
+#'
+#' @return `cache_blob_verified()`: logical scalar. The others: invisibly
+#'   `blob`.
+#' @keywords internal
+#' @noRd
+cache_blob_verified <- function(blob, checksum) {
+  record <- .gtropic_session$verified_blobs[[blob]]
+  if (is.null(record) || !identical(record$checksum, tolower(checksum))) {
+    return(FALSE)
+  }
+  info <- file.info(blob, extra_cols = FALSE)
+  identical(record$size, info$size) && identical(record$mtime, info$mtime)
+}
+
+#' @rdname cache_blob_verified
+#' @keywords internal
+#' @noRd
+cache_blob_mark_verified <- function(blob, checksum) {
+  if (is.null(.gtropic_session$verified_blobs)) {
+    .gtropic_session$verified_blobs <- new.env(parent = emptyenv())
+  }
+  info <- file.info(blob, extra_cols = FALSE)
+  .gtropic_session$verified_blobs[[blob]] <- list(
+    checksum = tolower(checksum), size = info$size, mtime = info$mtime
+  )
+  invisible(blob)
+}
+
+#' @rdname cache_blob_verified
+#' @keywords internal
+#' @noRd
+cache_blob_forget <- function(blob) {
+  verified <- .gtropic_session$verified_blobs
+  if (!is.null(verified) && exists(blob, envir = verified, inherits = FALSE)) {
+    rm(list = blob, envir = verified)
+  }
+  invisible(blob)
 }
 
 #' Find a cached file together with its original acquisition time
@@ -594,6 +650,10 @@ cache_put <- function(cache, key, path, checksum = NA_character_,
       ))
       return(list(path = path, downloaded_at = downloaded_at))
     }
+    # These are the bytes just checked against the published checksum (or
+    # hashed above), so their first use from the cache needs no new hash. A
+    # blob that was already there has not been checked by this session.
+    if (stored) cache_blob_mark_verified(blob, checksum)
   }
 
   idx <- cache_index_read(cache$dir)

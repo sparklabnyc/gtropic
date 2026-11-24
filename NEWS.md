@@ -99,6 +99,11 @@
   so a whole year-file of global precipitation is never decoded at once. The
   returned tables are unchanged, row order included.
 
+* Repeated queries in one session no longer re-read every cached file to
+  check it. A cached file is verified against its checksum the first time a
+  session uses it (or not at all, if this session just downloaded and
+  verified it), and again only if it has changed on disk since.
+
 * When precipitation or flood is requested without the `zero_pairs` table,
   only the four `zero_pairs` columns that linkage needs are read. A `polygon`
   filter tests each distinct population centroid against the polygon once,
