@@ -93,6 +93,14 @@
 
 ## Improvements
 
+* Data is downloaded with `httr2` directly; the `dataverse` package is no
+  longer a dependency (`httr2 (>= 1.2.0)` is now imported). Each file is
+  streamed to disk as it arrives and then checked and read from disk, so a
+  download is never held in memory whole. Fewer requests are made: the
+  `dataverse` client looked up the dataset and the file's size and type before
+  every download, and reading a dataset's version number no longer transfers
+  its whole file list.
+
 * Fewer dependencies: `stringr` is no longer imported, and the unused
   suggested packages `curl`, `memoise` and `scales` are gone. User-supplied
   plot captions are now wrapped with base `strwrap()`, which fills lines
@@ -156,6 +164,11 @@
   is treated as "no checksum published" when it comes from a file listing,
   and a cache index entry with such a checksum can no longer make the cache
   read or delete a file outside its own directory.
+
+* When Dataverse answers a download with a redirect to its storage (Harvard
+  Dataverse redirects to Amazon S3), the redirect is followed without
+  `DATAVERSE_KEY`, which belongs to the Dataverse host only. A redirect from
+  HTTPS to plain HTTP is refused.
 
 * `DATAVERSE_KEY` is now sent only to the configured server
   (`getOption("gtropic.server")`). Requests to any other host, for example

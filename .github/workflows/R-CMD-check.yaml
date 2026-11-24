@@ -104,8 +104,7 @@ jobs:
           if [ "$s" -gt 5000000 ]; then echo "::warning::Tarball exceeds 5 MB ($s bytes)"; exit 0; fi
           if [ "$s" -gt 4000000 ]; then echo "::warning::Tarball exceeds 4 MB ($s bytes)"; fi
 
-      # Count files, not directories: the dataverse dependency creates an empty
-      # R/dataverse/api_cache directory on first use (until PERF-01 removes it).
+      # Count files, not directories: an empty directory holds no user data.
       - name: No files written to R user directories
         if: ${{ !cancelled() }}
         shell: bash

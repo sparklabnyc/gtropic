@@ -4,7 +4,7 @@ test_that("cache hits retain original download times in file provenance", {
   bytes <- charToRaw("timestamped source")
   downloaded <- as.POSIXct("2026-01-02 03:04:05", tz = "UTC")
 
-  cache_put(cache, key, bytes, checksum_raw(bytes), downloaded_at = downloaded)
+  cache_put_bytes(cache, key, bytes, checksum_raw(bytes), downloaded_at = downloaded)
   cached <- cache_get_record(cache, key, checksum_raw(bytes))
 
   expect_equal(cached$downloaded_at, downloaded)
@@ -432,15 +432,15 @@ test_that("download estimates require the resolved version and checksum", {
   ))
   discovery$historical$version <- "2.0"
 
-  cache_put(cache, key, old, checksum_raw(old))
+  cache_put_bytes(cache, key, old, checksum_raw(old))
   estimate <- estimate_download(plan, cache, discovery)
   expect_equal(estimate$n_cached, 0L)
   expect_equal(estimate$n_files, 1L)
 
-  cache_put(cache, fetcher_key(version = "2.0"), old, checksum_raw(old))
+  cache_put_bytes(cache, fetcher_key(version = "2.0"), old, checksum_raw(old))
   expect_equal(estimate_download(plan, cache, discovery)$n_cached, 0L)
 
-  cache_put(cache, fetcher_key(version = "2.0"), current, checksum_raw(current))
+  cache_put_bytes(cache, fetcher_key(version = "2.0"), current, checksum_raw(current))
   expect_equal(estimate_download(plan, cache, discovery)$n_cached, 1L)
 })
 
@@ -470,12 +470,12 @@ test_that("a pinned version downloads and records that version's files", {
       role <- names(golden_doi)[match(doi, golden_doi)]
       if (identical(version, ":latest")) unname(golden_version[role]) else version
     },
-    dv_get_file = function(file_id, ...) {
+    dv_get_file = function(file_id, ..., dest) {
       log$downloads <- c(log$downloads, as.integer(file_id))
       id <- as.integer(file_id)
       if (id > 100L) id <- id - 100L
-      path <- served$path[[as.character(id)]]
-      readBin(path, "raw", file.size(path))
+      file.copy(served$path[[as.character(id)]], dest)
+      invisible(dest)
     }
   )
 

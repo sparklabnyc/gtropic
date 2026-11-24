@@ -444,14 +444,17 @@ cache_config_write <- function(enabled) {
   invisible(enabled)
 }
 
-#' Retrieve a cached file's bytes
+#' Find a cached file and verify it
+#'
+#' The blob is hashed from disk (in chunks, never read into an R vector) and
+#' its path returned.
 #'
 #' @param cache Resolved cache list from `cache_resolve()`.
 #' @param key Named list with `server`, `doi`, `version`, `directory_label`,
 #'   `label`.
 #' @param expected_checksum Checksum from the live listing, when known.
 #'
-#' @return A raw vector, or `NULL` on a miss.
+#' @return The path of the verified blob, or `NULL` on a miss.
 #' @keywords internal
 #' @noRd
 cache_get <- function(cache, key, expected_checksum = NA_character_) {
@@ -477,8 +480,6 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
     return(NULL)
   }
 
-  raw <- readBin(blob, "raw", n = file.info(blob)$size)
-
   # Verify on read as well as on write: silent bit-rot in a cache would be
   # indistinguishable from a data error in someone's analysis.
   reference <- if (!is.na(expected_checksum) && nzchar(expected_checksum)) {
@@ -486,7 +487,7 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
   } else {
     hit$checksum[1]
   }
-  got <- checksum_raw(raw, reference)
+  got <- checksum_file(blob, reference)
 
   if (!identical(tolower(got), tolower(reference))) {
     cli::cli_warn(
@@ -500,15 +501,19 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
     return(NULL)
   }
 
-  raw
+  blob
 }
 
-#' Retrieve cached bytes together with their original acquisition time
+#' Find a cached file together with its original acquisition time
+#'
+#' @inheritParams cache_get
+#' @return `NULL` on a miss, otherwise a list with `path` (see `cache_get()`)
+#'   and `downloaded_at`.
 #' @keywords internal
 #' @noRd
 cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
-  raw <- cache_get(cache, key, expected_checksum)
-  if (is.null(raw)) return(NULL)
+  path <- cache_get(cache, key, expected_checksum)
+  if (is.null(path)) return(NULL)
   idx <- cache_index_read(cache$dir)
   hit <- idx[
     idx$server == key$server & idx$doi == key$doi &
@@ -517,39 +522,69 @@ cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
     drop = FALSE
   ]
   if (nrow(hit) == 0L) return(NULL)
-  list(raw = raw, downloaded_at = hit$fetched_at[1L])
+  list(path = path, downloaded_at = hit$fetched_at[1L])
 }
 
-#' Store a file's bytes in the cache
+#' Where to download a file before it is verified
+#'
+#' With the cache enabled, inside its `blobs/` directory, so that storing the
+#' verified file is a rename on the same disk. Otherwise in the session's
+#' temporary directory. The `.tmp-` prefix lets `cache_sweep_tmp()` remove
+#' files left by an interrupted download.
+#'
+#' @param cache Resolved cache list.
+#' @return A path that does not exist yet.
+#' @keywords internal
+#' @noRd
+cache_download_path <- function(cache) {
+  if (!isTRUE(cache$enabled)) {
+    return(tempfile(pattern = "gtropic-", fileext = ".download"))
+  }
+  cache_ensure_dirs(cache$dir)
+  tempfile(pattern = ".tmp-", tmpdir = file.path(cache$dir, "blobs"))
+}
+
+#' Store a downloaded file in the cache
+#'
+#' The file (already verified against its published checksum) is moved into
+#' the content-addressed blob store; if identical content is already stored,
+#' the file is left where it is for the caller to remove.
 #'
 #' @param cache Resolved cache list.
 #' @param key Named list as for `cache_get()`.
-#' @param raw Raw vector to store.
+#' @param path The downloaded file.
 #' @param checksum Published checksum.
 #' @param downloaded_at Download time to record.
 #' @param quiet Suppress the first-use notice.
 #'
-#' @return Original download time recorded for the cache entry, in whole
-#'   seconds (as stored in the index, so a later cache hit reports the same
-#'   time).
+#' @return A list with `path`, the file to read from now on (the blob, or
+#'   `path` itself when the cache is disabled or the file could not be
+#'   stored), and `downloaded_at`, the original download time recorded for the
+#'   cache entry, in whole seconds (as stored in the index, so a later cache
+#'   hit reports the same time).
 #' @keywords internal
 #' @noRd
-cache_put <- function(cache, key, raw, checksum = NA_character_,
+cache_put <- function(cache, key, path, checksum = NA_character_,
                       downloaded_at = Sys.time(), quiet = FALSE) {
   if (!isTRUE(cache$enabled)) {
-    return(as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC"))
+    return(list(
+      path = path,
+      downloaded_at = as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC")
+    ))
   }
   downloaded_at <- cache_time(downloaded_at)
   cache_first_use_notice(cache$dir, quiet = quiet)
 
-  if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_raw(raw)
+  if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_file(path)
+  size_bytes <- file.size(path)
 
   cache_ensure_dirs(cache$dir)
   blob <- cache_blob_path(cache$dir, checksum)
 
   # Content-addressed: identical bytes at two dataset versions share one blob.
   if (!file.exists(blob)) {
-    stored <- cache_write_atomic(blob, function(tmp) writeBin(raw, tmp))
+    stored <- isTRUE(suppressWarnings(file.rename(path, blob))) ||
+      cache_write_atomic(blob, function(tmp) file.copy(path, tmp))
     # Another session may have stored the same bytes in the meantime.
     if (!stored && !file.exists(blob)) {
       cli::cli_warn(c(
@@ -557,7 +592,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
          in the cache.",
         i = "The downloaded copy is still used for this result."
       ))
-      return(downloaded_at)
+      return(list(path = path, downloaded_at = downloaded_at))
     }
   }
 
@@ -565,7 +600,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
   entry <- tibble::tibble(
     server = key$server, doi = key$doi, version = key$version,
     directory_label = key$directory_label, label = key$label,
-    checksum = checksum, size_bytes = length(raw), fetched_at = downloaded_at
+    checksum = checksum, size_bytes = size_bytes, fetched_at = downloaded_at
   )
   idx <- dplyr::bind_rows(
     idx[!(idx$server == key$server & idx$doi == key$doi &
@@ -576,7 +611,7 @@ cache_put <- function(cache, key, raw, checksum = NA_character_,
   )
   cache_index_write(cache$dir, idx)
 
-  downloaded_at
+  list(path = blob, downloaded_at = downloaded_at)
 }
 
 #' Is a planned file already cached?

@@ -16,41 +16,37 @@ skip_if_no_live_tests <- function() {
   testthat::skip_if_offline(opt_server())
 }
 
-# dataverse 0.3.16 builds requests with httr. This test-only transport keeps
-# dataverse's URL construction and parsing while making the final call through
-# httr2, which allows httptest2 to record and replay the API responses.
-dataverse_httptest_transport <- function(url, ..., key = NULL, as = "text") {
-  dots <- list(...)
-  request <- httr2::request(url)
-
-  if (!is.null(dots$query) && length(dots$query) > 0L) {
-    request <- do.call(httr2::req_url_query, c(list(request), dots$query))
-  }
-  if (!is.null(key) && nzchar(key)) {
-    request <- httr2::req_headers(request, `X-Dataverse-key` = key)
-  }
-
-  response <- httr2::req_perform(request)
-  httr2::resp_check_status(response)
-  if (identical(as, "raw")) {
-    httr2::resp_body_raw(response)
-  } else {
-    httr2::resp_body_string(response)
-  }
+# Hash bytes the way the package hashes a downloaded file.
+checksum_raw <- function(raw, checksum = NULL, checksum_type = NA_character_) {
+  digest::digest(
+    raw, algo = checksum_algorithm(checksum, checksum_type), serialize = FALSE
+  )
 }
 
-local_dataverse_recordings <- function(.env = parent.frame()) {
-  testthat::local_mocked_bindings(
-    api_get_impl = dataverse_httptest_transport,
-    api_get_session_cache = dataverse_httptest_transport,
-    api_get_disk_cache = dataverse_httptest_transport,
-    .package = "dataverse",
-    .env = .env
-  )
-  withr::local_options(
-    list(DATAVERSE_USE_CACHE = "none", gtropic.max_tries = 1L),
-    .local_envir = .env
-  )
+# Read a whole file back as bytes.
+read_bytes <- function(path) {
+  readBin(path, "raw", n = file.size(path))
+}
+
+# Write bytes to a temporary file that is removed with the calling frame.
+local_bytes_file <- function(bytes, env = parent.frame()) {
+  path <- withr::local_tempfile(.local_envir = env)
+  writeBin(bytes, path)
+  path
+}
+
+# A stand-in for dv_get_file(): "download" bytes to `dest`.
+serve_bytes <- function(bytes, dest) {
+  writeBin(bytes, dest)
+  invisible(dest)
+}
+
+# Store bytes in the cache the way a verified download is stored.
+cache_put_bytes <- function(cache, key, bytes, checksum = NA_character_, ...) {
+  path <- tempfile()
+  on.exit(unlink(path), add = TRUE)
+  writeBin(bytes, path)
+  cache_put(cache, key, path, checksum, ...)
 }
 
 fetcher_listing <- function(years = 2001:2005, directory = "yearly") {

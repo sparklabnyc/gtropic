@@ -36,7 +36,7 @@ test_that("a tampered index cannot make the cache read or delete other files", {
   key <- fetcher_key()
 
   got <- try(suppressWarnings(cache_get(cache, key)), silent = TRUE)
-  expect_false(is.raw(got))
+  expect_false(is.character(got))
   expect_true(file.exists(victim))
 
   expect_false(isTRUE(try(cache_has(cache, key), silent = TRUE)))
@@ -134,9 +134,9 @@ test_that("cache hits report the download time stored in the index", {
   dir <- withr::local_tempdir()
   cache <- fetcher_cache(dir)
   bytes <- charToRaw("bytes")
-  stored <- cache_put(cache, fetcher_key(), bytes, checksum_raw(bytes),
+  stored <- cache_put_bytes(cache, fetcher_key(), bytes, checksum_raw(bytes),
     downloaded_at = as.POSIXct("2026-01-02 03:04:05.75", tz = "UTC")
-  )
+  )$downloaded_at
 
   expect_identical(stored, as.POSIXct("2026-01-02 03:04:05", tz = "UTC"))
   expect_identical(cache_get_record(cache, fetcher_key())$downloaded_at, stored)
@@ -220,17 +220,17 @@ test_that("a file planted at a predictable temp name is not written through", {
   checksum <- checksum_raw(bytes)
   file.symlink(victim, file.path(dir, "blobs", paste0(checksum, ".blob.tmp")))
 
-  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum)
+  cache_put_bytes(fetcher_cache(dir), fetcher_key(), bytes, checksum)
 
   expect_identical(readLines(victim), "keep me")
   expect_identical(cache_index_read(dir)$checksum, checksum)
-  expect_identical(cache_get(fetcher_cache(dir), fetcher_key()), bytes)
+  expect_identical(read_bytes(cache_get(fetcher_cache(dir), fetcher_key())), bytes)
 })
 
 test_that("writes leave no temporary files behind", {
   dir <- withr::local_tempdir()
   bytes <- charToRaw("bytes")
-  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
+  cache_put_bytes(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
   cache_discovery_write(dir, fetcher_discovery(fetcher_listing()$listing), "x")
 
   expect_length(list_tmp(dir), 0L)
@@ -258,7 +258,7 @@ test_that("stale temporary files are removed when the cache is next written", {
   rm(list = ls(.gtropic_session, pattern = "^tmp_swept"), envir = .gtropic_session)
 
   bytes <- charToRaw("bytes")
-  cache_put(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
+  cache_put_bytes(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
 
   expect_false(any(file.exists(stale)))
   expect_true(file.exists(fresh))

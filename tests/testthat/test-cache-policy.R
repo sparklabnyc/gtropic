@@ -219,12 +219,14 @@ test_that("the first cached file of a session is announced once", {
   cache <- fetcher_cache(withr::local_tempdir())
   raw <- charToRaw("bytes")
 
-  expect_no_message(cache_put(cache, fetcher_key(label = "2001.parquet"), raw, quiet = TRUE))
+  expect_no_message(
+    cache_put_bytes(cache, fetcher_key(label = "2001.parquet"), raw, quiet = TRUE)
+  )
   expect_message(
-    cache_put(cache, fetcher_key(label = "2002.parquet"), raw),
+    cache_put_bytes(cache, fetcher_key(label = "2002.parquet"), raw),
     "Caching downloads in"
   )
-  expect_no_message(cache_put(cache, fetcher_key(label = "2003.parquet"), raw))
+  expect_no_message(cache_put_bytes(cache, fetcher_key(label = "2003.parquet"), raw))
 })
 
 test_that("a retrieval that writes to the cache prunes outdated versions", {

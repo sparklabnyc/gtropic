@@ -16,7 +16,9 @@ test_that("transport failures are gtropic_error_network", {
 
 test_that("checksum mismatches are gtropic_error_checksum", {
   expect_gtropic_error(
-    verify_checksum(charToRaw("abc"), strrep("0", 32L), label = "x.parquet"),
+    verify_checksum(
+      local_bytes_file(charToRaw("abc")), strrep("0", 32L), label = "x.parquet"
+    ),
     "gtropic_error_checksum"
   )
 })

@@ -59,10 +59,10 @@ local_golden_collection <- function(env = parent.frame()) {
     },
     dv_list_files = function(doi, ...) listings[[role_of(doi)]],
     dv_version_label = function(doi, ...) unname(golden_version[role_of(doi)]),
-    dv_get_file = function(file_id, ...) {
+    dv_get_file = function(file_id, ..., dest) {
       log$downloads <- c(log$downloads, as.integer(file_id))
-      path <- listings$path[[as.character(file_id)]]
-      readBin(path, "raw", file.size(path))
+      file.copy(listings$path[[as.character(file_id)]], dest)
+      invisible(dest)
     },
     .env = env
   )

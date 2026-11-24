@@ -5,17 +5,21 @@
 # supports local paths and S3/GCS URIs only; there is no generic HTTP
 # filesystem. The working pattern is therefore:
 #
-#   raw <- dv_get_file(id)                       # raw vector, nothing on disk
-#   tbl <- read_parquet_raw(raw, cols)           # Arrow Table
-#   out <- tbl |> filter(...) |> collect()       # materialise only what we need
+#   path <- dv_get_file(id, dest = <file>)       # streamed to disk
+#   tbl <- read_parquet_file(path, cols)         # Arrow Table
+#   out <- tibble::as_tibble(tbl)                # then filtered in R
 #
 # Column projection saves memory and R-side conversion time. It does NOT save
 # bandwidth: Dataverse serves whole files regardless.
 # ---------------------------------------------------------------------------
 
-#' Read parquet bytes into an Arrow Table
+#' Read a parquet file into an Arrow Table
 #'
-#' @param raw Raw vector of parquet bytes.
+#' The file is read rather than memory-mapped: a download that is not cached
+#' is deleted as soon as it has been read, and Windows cannot delete a file
+#' that is still mapped.
+#'
+#' @param path Parquet file.
 #' @param col_select Character vector of columns to project, or `NULL` for all.
 #'   Columns absent from the file are dropped with a warning rather than an
 #'   error, so a schema addition upstream never breaks a query.
@@ -25,10 +29,10 @@
 #' @return An `arrow::Table`.
 #' @keywords internal
 #' @noRd
-read_parquet_raw <- function(raw, col_select = NULL, label = "file",
-                             call = rlang::caller_env()) {
+read_parquet_file <- function(path, col_select = NULL, label = "file",
+                              call = rlang::caller_env()) {
   tbl <- tryCatch(
-    arrow::read_parquet(raw, as_data_frame = FALSE),
+    arrow::read_parquet(path, as_data_frame = FALSE, mmap = FALSE),
     error = function(e) {
       cli::cli_abort(
         c("Could not read {.path {label}} as parquet.",
@@ -58,18 +62,18 @@ read_parquet_raw <- function(raw, col_select = NULL, label = "file",
   tbl
 }
 
-#' Read JSON bytes into a nested list
+#' Read a JSON file into a nested list
 #'
-#' @param raw Raw vector.
+#' @param path JSON file.
 #' @param label Path used in error messages.
 #' @param call Calling environment.
 #'
 #' @return A nested list.
 #' @keywords internal
 #' @noRd
-read_json_raw <- function(raw, label = "file", call = rlang::caller_env()) {
+read_json_file <- function(path, label = "file", call = rlang::caller_env()) {
   tryCatch(
-    jsonlite::fromJSON(rawToChar(raw), simplifyVector = FALSE),
+    jsonlite::read_json(path, simplifyVector = FALSE),
     error = function(e) {
       cli::cli_abort(
         c("Could not parse {.path {label}} as JSON.", x = "{conditionMessage(e)}"),
@@ -79,31 +83,25 @@ read_json_raw <- function(raw, label = "file", call = rlang::caller_env()) {
   )
 }
 
-#' Read GeoParquet bytes into an sf object
+#' Read a GeoParquet file into an sf object
 #'
 #' `sf` and `sfarrow` are Suggests, not Imports: only the `polygon` filter and
 #' the `geometry` table need them. Users who do not need geometry can omit it
 #' from `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
 #'
-#' @param raw Raw vector of GeoParquet bytes.
+#' @param path GeoParquet file.
 #' @param label Path used in messages.
 #' @param call Calling environment.
 #'
 #' @return An `sf` object in EPSG:4326.
 #' @keywords internal
 #' @noRd
-read_geoparquet_raw <- function(raw, label = "file",
-                                call = rlang::caller_env()) {
+read_geoparquet_file <- function(path, label = "file",
+                                 call = rlang::caller_env()) {
   check_installed_geo(call = call)
 
-  # sfarrow reads from a path, so the bytes touch disk briefly. This is a
-  # tempfile, never the cache and never the installation directory.
-  tf <- tempfile(fileext = ".parquet")
-  on.exit(unlink(tf), add = TRUE)
-  writeBin(raw, tf)
-
   geometry <- tryCatch(
-    sfarrow::st_read_parquet(tf),
+    sfarrow::st_read_parquet(path),
     error = function(e) {
       cli::cli_abort(
         c("Could not read {.path {label}} as GeoParquet.",

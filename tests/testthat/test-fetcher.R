@@ -43,9 +43,14 @@ test_that("failed automatic discovery warns before using configured DOIs", {
 test_that("checksum verification rejects changed bytes", {
   bytes <- charToRaw("published bytes")
 
-  expect_invisible(verify_checksum(bytes, checksum_raw(bytes), "fixture.bin"))
+  expect_invisible(verify_checksum(
+    local_bytes_file(bytes), checksum_raw(bytes), "fixture.bin"
+  ))
   expect_error(
-    verify_checksum(charToRaw("changed bytes"), checksum_raw(bytes), "fixture.bin"),
+    verify_checksum(
+      local_bytes_file(charToRaw("changed bytes")), checksum_raw(bytes),
+      "fixture.bin"
+    ),
     "Checksum mismatch"
   )
 })
@@ -57,10 +62,12 @@ test_that("checksum verification supports Dataverse SHA-256 digests", {
   expect_identical(checksum_algorithm(checksum), "sha256")
   expect_identical(checksum_algorithm(checksum, "SHA-256"), "sha256")
   expect_invisible(verify_checksum(
-    bytes, checksum, "fixture.bin", checksum_type = "SHA-256"
+    local_bytes_file(bytes), checksum, "fixture.bin", checksum_type = "SHA-256"
   ))
   expect_error(
-    verify_checksum(charToRaw("changed bytes"), checksum, "fixture.bin"),
+    verify_checksum(
+      local_bytes_file(charToRaw("changed bytes")), checksum, "fixture.bin"
+    ),
     "Checksum mismatch"
   )
 })
@@ -71,7 +78,7 @@ test_that("a corrupt cached blob is invalidated", {
   key <- fetcher_key()
   bytes <- charToRaw("valid bytes")
   checksum <- checksum_raw(bytes)
-  cache_put(cache, key, bytes, checksum)
+  cache_put_bytes(cache, key, bytes, checksum)
 
   blob <- file.path(cache_dir, "blobs", paste0(checksum, ".blob"))
   writeBin(charToRaw("corrupt"), blob)
@@ -91,9 +98,11 @@ test_that("a cached SHA-256 blob is verified using SHA-256", {
   key <- fetcher_key()
   bytes <- charToRaw("valid bytes")
   checksum <- digest::digest(bytes, algo = "sha256", serialize = FALSE)
-  cache_put(cache, key, bytes, checksum)
+  cache_put_bytes(cache, key, bytes, checksum)
 
-  expect_identical(cache_get(cache, key, expected_checksum = checksum), bytes)
+  expect_identical(
+    read_bytes(cache_get(cache, key, expected_checksum = checksum)), bytes
+  )
 })
 
 test_that("cold, warm, and overlapping fetches download only missing years", {
@@ -103,9 +112,9 @@ test_that("cold, warm, and overlapping fetches download only missing years", {
   calls <- integer(0)
 
   local_mocked_bindings(
-    dv_get_file = function(file_id, ...) {
+    dv_get_file = function(file_id, ..., dest) {
       calls <<- c(calls, file_id)
-      fixture$bytes[[file_id]]
+      serve_bytes(fixture$bytes[[file_id]], dest)
     }
   )
 
@@ -133,8 +142,8 @@ test_that("content-addressed cache deduplicates bytes across versions", {
   bytes <- charToRaw("same immutable file")
   checksum <- checksum_raw(bytes)
 
-  cache_put(cache, fetcher_key(version = "1.0"), bytes, checksum)
-  cache_put(cache, fetcher_key(version = "2.0"), bytes, checksum)
+  cache_put_bytes(cache, fetcher_key(version = "1.0"), bytes, checksum)
+  cache_put_bytes(cache, fetcher_key(version = "2.0"), bytes, checksum)
 
   expect_equal(nrow(cache_index_read(cache_dir)), 2L)
   expect_length(list.files(file.path(cache_dir, "blobs")), 1L)
@@ -174,12 +183,12 @@ test_that("metadata remains historical when current listing contains a copy", {
     dv_version_label = function(doi, ...) {
       if (identical(doi, "doi:10.0000/HIST")) "4.0" else "2.0"
     },
-    dv_get_file = function(file_id, ...) {
-      if (identical(file_id, 2L)) {
-        charToRaw('{"source":"historical"}')
+    dv_get_file = function(file_id, ..., dest) {
+      serve_bytes(charToRaw(if (identical(file_id, 2L)) {
+        '{"source":"historical"}'
       } else {
-        charToRaw('{"source":"current"}')
-      }
+        '{"source":"current"}'
+      }), dest)
     }
   )
 
@@ -215,8 +224,6 @@ test_that("metadata remains historical when current listing contains a copy", {
 
 test_that("unreachable servers produce a contextual Dataverse error", {
   skip_if_not_installed("httptest2")
-  skip_if_not_installed("httr2")
-  local_dataverse_recordings()
 
   expect_error(
     httptest2::without_internet(

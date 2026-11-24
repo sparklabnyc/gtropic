@@ -52,7 +52,8 @@ run_case <- function(name, cache_dir) {
     function(...) {
       stats$calls <- stats$calls + 1L
       out <- f(...)
-      if (download) stats$bytes <- stats$bytes + length(out)
+      # dv_get_file() returns the path of the downloaded file.
+      if (download) stats$bytes <- stats$bytes + file.size(out)
       out
     }
   }

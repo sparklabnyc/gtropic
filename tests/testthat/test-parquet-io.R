@@ -20,7 +20,7 @@ test_that("GeoParquet reading restores the published WGS 84 CRS", {
     .package = "sfarrow"
   )
 
-  result <- read_geoparquet_raw(as.raw(1:4), "geometry.parquet")
+  result <- read_geoparquet_file("geometry.parquet", "geometry.parquet")
 
   expect_s3_class(result, "sf")
   expect_equal(sf::st_crs(result)$epsg, 4326)
@@ -36,7 +36,7 @@ test_that("GeoParquet reading normalizes a known CRS to WGS 84", {
     .package = "sfarrow"
   )
 
-  result <- read_geoparquet_raw(as.raw(1:4), "geometry.parquet")
+  result <- read_geoparquet_file("geometry.parquet", "geometry.parquet")
 
   expect_equal(sf::st_crs(result)$epsg, 4326)
   expect_equal(

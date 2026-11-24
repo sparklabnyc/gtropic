@@ -87,10 +87,10 @@ fetch_file <- function(dataset, directory_label, label, ctx,
   )
 
   cached <- cache_get_record(ctx$cache, key, expected_checksum = checksum)
-  raw <- if (is.null(cached)) NULL else cached$raw
-  downloaded_at <- if (is.null(cached)) NULL else cached$downloaded_at
+  local_file <- cached$path
+  downloaded_at <- cached$downloaded_at
 
-  if (is.null(raw)) {
+  if (is.null(local_file)) {
     if (isTRUE(ctx$offline)) {
       cli::cli_abort(c(
         "Offline retrieval could not find {.path {path}} in the cache.",
@@ -98,15 +98,21 @@ fetch_file <- function(dataset, directory_label, label, ctx,
       ))
     }
     inform_unless_quiet("Downloading {.path {path}}.", quiet = ctx$quiet)
-    raw <- dv_get_file(file_id,
+    # Removed once read, unless the cache took it over.
+    tmp <- cache_download_path(ctx$cache)
+    on.exit(unlink(tmp), add = TRUE)
+    dv_get_file(file_id,
       server = ctx$discovery$server,
-      quiet = ctx$quiet
+      quiet = ctx$quiet,
+      dest = tmp
     )
-    verify_checksum(raw, checksum, label = path, checksum_type = checksum_type)
-    downloaded_at <- cache_put(ctx$cache, key, raw,
+    verify_checksum(tmp, checksum, label = path, checksum_type = checksum_type)
+    stored <- cache_put(ctx$cache, key, tmp,
       checksum = checksum,
       quiet = ctx$notice_quiet
     )
+    local_file <- stored$path
+    downloaded_at <- stored$downloaded_at
     if (isTRUE(ctx$cache$enabled)) ctx$cache_state$written <- TRUE
     # Caching may be disabled. The timestamp still records this download.
     if (is.null(downloaded_at) || is.na(downloaded_at)) downloaded_at <- Sys.time()
@@ -118,14 +124,14 @@ fetch_file <- function(dataset, directory_label, label, ctx,
       directory_label = directory_label, label = label,
        file_id = file_id, checksum = checksum,
       checksum_type = checksum_type,
-      size_bytes = as.numeric(length(raw))
+      size_bytes = as.numeric(file.size(local_file))
     ), downloaded_at = downloaded_at, source_role = dataset
   )
 
   switch(kind,
-    parquet = read_parquet_raw(raw, col_select = col_select, label = path),
-    json = read_json_raw(raw, label = path),
-    geoparquet = read_geoparquet_raw(raw, label = path),
+    parquet = read_parquet_file(local_file, col_select = col_select, label = path),
+    json = read_json_file(local_file, label = path),
+    geoparquet = read_geoparquet_file(local_file, label = path),
     cli::cli_abort("Unknown file kind {.val {kind}}.")
   )
 }

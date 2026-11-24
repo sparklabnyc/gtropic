@@ -54,9 +54,9 @@ test_that("live: manifest replay retrieves byte-identical input", {
   live_download <- dv_get_file
   local_mocked_bindings(
     dv_get_file = function(...) {
-      raw <- live_download(...)
-      downloaded[[length(downloaded) + 1L]] <<- raw
-      raw
+      path <- live_download(...)
+      downloaded[[length(downloaded) + 1L]] <<- read_bytes(path)
+      invisible(path)
     }
   )
   no_cache <- list(enabled = FALSE, dir = NULL)

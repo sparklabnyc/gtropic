@@ -1,19 +1,22 @@
 # ---------------------------------------------------------------------------
-# Thin wrappers over the `dataverse` client.
+# The Dataverse transport: four read-only endpoints of the native API, called
+# directly through httr2.
 #
-# Two invariants are enforced here and relied on everywhere else:
+# Three invariants are enforced here and relied on everywhere else:
 #
 #  1. Dataverse has no real directories. Every file carries a `label` (e.g.
 #     "1980.parquet") and a `directoryLabel` (e.g. "02_wind/exposures").
 #     Labels are NOT unique within a dataset -- "1980.parquet" appears under
 #     exposures, zero_pairs, storm_metadata and storm_tracks alike. All
 #     resolution therefore matches on the (directoryLabel, label) PAIR and then
-#     downloads by numeric id. `dataverse::get_file_by_name()` must never be
-#     used: it matches on label alone and will silently return the wrong file.
+#     downloads by numeric id.
 #
 #  2. Network failure is expected, not exceptional. Every call is wrapped so
 #     users see an explanation naming the server and the likely cause instead of
 #     a raw HTTP condition.
+#
+#  3. A downloaded file never sits in memory whole. It is written to disk as it
+#     arrives, hashed from disk, and read from disk.
 # ---------------------------------------------------------------------------
 
 #' Retry an expression with bounded exponential backoff
@@ -86,6 +89,116 @@ abort_dataverse <- function(err, what = "request", server = opt_server(),
   )
 }
 
+#' Base URL of the Dataverse native API on a host
+#'
+#' Requests always use HTTPS; `server` has already passed `validate_server()`.
+#'
+#' @param server Dataverse host.
+#' @return A character scalar.
+#' @keywords internal
+#' @noRd
+dv_api_url <- function(server) {
+  paste0("https://", server, "/api")
+}
+
+#' The User-Agent sent with every request
+#' @keywords internal
+#' @noRd
+gtropic_user_agent <- function() {
+  paste0(
+    "gtropic/", utils::packageVersion("gtropic"),
+    " (https://github.com/sparklabnyc/gtropic)"
+  )
+}
+
+#' Percent-encode one URL path segment
+#'
+#' Collection aliases and version strings come from options and user input.
+#' Encoding keeps them inside their own path segment; `:` stays as it is
+#' because Dataverse spells `:persistentId` and `:latest` with it.
+#'
+#' @param x Character scalar.
+#' @keywords internal
+#' @noRd
+dv_path_segment <- function(x) {
+  gsub("%3A", ":", utils::URLencode(as.character(x), reserved = TRUE),
+    fixed = TRUE
+  )
+}
+
+#' A request with the settings every gtropic request shares
+#'
+#' @param url Full URL.
+#' @keywords internal
+#' @noRd
+gtropic_request <- function(url) {
+  req <- httr2::request(url)
+  req <- httr2::req_user_agent(req, gtropic_user_agent())
+  httr2::req_error(req, body = dv_error_body)
+}
+
+#' A request to the Dataverse native API
+#'
+#' The API token is attached only here, and only for the configured server
+#' (`dv_key()`).
+#'
+#' @param server Dataverse host.
+#' @param ... Path segments after `/api`, already encoded.
+#' @keywords internal
+#' @noRd
+dv_request <- function(server, ...) {
+  req <- gtropic_request(paste(c(dv_api_url(server), ...), collapse = "/"))
+  key <- dv_key(server)
+  if (nzchar(key)) {
+    req <- httr2::req_headers_redacted(req, `X-Dataverse-key` = key)
+  }
+  req
+}
+
+#' The error text Dataverse puts in a JSON error response
+#'
+#' @param resp An `httr2` response.
+#' @return A character vector (possibly empty) for [httr2::req_error()].
+#' @keywords internal
+#' @noRd
+dv_error_body <- function(resp) {
+  if (!identical(httr2::resp_content_type(resp), "application/json")) {
+    return(character(0))
+  }
+  body <- tryCatch(
+    httr2::resp_body_json(resp, simplifyVector = FALSE),
+    error = function(e) NULL
+  )
+  msg <- if (is.list(body)) body$message else NULL
+  if (is.character(msg) && length(msg) == 1L && !is.na(msg)) msg else character(0)
+}
+
+#' Perform a metadata request and return its `data` element
+#'
+#' @param req Request from `dv_request()`.
+#' @param what Description of the operation, used in messages.
+#' @param server Host the request is sent to.
+#' @param quiet Suppress retry notices.
+#' @param call Calling environment for error reporting.
+#'
+#' @return The parsed `data` element of the Dataverse response.
+#' @keywords internal
+#' @noRd
+dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
+  with_retry(
+    {
+      resp <- httr2::req_perform(req)
+      body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
+      if (!identical(body$status, "OK")) {
+        status <- body$status %||% "none"
+        cli::cli_abort("Dataverse reported status {.val {status}}.")
+      }
+      body$data
+    },
+    what = what, quiet = quiet, server = server, call = call
+  )
+}
+
 #' List the files in a Dataverse dataset version
 #'
 #' @param doi Dataset DOI, e.g. `"doi:10.7910/DVN/EAVWC3"`.
@@ -101,16 +214,14 @@ dv_list_files <- function(doi,
                           version = ":latest",
                           server = opt_server(),
                           quiet = FALSE) {
-  raw_files <- with_retry(
-    dataverse::dataset_files(
-      dataset = doi,
-      version = version,
-      server = server,
-      key = dv_key(server)
-    ),
-    server = server,
+  req <- dv_request(
+    server, "datasets", ":persistentId", "versions",
+    dv_path_segment(version), "files"
+  )
+  req <- httr2::req_url_query(req, persistentId = doi)
+  raw_files <- dv_get_json(req,
     what = glue::glue("file listing for {doi}"),
-    quiet = quiet
+    server = server, quiet = quiet
   )
 
   dv_listing_from_records(raw_files)
@@ -130,9 +241,9 @@ dv_listing_from_records <- function(raw_files) {
     return(dv_empty_listing())
   }
 
-  # `dataset_files()` returns a list of per-file records whose shape differs a
-  # little between Dataverse releases: the checksum may be supplied in a legacy
-  # `md5` field or nested under `checksum`. Preserve its declared algorithm.
+  # The file records differ a little between Dataverse releases: the checksum
+  # may be supplied in a legacy `md5` field or nested under `checksum`.
+  # Preserve its declared algorithm.
   rows <- lapply(raw_files, function(f) {
     df <- f$dataFile %||% list()
     checksum_record <- df$checksum %||% list()
@@ -218,31 +329,128 @@ dv_resolve_file <- function(listing, directory_label, label, doi = NULL,
   hit
 }
 
-#' Download a file's raw bytes
+#' Download a file to disk
 #'
-#' Returns a raw vector rather than writing to disk. `format = "original"` is
-#' passed defensively: parquet is not ingested by Dataverse, but if the server
-#' ever decided otherwise we want the bytes we published, not a derived TSV.
+#' The body is written to `dest` as it arrives; nothing is held in memory.
+#' `format = "original"` is passed defensively: parquet is not ingested by
+#' Dataverse, but if the server ever decided otherwise we want the bytes we
+#' published, not a derived TSV.
+#'
+#' Dataverse usually answers with a redirect to its storage (for Harvard
+#' Dataverse, Amazon S3). Redirects are followed here rather than by curl so
+#' that the API token, which belongs to the Dataverse host, is never sent to
+#' the storage host, and so a redirect cannot downgrade the request to plain
+#' HTTP.
 #'
 #' @param file_id Numeric Dataverse file id.
 #' @param server Dataverse host.
 #' @param quiet Suppress progress messages.
+#' @param dest Path to write. It must not exist yet; on failure it is removed.
 #'
-#' @return A raw vector.
+#' @return `dest`, invisibly.
 #' @keywords internal
 #' @noRd
-dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE) {
+dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE,
+                        dest = tempfile(fileext = ".download")) {
+  req <- dv_request(server, "access", "datafile", dv_file_id(file_id))
+  req <- httr2::req_url_query(req, format = "original")
+  done <- FALSE
+  on.exit(if (!done) unlink(dest), add = TRUE)
   with_retry(
-    dataverse::get_file(
-      file = file_id,
-      server = server,
-      format = "original",
-      key = dv_key(server)
-    ),
-    server = server,
+    dv_download(req, dest),
     what = glue::glue("download of file {file_id}"),
-    quiet = quiet
+    quiet = quiet, server = server
   )
+  done <- TRUE
+  invisible(dest)
+}
+
+#' A Dataverse file id as a URL path segment
+#'
+#' @param file_id Whole positive number.
+#' @keywords internal
+#' @noRd
+dv_file_id <- function(file_id, call = rlang::caller_env()) {
+  if (!is.numeric(file_id) || length(file_id) != 1L || is.na(file_id) ||
+    file_id < 1 || file_id != round(file_id)) {
+    cli::cli_abort("A Dataverse file id must be a whole positive number.",
+      call = call
+    )
+  }
+  format(file_id, scientific = FALSE, trim = TRUE)
+}
+
+#' Perform a download request, following redirects, and write the body
+#'
+#' @param req Request from `dv_request()`.
+#' @param dest Destination path.
+#' @param max_redirects Redirects followed before giving up.
+#'
+#' @return `dest`, invisibly.
+#' @keywords internal
+#' @noRd
+dv_download <- function(req, dest, max_redirects = 5L) {
+  for (hop in seq_len(max_redirects + 1L)) {
+    resp <- httr2::req_perform_connection(
+      httr2::req_options(req, followlocation = 0L)
+    )
+    status <- httr2::resp_status(resp)
+    if (status < 300L || status >= 400L) {
+      on.exit(close(resp), add = TRUE)
+      return(invisible(dv_write_body(resp, dest)))
+    }
+    location <- httr2::resp_header(resp, "Location")
+    from <- resp$url
+    close(resp)
+    req <- dv_redirect_request(location, from)
+  }
+  cli::cli_abort("Too many redirects (more than {max_redirects}).")
+}
+
+#' The request that follows a redirect
+#'
+#' Carries the shared settings but no API token: the target is the storage
+#' host, not the Dataverse host the token belongs to.
+#'
+#' @param location Value of the `Location` header.
+#' @param from URL that answered with the redirect.
+#' @keywords internal
+#' @noRd
+dv_redirect_request <- function(location, from) {
+  if (is.null(location) || !nzchar(location)) {
+    cli::cli_abort("The server sent a redirect without a location.")
+  }
+  url <- httr2::url_parse(location, base_url = from)
+  if (identical(httr2::url_parse(from)$scheme, "https") &&
+    !identical(url$scheme, "https")) {
+    cli::cli_abort("Refusing a redirect from HTTPS to {.val {url$scheme}}.")
+  }
+  gtropic_request(httr2::url_build(url))
+}
+
+#' Write a response body to a file in chunks
+#'
+#' A live response is read from its connection as it arrives. A complete
+#' response (as replayed by `httptest2` or `httr2` mocks) is written as is.
+#'
+#' @param resp An `httr2` response from [httr2::req_perform_connection()].
+#' @param dest Destination path.
+#'
+#' @return `dest`.
+#' @keywords internal
+#' @noRd
+dv_write_body <- function(resp, dest) {
+  con <- file(dest, open = "wb")
+  on.exit(close(con), add = TRUE)
+  if (is.raw(resp$body)) {
+    writeBin(resp$body, con)
+    return(dest)
+  }
+  while (!httr2::resp_stream_is_complete(resp)) {
+    chunk <- httr2::resp_stream_raw(resp, kb = 256)
+    if (length(chunk) > 0L) writeBin(chunk, con)
+  }
+  dest
 }
 
 #' List datasets in a Dataverse collection
@@ -257,26 +465,19 @@ dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE) {
 dv_list_datasets <- function(collection = opt_collection(),
                              server = opt_server(),
                              quiet = FALSE) {
-  contents <- with_retry(
-    dataverse::dataverse_contents(
-      dataverse = collection,
-      server = server,
-      key = dv_key(server)
-    ),
-    server = server,
+  req <- dv_request(
+    server, "dataverses", dv_path_segment(collection), "contents"
+  )
+  contents <- dv_get_json(req,
     what = glue::glue("listing of collection {collection}"),
-    quiet = quiet
+    server = server, quiet = quiet
   )
 
-  datasets <- Filter(
-    function(x) identical(x$type, "dataset") || inherits(x, "dataverse_dataset"),
-    contents
-  )
+  datasets <- Filter(function(x) identical(x$type, "dataset"), contents)
 
   if (length(datasets) == 0L) {
     return(tibble::tibble(doi = character(0)))
   }
-
   dois <- vapply(datasets, function(d) {
     # Dataverse reports either a ready-made `persistentUrl` or the components.
     if (!is.null(d$persistentUrl)) {
@@ -308,18 +509,15 @@ dv_version_label <- function(doi,
                              version = ":latest",
                              server = opt_server(),
                              quiet = FALSE) {
-  ds <- with_retry(
-    dataverse::get_dataset(
-      dataset = doi,
-      version = version,
-      server = server,
-      key = dv_key(server)
-    ),
-    server = server,
-    what = glue::glue("metadata for {doi}"),
-    quiet = quiet
+  req <- dv_request(
+    server, "datasets", ":persistentId", "versions", dv_path_segment(version)
   )
-
+  # Only the version numbers are needed; the file list is fetched separately.
+  req <- httr2::req_url_query(req, persistentId = doi, excludeFiles = "true")
+  ds <- dv_get_json(req,
+    what = glue::glue("metadata for {doi}"),
+    server = server, quiet = quiet
+  )
   major <- ds$versionNumber %||% ds$majorVersion
   minor <- ds$versionMinorNumber %||% ds$minorVersion
 
@@ -334,8 +532,7 @@ dv_version_label <- function(doi,
 #' `DATAVERSE_KEY` is sent only to the configured server
 #' (`getOption("gtropic.server")`). A manifest can name another host, and the
 #' token must not leak to it; for any other host an empty key is returned and,
-#' if a token is set, a warning says so once per host and session. The
-#' Dataverse client expects a character scalar either way.
+#' if a token is set, a warning says so once per host and session.
 #'
 #' @param server Host the request is sent to.
 #'
@@ -411,22 +608,24 @@ checksum_algorithm <- function(checksum, checksum_type = NA_character_) {
   )
 }
 
-#' Hash downloaded bytes using the algorithm of a published checksum
+#' Hash a downloaded file using the algorithm of a published checksum
 #'
-#' @param raw Raw vector to hash.
+#' The file is read in chunks by the hashing code, never into an R vector.
+#'
+#' @param path File to hash.
 #' @param checksum Published checksum value.
 #' @param checksum_type Optional declared checksum algorithm.
 #' @keywords internal
 #' @noRd
-checksum_raw <- function(raw, checksum = NULL, checksum_type = NA_character_) {
+checksum_file <- function(path, checksum = NULL, checksum_type = NA_character_) {
   digest::digest(
-    raw, algo = checksum_algorithm(checksum, checksum_type), serialize = FALSE
+    path, algo = checksum_algorithm(checksum, checksum_type), file = TRUE
   )
 }
 
-#' Verify downloaded bytes against the published checksum
+#' Verify a downloaded file against the published checksum
 #'
-#' @param raw Raw vector as downloaded.
+#' @param path The downloaded file.
 #' @param expected_checksum Checksum recorded in the Dataverse listing.
 #' @param checksum_type Optional checksum algorithm recorded in the listing.
 #' @param label Path used in messages.
@@ -435,8 +634,9 @@ checksum_raw <- function(raw, checksum = NULL, checksum_type = NA_character_) {
 #' @return Invisibly `TRUE`; aborts on mismatch.
 #' @keywords internal
 #' @noRd
-verify_checksum <- function(raw, expected_checksum, label = "file",
-                         call = rlang::caller_env(), checksum_type = NA_character_) {
+verify_checksum <- function(path, expected_checksum, label = "file",
+                            call = rlang::caller_env(),
+                            checksum_type = NA_character_) {
   if (is.na(expected_checksum) || !nzchar(expected_checksum)) {
     # Nothing published to check against; not an error, but worth knowing.
     cli::cli_warn(
@@ -445,7 +645,7 @@ verify_checksum <- function(raw, expected_checksum, label = "file",
     return(invisible(TRUE))
   }
 
-  got <- checksum_raw(raw, expected_checksum, checksum_type)
+  got <- checksum_file(path, expected_checksum, checksum_type)
   if (!identical(tolower(got), tolower(expected_checksum))) {
     gtropic_abort(
       c("Checksum mismatch for {.path {label}}.",

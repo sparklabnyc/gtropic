@@ -76,17 +76,19 @@ test_that("DATAVERSE_KEY is sent only to the configured server", {
   expect_no_warning(expect_identical(dv_key("evil.example"), ""))
 })
 
+# The API token a mocked request carries, or "".
+sent_key <- function(req) {
+  httr2::req_get_headers(req, redacted = "reveal")[["X-Dataverse-key"]] %||% ""
+}
+
 test_that("the transport receives no key for a host other than the configured one", {
   withr::local_envvar(DATAVERSE_KEY = "secret-token")
   withr::local_options(gtropic.server = "dataverse.harvard.edu")
   keys <- character(0)
-  local_mocked_bindings(
-    get_file = function(file, server, format, key, ...) {
-      keys <<- c(keys, key)
-      charToRaw("x")
-    },
-    .package = "dataverse"
-  )
+  httr2::local_mocked_responses(function(req) {
+    keys <<- c(keys, sent_key(req))
+    httr2::response(200, body = charToRaw("x"))
+  })
 
   suppressWarnings(dv_get_file(1L, server = "evil.example", quiet = TRUE))
   dv_get_file(1L, server = "dataverse.harvard.edu", quiet = TRUE)
@@ -97,13 +99,10 @@ test_that("replaying a manifest from another host does not send the token", {
   withr::local_envvar(DATAVERSE_KEY = "secret-token")
   withr::local_options(gtropic.server = "dataverse.harvard.edu")
   keys <- character(0)
-  local_mocked_bindings(
-    get_file = function(file, server, format, key, ...) {
-      keys <<- c(keys, key)
-      charToRaw("not the published bytes")
-    },
-    .package = "dataverse"
-  )
+  httr2::local_mocked_responses(function(req) {
+    keys <<- c(keys, sent_key(req))
+    httr2::response(200, body = charToRaw("not the published bytes"))
+  })
   m <- gtropic_manifest(gtropic_example())
   m$server <- "evil.example"
 
@@ -114,13 +113,115 @@ test_that("replaying a manifest from another host does not send the token", {
   expect_true(all(keys == ""))
 })
 
-test_that("transport errors name the server that was contacted", {
-  local_mocked_bindings(
-    dataset_files = function(...) stop("HTTP 404"),
-    .package = "dataverse"
+test_that("the token is not sent to the storage host a download redirects to", {
+  withr::local_envvar(DATAVERSE_KEY = "secret-token")
+  withr::local_options(gtropic.server = "dataverse.harvard.edu")
+  seen <- list()
+  httr2::local_mocked_responses(function(req) {
+    seen[[length(seen) + 1L]] <<- list(
+      url = req$url, key = sent_key(req)
+    )
+    if (grepl("^https://dataverse.harvard.edu/", req$url)) {
+      httr2::response(303, headers = list(
+        Location = "https://storage.example/bucket/file?signature=abc"
+      ))
+    } else {
+      httr2::response(200, body = charToRaw("file bytes"))
+    }
+  })
+
+  path <- dv_get_file(7L, quiet = TRUE)
+  withr::defer(unlink(path))
+
+  expect_identical(read_bytes(path), charToRaw("file bytes"))
+  expect_identical(
+    vapply(seen, `[[`, character(1), "url"),
+    c(
+      "https://dataverse.harvard.edu/api/access/datafile/7?format=original",
+      "https://storage.example/bucket/file?signature=abc"
+    )
   )
+  expect_identical(vapply(seen, `[[`, character(1), "key"), c("secret-token", ""))
+})
+
+test_that("a download redirect cannot downgrade to plain HTTP", {
+  httr2::local_mocked_responses(function(req) {
+    httr2::response(302, headers = list(Location = "http://storage.example/f"))
+  })
+  dest <- withr::local_tempfile()
   expect_error(
-    dv_list_files("doi:10.0000/X", server = "other.example", quiet = TRUE),
-    "other.example"
+    dv_get_file(7L, server = "example.invalid", quiet = TRUE, dest = dest),
+    "Refusing a redirect"
   )
+  expect_false(file.exists(dest))
+})
+
+test_that("transport errors name the server that was contacted", {
+  httr2::local_mocked_responses(function(req) {
+    httr2::response(404,
+      headers = list(`Content-Type` = "application/json"),
+      body = charToRaw('{"status":"ERROR","message":"Dataset not found"}')
+    )
+  })
+  err <- expect_error(
+    dv_list_files("doi:10.0000/X", server = "other.example", quiet = TRUE),
+    "other.example",
+    class = "gtropic_error_network"
+  )
+  # The Dataverse error message is passed on.
+  expect_match(conditionMessage(err), "Dataset not found")
+})
+
+test_that("requests are built for the four native API endpoints", {
+  urls <- character(0)
+  httr2::local_mocked_responses(function(req) {
+    urls <<- c(urls, req$url)
+    expect_match(req$options$useragent, "^gtropic/")
+    if (grepl("datafile", req$url)) {
+      return(httr2::response(200, body = charToRaw("x")))
+    }
+    data <- if (grepl("contents$", req$url)) {
+      '[{"type":"dataset","persistentUrl":"https://doi.org/10.0000/A"},
+        {"type":"dataverse","alias":"sub"}]'
+    } else if (grepl("files", req$url)) {
+      '[]'
+    } else {
+      '{"versionNumber":3,"versionMinorNumber":1}'
+    }
+    httr2::response(200,
+      headers = list(`Content-Type` = "application/json"),
+      body = charToRaw(paste0('{"status":"OK","data":', data, '}'))
+    )
+  })
+
+  expect_identical(
+    dv_list_datasets("gtropic", server = "dv.example", quiet = TRUE)$doi,
+    "doi:10.0000/A"
+  )
+  expect_identical(
+    nrow(dv_list_files("doi:10.0000/A", "1.0", server = "dv.example", quiet = TRUE)),
+    0L
+  )
+  expect_identical(
+    dv_version_label("doi:10.0000/A", ":latest", server = "dv.example", quiet = TRUE),
+    "3.1"
+  )
+  path <- dv_get_file(12L, server = "dv.example", quiet = TRUE)
+  unlink(path)
+
+  expect_identical(urls, c(
+    "https://dv.example/api/dataverses/gtropic/contents",
+    "https://dv.example/api/datasets/:persistentId/versions/1.0/files?persistentId=doi%3A10.0000%2FA",
+    "https://dv.example/api/datasets/:persistentId/versions/:latest?persistentId=doi%3A10.0000%2FA&excludeFiles=true",
+    "https://dv.example/api/access/datafile/12?format=original"
+  ))
+})
+
+test_that("path segments from options cannot leave their segment", {
+  expect_identical(dv_path_segment(":latest"), ":latest")
+  expect_identical(dv_path_segment("1.0"), "1.0")
+  expect_identical(dv_path_segment("../x?y"), "..%2Fx%3Fy")
+  expect_error(dv_file_id(1.5), "whole positive number")
+  expect_error(dv_file_id("1/../2"), "whole positive number")
+  expect_identical(dv_file_id(14430328), "14430328")
 })
