@@ -84,6 +84,11 @@ mf <- gtropic_manifest_read("usa-2005-manifest.json")
 usa_05 <- gtropic_data(manifest = mf)
 ```
 
+Prefer JSON to `saveRDS()` for any manifest you share or receive: reading an
+`.rds` file with `readRDS()` can run code hidden in it, so only read `.rds`
+files from people you trust. `gtropic_manifest_read()` reads plain text and
+checks every field.
+
 A replay uses the recorded files and the recorded query: resolved units and storms, filters, tables, windows and the metadata
 years scanned. Do not repeat data-shaping arguments such as `version`,
 `tables`, geography, storm filters or radii; that is an error. Only `cache`,

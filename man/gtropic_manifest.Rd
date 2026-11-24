@@ -43,6 +43,11 @@ server as the files, and are usually MD5, so they detect truncated or
 corrupted transfers and silent changes to a published file, but they do not
 prove who published it.
 
+To keep or share a manifest, save it as JSON with
+\code{\link[=gtropic_manifest_write]{gtropic_manifest_write()}}. A manifest saved with \code{\link[=saveRDS]{saveRDS()}} works too, but
+\code{\link[=readRDS]{readRDS()}} can run code hidden in the file, so only read \code{.rds} files from
+people you trust.
+
 \code{gtropic_filters()} reports the filters as resolved by the package, including
 selected ADM2 and storm identifiers, genesis-date bounds, years represented
 by the selected storms, the wind radius, and precipitation and flood window
