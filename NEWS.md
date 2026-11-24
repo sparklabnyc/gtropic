@@ -118,6 +118,9 @@
 
 ## Bug fixes
 
+* Manifest download times are always stored in UTC. On R 4.2 they kept the
+  session's time zone attribute (the instants were the same).
+
 * The warning for ADM2 units that move in or out of a `polygon` across years
   no longer fails with "Cannot pluralize without a quantity" instead of
   warning.

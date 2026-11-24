@@ -135,3 +135,20 @@ test_that("paths are checked", {
   expect_error(gtropic_manifest_read(tempfile()), "does not exist")
   expect_error(gtropic_manifest_write(gtropic_example(), NA_character_), "single file path")
 })
+
+test_that("manifest times are UTC whatever the input's time zone", {
+  # Before R 4.3.0, as.POSIXct(<POSIXct>, tz = "UTC") kept the input's zone,
+  # so a JSON round trip changed the attribute on R 4.2.
+  local_time <- as.POSIXct("2026-01-05 12:00:00", tz = "America/New_York")
+  attr(local_time, "tzone") <- ""
+  row <- tibble::tibble(
+    directory_label = "yearly", label = "2001.parquet", file_id = 1L,
+    checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
+  )
+  m <- manifest_add(gtropic_manifest(gtropic_example()), "doi:10.0000/EXAMPLE",
+    "1.0", row, downloaded_at = local_time, source_role = "historical"
+  )
+  added <- m$files$downloaded_at
+  expect_identical(attr(added, "tzone"), "UTC")
+  expect_equal(as.numeric(added[nrow(m$files)]), as.numeric(local_time))
+})

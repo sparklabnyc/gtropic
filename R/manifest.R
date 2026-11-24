@@ -35,7 +35,7 @@ manifest_new <- function(discovery) {
         checksum = character(0),
         checksum_type = character(0),
         size_bytes = numeric(0),
-        downloaded_at = as.POSIXct(character(0))
+        downloaded_at = as.POSIXct(character(0), tz = "UTC")
       ),
       server = discovery$server,
       datasets = tibble::tibble(
@@ -45,7 +45,7 @@ manifest_new <- function(discovery) {
       ),
       resolved_query = NULL,
       availability = NULL,
-      retrieved_at = as.POSIXct(NA),
+      retrieved_at = as.POSIXct(NA, tz = "UTC"),
       schema_version = MANIFEST_SCHEMA_VERSION,
       gtropic_version = as.character(utils::packageVersion("gtropic"))
     ),
@@ -75,7 +75,7 @@ manifest_add <- function(manifest, doi, version, row, downloaded_at,
     checksum = row$checksum,
     checksum_type = row$checksum_type,
     size_bytes = as.numeric(row$size_bytes),
-    downloaded_at = as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC")
+    downloaded_at = manifest_utc(downloaded_at)
   )
 
   manifest$files <- dplyr::distinct(
@@ -86,6 +86,19 @@ manifest_add <- function(manifest, doi, version, row, downloaded_at,
   )
 
   manifest
+}
+
+#' A download time as POSIXct in UTC
+#'
+#' `as.POSIXct(<POSIXct>, tz = "UTC")` keeps the input's time zone before
+#' R 4.3.0, so the attribute is set explicitly: manifests then carry the same
+#' times on every supported R version, and a JSON round trip preserves them.
+#' @keywords internal
+#' @noRd
+manifest_utc <- function(x) {
+  x <- as.POSIXct(x, origin = "1970-01-01", tz = "UTC")
+  attr(x, "tzone") <- "UTC"
+  x
 }
 
 #' Stamp a manifest as complete
