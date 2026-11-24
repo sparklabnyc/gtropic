@@ -63,6 +63,11 @@
 
 ## Bug fixes
 
+* `gtropic_saffir_simpson()` writes the tropical-storm colour as `"#55FFFF"`
+  instead of the shorthand `"#5FF"` (the same colour). R before 4.3.0 does not
+  accept three-digit colour codes, so every map drawn with the default key
+  failed on R 4.2.
+
 * A pinned `version` (for example `gtropic_data(version = "2.0")`) now reads
   the files of that version. Earlier development versions always read the
   files of the latest version and recorded them in the manifest under the

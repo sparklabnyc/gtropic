@@ -19,7 +19,7 @@ gtropic_saffir_simpson <- function() {
     threshold = c(17, 32, 42, 49, 58, 70, Inf),
     unit = rep("m/s", 7L),
     color = c(
-      "#6EC1EA", "#5FF", "#FFFFD9", "#FBDA8C", "#F89F59",
+      "#6EC1EA", "#55FFFF", "#FFFFD9", "#FBDA8C", "#F89F59",
       "#F6738A", "#A188FC"
     )
   )
