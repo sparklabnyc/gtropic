@@ -93,7 +93,10 @@ gtropic_default_options <- function() {
     ),
     timeout = option_spec(
       600, "positive",
-      "Per-request timeout in seconds."
+      "Seconds to wait for the server. A metadata request that takes longer is
+       abandoned (and retried, see `gtropic.max_tries`), and so is a download
+       that receives no data for this long; a download that keeps receiving
+       data may take longer. `Inf` waits indefinitely."
     ),
     max_tries = option_spec(
       3L, "count",

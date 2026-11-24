@@ -133,6 +133,12 @@
 
 ## Bug fixes
 
+* `options(gtropic.timeout = )` (default 600 seconds) now takes effect; it
+  was documented but never applied. A metadata request that takes longer is
+  abandoned and retried, and a download is abandoned when no data arrives for
+  that long, so a large file on a slow connection is not cut off while it is
+  still arriving. `Inf` waits indefinitely.
+
 * Manifest download times are always stored in UTC. On R 4.2 they kept the
   session's time zone attribute (the instants were the same).
 

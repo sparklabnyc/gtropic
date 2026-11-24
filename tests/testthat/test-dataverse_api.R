@@ -371,3 +371,49 @@ test_that("a live transfer is stopped once it passes the bound", {
   )
   expect_false(file.exists(dest))
 })
+
+# --- timeouts (Plan 03 UX-02) ---------------------------------------------------
+
+test_that("requests carry gtropic.timeout", {
+  withr::local_options(gtropic.timeout = 42)
+  req <- dv_request("example.invalid", "info", "version")
+  expect_identical(req$options$timeout_ms, 42000)
+
+  stream <- dv_stream_timeouts(req)$options
+  expect_identical(stream$timeout_ms, 0L)
+  expect_identical(stream$connecttimeout_ms, 42000)
+  expect_identical(stream$low_speed_time, 42)
+
+  withr::local_options(gtropic.timeout = Inf)
+  expect_null(dv_request("example.invalid", "info")$options$timeout_ms)
+  expect_identical(dv_stream_timeouts(req)$options$timeout_ms, 0L)
+})
+
+test_that("a metadata request slower than gtropic.timeout is abandoned", {
+  web <- local_dataverse_app(dataverse_test_app())
+  withr::local_options(gtropic.timeout = 1, gtropic.max_tries = 1L)
+  started <- Sys.time()
+  err <- expect_error(
+    dv_list_datasets("slow", server = "dv.invalid", quiet = TRUE),
+    class = "gtropic_error_network"
+  )
+  expect_lt(as.numeric(difftime(Sys.time(), started, units = "secs")), 2.5)
+  expect_match(conditionMessage(err), "Timeout|timed out")
+})
+
+test_that("a stalled download is abandoned, a slow steady one is not", {
+  web <- local_dataverse_app(dataverse_test_app())
+  withr::local_options(gtropic.timeout = 1, gtropic.max_tries = 1L)
+
+  dest <- withr::local_tempfile()
+  expect_error(
+    dv_get_file(98L, server = "dv.invalid", quiet = TRUE, dest = dest),
+    class = "gtropic_error_network"
+  )
+  expect_false(file.exists(dest))
+
+  # About 1.6 s in all, longer than the timeout, but data keeps arriving.
+  dest <- withr::local_tempfile()
+  dv_get_file(97L, server = "dv.invalid", quiet = TRUE, dest = dest)
+  expect_identical(read_bytes(dest), as.raw(rep(1:5, each = 100)))
+})

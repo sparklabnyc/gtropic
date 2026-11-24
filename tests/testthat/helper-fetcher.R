@@ -110,7 +110,12 @@ fetcher_key <- function(version = "1.0", label = "2001.parquet") {
 local_dataverse_app <- function(app, env = parent.frame()) {
   testthat::skip_on_cran()
   testthat::skip_if_not_installed("webfakes")
-  web <- webfakes::local_app_process(app, .local_envir = env)
+  # Several threads, so a deliberately stalled response does not hold up the
+  # next request.
+  web <- webfakes::local_app_process(app,
+    opts = webfakes::server_opts(num_threads = 4),
+    .local_envir = env
+  )
   testthat::local_mocked_bindings(
     dv_api_url = function(server) sub("/$", "", web$url("/api")),
     dv_backoff = function(i) 0.05,
@@ -151,7 +156,34 @@ dataverse_test_app <- function() {
   app$get("/api/access/datafile/99", function(req, res) {
     res$set_type("application/octet-stream")
     for (i in 1:3) res$send_chunk(as.raw(rep(1L, 1024^2)))
-    res$send_chunk(raw(0))
+  })
+  # Answers after 3 s.
+  app$get("/api/dataverses/slow/contents", function(req, res) {
+    if (is.null(res$locals$waited)) {
+      res$locals$waited <- TRUE
+      return(res$delay(3))
+    }
+    dv_json(res, 200L, '{"status":"OK","data":[]}')
+  })
+  # Sends 1 byte, then nothing for 3 s. (curl averages the transfer speed
+  # over a few seconds, so a larger first chunk would hide a short stall.)
+  app$get("/api/access/datafile/98", function(req, res) {
+    if (is.null(res$locals$sent)) {
+      res$locals$sent <- TRUE
+      res$set_type("application/octet-stream")
+      res$send_chunk(as.raw(1))
+      return(res$delay(3))
+    }
+    res$send_chunk(as.raw(2))
+  })
+  # Sends 5 chunks of 100 bytes, 0.4 s apart: slow but steady.
+  app$get("/api/access/datafile/97", function(req, res) {
+    n <- res$locals$n
+    n <- if (is.null(n)) 0L else n
+    if (n == 0L) res$set_type("application/octet-stream")
+    res$send_chunk(as.raw(rep(n + 1L, 100)))
+    res$locals$n <- n + 1L
+    if (n < 4L) res$delay(0.4)
   })
   app$get("/api/dataverses/missing/contents", function(req, res) {
     count(req, "missing")

@@ -84,10 +84,11 @@ dv_path_segment <- function(x) {
 
 #' A request with the settings every gtropic request shares
 #'
-#' Only transient failures are retried, up to `getOption("gtropic.max_tries")`
-#' attempts in all: a lost or refused connection, a timeout, and HTTP 408,
-#' 429 and 5xx responses. Anything else (a mistyped DOI, a missing version)
-#' fails at once.
+#' Each attempt may take at most `getOption("gtropic.timeout")` seconds
+#' (downloads relax this; see `dv_stream_timeouts()`). Only transient failures
+#' are retried, up to `getOption("gtropic.max_tries")` attempts in all: a lost
+#' or refused connection, a timeout, and HTTP 408, 429 and 5xx responses.
+#' Anything else (a mistyped DOI, a missing version) fails at once.
 #'
 #' @param url Full URL.
 #' @keywords internal
@@ -95,6 +96,8 @@ dv_path_segment <- function(x) {
 gtropic_request <- function(url) {
   req <- httr2::request(url)
   req <- httr2::req_user_agent(req, gtropic_user_agent())
+  timeout <- opt_timeout()
+  if (is.finite(timeout)) req <- httr2::req_timeout(req, timeout)
   req <- httr2::req_retry(req,
     max_tries = opt_max_tries(),
     retry_on_failure = TRUE,
@@ -521,7 +524,7 @@ dv_download <- function(req, dest, bound = download_bound(NA),
                         max_redirects = 5L) {
   for (hop in seq_len(max_redirects + 1L)) {
     resp <- httr2::req_perform_connection(
-      httr2::req_options(req, followlocation = 0L)
+      httr2::req_options(dv_stream_timeouts(req), followlocation = 0L)
     )
     status <- httr2::resp_status(resp)
     if (status < 300L || status >= 400L) {
@@ -534,6 +537,29 @@ dv_download <- function(req, dest, bound = download_bound(NA),
     req <- dv_redirect_request(location, from)
   }
   cli::cli_abort("Too many redirects (more than {max_redirects}).")
+}
+
+#' Timeouts for a download
+#'
+#' A large file on a slow connection may take longer than
+#' `getOption("gtropic.timeout")` and still be arriving steadily, so for a
+#' download the timeout bounds the time to connect and any stretch in which no
+#' data arrives, not the whole transfer.
+#'
+#' @param req A request.
+#' @keywords internal
+#' @noRd
+dv_stream_timeouts <- function(req) {
+  timeout <- opt_timeout()
+  if (!is.finite(timeout)) {
+    return(httr2::req_options(req, timeout_ms = 0L))
+  }
+  httr2::req_options(req,
+    timeout_ms = 0L,
+    connecttimeout_ms = ceiling(timeout * 1000),
+    low_speed_limit = 1L,
+    low_speed_time = max(1L, ceiling(timeout))
+  )
 }
 
 #' The request that follows a redirect
