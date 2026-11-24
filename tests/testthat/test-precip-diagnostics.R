@@ -60,6 +60,6 @@ test_that("large caption diagnostics remain concise", {
   caption <- plot_precip_limitation_caption(ids, has_diagnostics = TRUE)
 
   expect_match(caption, "20 mapped ADM2 units", fixed = TRUE)
-  expect_match(caption, "gtropic_warnings()", fixed = TRUE)
+  expect_match(caption, "gtropic_diagnostics()", fixed = TRUE)
   expect_false(any(vapply(ids, grepl, logical(1), x = caption, fixed = TRUE)))
 })

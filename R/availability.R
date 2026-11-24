@@ -79,7 +79,7 @@ availability_metadata <- function(date_spec,
 #' Generate targeted availability diagnostics
 #'
 #' @param availability Output of `availability_metadata()`.
-#' @return Named character list suitable for `gtropic_warnings()`.
+#' @return Named character list suitable for `gtropic_diagnostics()`.
 #' @keywords internal
 #' @noRd
 availability_warnings <- function(availability) {

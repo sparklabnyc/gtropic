@@ -15,7 +15,7 @@
 #' [gtropic_data()] warns when a precipitation query includes an ADM2 unit with
 #' no non-missing precipitation values in the returned period. The complete
 #' vector of identifiers is retained in
-#' `gtropic_warnings(x)$precip_all_missing_adm2_ids`. Automatic precipitation
+#' `gtropic_diagnostics(x)$precip_all_missing_adm2_ids`. Automatic precipitation
 #' captions from [gtropic_plot()] include a shorter note for affected mapped
 #' units.
 #'
@@ -25,7 +25,7 @@
 #' can also produce the same diagnostic.
 #'
 #' @name gtropic_known_limitations
-#' @seealso [gtropic_data()], [gtropic_plot()], [gtropic_warnings()]
+#' @seealso [gtropic_data()], [gtropic_plot()], [gtropic_diagnostics()]
 NULL
 
 #' Find ADM2 units with no non-missing precipitation values
@@ -84,7 +84,7 @@ warn_precip_all_missing <- function(adm2_ids, call = rlang::caller_env()) {
       "i" = "A future G-TROPIC dataset release is planned to fill these gaps
              using finer-resolution ERA5 precipitation data.",
       "i" = "See {.code ?gtropic_known_limitations}; complete identifiers are
-             available from {.code gtropic_warnings()}."
+             available from {.code gtropic_diagnostics()}."
     ),
     class = "gtropic_warning_precip_all_missing",
     call = call
@@ -113,7 +113,7 @@ plot_precip_limitation_caption <- function(adm2_ids,
     paste0(length(adm2_ids), " mapped ADM2 units")
   }
   details <- if (length(adm2_ids) > 3L && isTRUE(has_diagnostics)) {
-    " See gtropic_warnings() for the complete IDs."
+    " See gtropic_diagnostics() for the complete IDs."
   } else {
     ""
   }

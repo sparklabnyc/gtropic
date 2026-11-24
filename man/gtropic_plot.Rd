@@ -17,7 +17,7 @@ gtropic_plot(
   count_unit = c("storms", "days"),
   facet_by = NULL,
   track = NULL,
-  track_map_key = saffir_simpson(),
+  track_map_key = gtropic_saffir_simpson(),
   track_labels = TRUE,
   track_interval = 6,
   track_legend_position = NULL,
@@ -52,7 +52,7 @@ For \code{type = "exposure"}, \code{NULL} selects every available core metric in
 order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_FLOODED_AREA"}.
 For \code{type = "count"}, it selects the first available count default;
 \code{type = "track"} selects \code{"USA_WIND"}. Track maps require exactly one of
-\code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_exposures]{gtropic_exposures()}} for all available
+\code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_metrics]{gtropic_metrics()}} for all available
 \code{metric}s available for plotting.}
 
 \item{storm}{Optional character vector of \code{STORM_ID}s or \code{STORM_NAME}s used
@@ -71,7 +71,7 @@ retains tracks linked to the selected ADM2 units when the \code{links} table is 
 \item{aggregate}{Summary method for exposure maps: one of \code{"max"}, \code{"min"},
 \code{"sum"}, \code{"mean"}, or \code{"n"}. \code{aggregate = NULL} (the default) uses the metric-specific
 published default (see the \code{aggregate} column of the tables returned by
-\code{\link[=gtropic_exposures]{gtropic_exposures()}} for these defaults).
+\code{\link[=gtropic_metrics]{gtropic_metrics()}} for these defaults).
 A single value is recycled over \code{metric}; multiple values
 must either be in \code{metric} order or be named for every selected \code{metric}. Count
 maps always use \code{"n"} and reject another value; this argument is ignored when
@@ -97,7 +97,7 @@ uniquely named list keyed by selected wind metric; a bare key is allowed
 only for one selected metric. Keys must use the source metric's unit;
 conventional spellings of meters per second, such as \code{"m/s"} and
 \code{"meters per second"}, are treated as compatible. The
-\code{\link[=saffir_simpson]{saffir_simpson()}} key is allowed only for \code{VMAX_SUST_MS} with
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} key is allowed only for \code{VMAX_SUST_MS} with
 \code{aggregate = "max"}, where it means a local sustained-wind equivalent,
 not a storm status. Other wind metrics or aggregates require an explicitly
 custom key. Applies only to non-binary exposure maps and wind metrics.}
@@ -117,9 +117,9 @@ default) overlays them when \code{data} contains a \code{tracks} table; \code{TR
 tracks regardless of this value.}
 
 \item{track_map_key}{A data frame defining the discrete color scale used when
-plotting track points. Defaults to the data frame returned by \code{\link[=saffir_simpson]{saffir_simpson()}}.
-The \code{track_map_key} must contain the following four columns: \code{category},
-\code{threshold}, \code{unit}, and \code{color}.
+plotting track points. Defaults to the data frame returned by
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}}. The \code{track_map_key} must contain the following
+four columns: \code{category}, \code{threshold}, \code{unit}, and \code{color}.
 The \code{unit} column must contain a single, constant value, and can be one of:
 \code{"m/s"}, \code{"knots"}, \code{"mph"}, \code{"km/h"}. This key controls
 \code{USA_WIND} track points and exposure/count track overlays, but not a
@@ -215,7 +215,8 @@ applicable. Hazard radii and windows are derived from rows that contributed
 to the plot.
 
 Track paths are drawn from every supplied observation. By default, constant-
-size points use \code{\link[=saffir_simpson]{saffir_simpson()}} categories derived from \code{USA_WIND}, which is
-published in knots and converted to the map key's unit before classification.
+size points use \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} categories derived from
+\code{USA_WIND}, which is published in knots and converted to the map key's unit
+before classification.
 An explicit \code{metric = "USA_STATUS"} retains the status-color display.
 }

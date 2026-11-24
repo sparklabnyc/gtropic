@@ -53,7 +53,7 @@ new_gtropic_data <- function(tables,
 #' downstream analyses. Resolved storm identifiers are unique `STORM_ID` values,
 #' the preferred keys for reproducible joins and grouping.
 #'
-#' `gtropic_warnings()` returns diagnostic details retained with the result.
+#' `gtropic_diagnostics()` returns diagnostic details retained with the result.
 #' This can include complete values that were abbreviated in a console warning,
 #' such as ADM2 units whose polygon membership varied over time. It is not a log
 #' of every warning that may have been emitted during retrieval.
@@ -67,16 +67,16 @@ new_gtropic_data <- function(tables,
 #'   `gtropic_filters()` returns a named `gtropic_filters` list of resolved
 #'   query settings. List elements retain their complete values; printing shows
 #'   a compact preview.
-#'   `gtropic_warnings()` returns a named list of recorded diagnostics, which is
-#'   empty when none were retained. `gtropic_availability()` returns a named
-#'   list of source availability and coverage metadata.
+#'   `gtropic_diagnostics()` returns a named list of recorded diagnostics,
+#'   which is empty when none were retained. `gtropic_availability()` returns a
+#'   named list of source availability and coverage metadata.
 #'
 #' @examples
 #' \donttest{
 #' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
 #' manifest <- gtropic_manifest(res)
 #' filters <- gtropic_filters(res)
-#' diagnostics <- gtropic_warnings(res)
+#' diagnostics <- gtropic_diagnostics(res)
 #' }
 #'
 #' @seealso [gtropic_data()]
@@ -95,7 +95,7 @@ gtropic_filters <- function(x) {
 
 #' @rdname gtropic_manifest
 #' @export
-gtropic_warnings <- function(x) {
+gtropic_diagnostics <- function(x) {
   stopifnot(inherits(x, "gtropic_data"))
   attr(x, "warnings")
 }
@@ -234,7 +234,7 @@ print.gtropic_data <- function(x, ...) {
   cli::cli_text("")
   cli::cli_alert_info(
     "Use {.code summary()} for detail{if (n_warn > 0)
-     glue::glue('; {n_warn} warning(s) recorded, see gtropic_warnings()')}."
+     glue::glue('; {n_warn} warning(s) recorded, see gtropic_diagnostics()')}."
   )
 
   invisible(x)

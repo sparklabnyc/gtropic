@@ -2,6 +2,18 @@
 
 ## Breaking changes
 
+* Renamed exported functions, with no aliases:
+  * `gtropic_warnings()` is now `gtropic_diagnostics()`. It returns retained
+    diagnostics, not warnings, and the old name was easy to confuse with
+    `base::warnings()`.
+  * `saffir_simpson()` is now `gtropic_saffir_simpson()`, so every exported
+    function except the ggplot2-style `theme_` and `scale_` helpers starts
+    with `gtropic_`.
+  * `gtropic_exposures()` is now `gtropic_metrics()`. It lists the metric
+    names accepted by `gtropic_plot(metric = )`.
+* `gtropic_basemap()` takes `what` first: `gtropic_basemap(what = "countries",
+  scale = "medium")`.
+
 * `gtropic_storms()` and `gtropic_excluded_storms()` no longer have a `year`
   argument; use `date_range`, which now also accepts a single value
   (`date_range = 2005` selects storms that formed in 2005). When both were

@@ -1,5 +1,5 @@
-test_that("gtropic_exposures lists exposure metadata by hazard", {
-  out <- gtropic_exposures()
+test_that("gtropic_metrics lists exposure metadata by hazard", {
+  out <- gtropic_metrics()
 
   expect_named(out, c("wind", "precip", "flood"))
   expect_true(all(vapply(out, inherits, logical(1), what = "tbl_df")))
@@ -14,8 +14,8 @@ test_that("gtropic_exposures lists exposure metadata by hazard", {
   expect_true("FLOODED_POP_CENTROID" %in% out$flood$metric)
 })
 
-test_that("gtropic_exposures excludes non-exposure and non-plot metrics", {
-  out <- gtropic_exposures()
+test_that("gtropic_metrics excludes non-exposure and non-plot metrics", {
+  out <- gtropic_metrics()
   metrics <- unlist(lapply(out, `[[`, "metric"), use.names = FALSE)
   centroid <- out$flood[out$flood$metric == "FLOODED_POP_CENTROID", ]
 

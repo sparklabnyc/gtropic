@@ -365,7 +365,7 @@ test_that("an old named storm without a date filter emits no current-period warn
   )
 
   expect_silent(result <- assemble_gtropic_data(args))
-  expect_length(gtropic_warnings(result), 0L)
+  expect_length(gtropic_diagnostics(result), 0L)
 })
 
 test_that("dataset roles appear in manifest and data summaries", {

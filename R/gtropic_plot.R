@@ -17,7 +17,7 @@
 #'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_FLOODED_AREA"`.
 #'   For `type = "count"`, it selects the first available count default;
 #'   `type = "track"` selects `"USA_WIND"`. Track maps require exactly one of
-#'   `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_exposures()] for all available
+#'   `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_metrics()] for all available
 #'   `metric`s available for plotting.
 #' @param storm Optional character vector of `STORM_ID`s or `STORM_NAME`s used
 #'   to subset all applicable tables in `data`. Specifying `storm`s requires that the `data`
@@ -33,7 +33,7 @@
 #' @param aggregate Summary method for exposure maps: one of `"max"`, `"min"`,
 #'   `"sum"`, `"mean"`, or `"n"`. `aggregate = NULL` (the default) uses the metric-specific
 #'   published default (see the `aggregate` column of the tables returned by
-#'   [gtropic_exposures()] for these defaults).
+#'   [gtropic_metrics()] for these defaults).
 #'   A single value is recycled over `metric`; multiple values
 #'   must either be in `metric` order or be named for every selected `metric`. Count
 #'   maps always use `"n"` and reject another value; this argument is ignored when
@@ -56,7 +56,7 @@
 #'   only for one selected metric. Keys must use the source metric's unit;
 #'   conventional spellings of meters per second, such as `"m/s"` and
 #'   `"meters per second"`, are treated as compatible. The
-#'   [saffir_simpson()] key is allowed only for `VMAX_SUST_MS` with
+#'   [gtropic_saffir_simpson()] key is allowed only for `VMAX_SUST_MS` with
 #'   `aggregate = "max"`, where it means a local sustained-wind equivalent,
 #'   not a storm status. Other wind metrics or aggregates require an explicitly
 #'   custom key. Applies only to non-binary exposure maps and wind metrics.
@@ -72,9 +72,9 @@
 #'   `FALSE` explicitly enables or suppresses the overlay. Track maps always draw
 #'   tracks regardless of this value.
 #' @param track_map_key A data frame defining the discrete color scale used when
-#'   plotting track points. Defaults to the data frame returned by [saffir_simpson()].
-#'   The `track_map_key` must contain the following four columns: `category`,
-#'   `threshold`, `unit`, and `color`.
+#'   plotting track points. Defaults to the data frame returned by
+#'   [gtropic_saffir_simpson()]. The `track_map_key` must contain the following
+#'   four columns: `category`, `threshold`, `unit`, and `color`.
 #'   The `unit` column must contain a single, constant value, and can be one of:
 #'   `"m/s"`, `"knots"`, `"mph"`, `"km/h"`. This key controls
 #'   `USA_WIND` track points and exposure/count track overlays, but not a
@@ -146,8 +146,9 @@
 #' to the plot.
 #'
 #' Track paths are drawn from every supplied observation. By default, constant-
-#' size points use [saffir_simpson()] categories derived from `USA_WIND`, which is
-#' published in knots and converted to the map key's unit before classification.
+#' size points use [gtropic_saffir_simpson()] categories derived from
+#' `USA_WIND`, which is published in knots and converted to the map key's unit
+#' before classification.
 #' An explicit `metric = "USA_STATUS"` retains the status-color display.
 #'
 #' @return A ggplot for static output or a leaflet widget for interactive output.
@@ -160,7 +161,8 @@ gtropic_plot <- function(
   wind_categories = NULL,
   count_unit = c("storms", "days"),
   facet_by = NULL, track = NULL,
-  track_map_key = saffir_simpson(), track_labels = TRUE, track_interval = 6,
+  track_map_key = gtropic_saffir_simpson(), track_labels = TRUE,
+  track_interval = 6,
   track_legend_position = NULL,
   basemap = c("countries", "admin1", "none"),
   bbox = NULL, expand = 2, crs = NULL, interactive = FALSE,

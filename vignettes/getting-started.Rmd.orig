@@ -124,14 +124,14 @@ what those columns measure, and the original provenance of the data,
 both in terms of the raw data sources, as well as the G-TROPIC backend
 pipeline scripts that generated that data.
 
-Related to the codebook is the `gtropic_exposures()` function, which lists
+Related to the codebook is the `gtropic_metrics()` function, which lists
 the variable names associated with exposures available in G-TROPIC,
 their units of measurement, their default aggregation methods (for plotting
 exposure maps), and whether or not the `gtropic_plot()` function supports
 plotting the exposure.
 
 ```{r}
-gtropic_exposures()
+gtropic_metrics()
 ```
 
 ## A first query
@@ -269,7 +269,7 @@ gtropic_filters(usa_25)
 
 ```{r}
 # Anything the query warned about
-gtropic_warnings(usa_25)
+gtropic_diagnostics(usa_25)
 ```
 
 ```{r, eval = FALSE}
@@ -288,7 +288,7 @@ the requested period used for diagnostics. Availability warnings are
 conditional: for example, a recent wind request can warn about provisional
 IBTrACS data, a recent precipitation request about the typical ERA5-Land lag,
 and a flood request reaching or extending beyond **2026-01-22** about the known
-Groundsource flood endpoint. Inspect `gtropic_warnings()` to retain these diagnostics with
+Groundsource flood endpoint. Inspect `gtropic_diagnostics()` to retain these diagnostics with
 an analysis; availability is metadata, not a guarantee that every record exists.
 
 ## Larger queries, caching, and size guardrails

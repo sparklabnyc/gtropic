@@ -228,7 +228,7 @@ resolve_polygon <- function(polygon,
        across years.",
       "!" = "{truncate_display(inconsistent)}",
       i = "{?It was/They were} included. The full vector is available via
-           {.code gtropic_warnings()}."
+           {.code gtropic_diagnostics()}."
     ))
   }
 

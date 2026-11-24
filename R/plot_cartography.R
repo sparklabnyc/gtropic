@@ -3,10 +3,10 @@
 #' Countries use the locally installed Natural Earth data package. First use of
 #' an administrative-level-1 layer requires the optional, non-CRAN
 #' `rnaturalearthhires` package. No layer is downloaded by this function.
+#' @param what One of `"countries"` (the default), `"admin1"`, or `"none"`.
 #' @param scale Country resolution: `"small"` (110) or `"medium"` (50).
 #'   Large (10) country layers are deliberately unsupported. Ignored for admin1,
 #'   which uses the resolution supplied by `rnaturalearth::ne_states()`.
-#' @param what One of `"countries"`, `"admin1"`, or `"none"`.
 #' @return An sf object, or NULL for `what = "none"`. Layers are cached by
 #'   resolution and type until the R session ends.
 #' @examples
@@ -18,8 +18,8 @@
 #' }
 #' }
 #' @export
-gtropic_basemap <- function(scale = "medium",
-                            what = c("countries", "admin1", "none")) {
+gtropic_basemap <- function(what = c("countries", "admin1", "none"),
+                            scale = "medium") {
   what <- match.arg(what)
   if (what == "none") {
     return(NULL)

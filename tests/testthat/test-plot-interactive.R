@@ -79,7 +79,7 @@ test_that("interactive maps escape HTML in names, category labels and units", {
   payload <- "<img src=x onerror=alert(1)>"
   x <- gtropic_example()
   x$adm2$ADM2_NAME[] <- payload
-  key <- saffir_simpson()
+  key <- gtropic_saffir_simpson()
   key$category[] <- paste(payload, seq_len(nrow(key)))
 
   p <- gtropic_plot(x,
@@ -96,7 +96,7 @@ test_that("interactive maps escape HTML in names, category labels and units", {
   expect_match(legend[1L], "^&lt;img", perl = TRUE)
 
   # A track unit cannot carry markup: the key accepts four units only.
-  track_key <- saffir_simpson()
+  track_key <- gtropic_saffir_simpson()
   track_key$unit[] <- payload
   expect_error(
     gtropic_plot(x,

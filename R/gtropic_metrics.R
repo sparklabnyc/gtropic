@@ -14,11 +14,11 @@
 #'   and `plot_supported`.
 #'
 #' @examples
-#' exposures <- gtropic_exposures()
-#' exposures$flood
+#' metrics <- gtropic_metrics()
+#' metrics$flood
 #'
 #' @export
-gtropic_exposures <- function() {
+gtropic_metrics <- function() {
   registry <- plot_metric_registry()
   registry <- registry[
     registry$table %in% c("wind", "precip", "flood") &

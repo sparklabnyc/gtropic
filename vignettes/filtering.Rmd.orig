@@ -113,7 +113,7 @@ more than one year, and warns again, listing the units, if membership actually
 varied. The complete list is always available:
 
 ```{r}
-gtropic_warnings(nc_10to11)$polygon_inconsistent
+gtropic_diagnostics(nc_10to11)$polygon_inconsistent
 ```
 
 The named geographic filters are not year-varying, so they raise no such

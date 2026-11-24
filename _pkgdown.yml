@@ -42,7 +42,7 @@ reference:
   - gtropic_adm2
   - gtropic_storms
   - gtropic_excluded_storms
-  - gtropic_exposures
+  - gtropic_metrics
   - gtropic_years
   - gtropic_codebook
 - title: Cache
@@ -60,7 +60,7 @@ reference:
   contents:
   - gtropic_plot
   - plot.gtropic_data
-  - saffir_simpson
+  - gtropic_saffir_simpson
   - theme_gtropic
   - scale_fill_gtropic_c
   - scale_fill_gtropic_d

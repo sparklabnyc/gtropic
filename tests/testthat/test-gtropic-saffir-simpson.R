@@ -1,5 +1,5 @@
-test_that("saffir_simpson returns the complete wind-category lookup", {
-  out <- saffir_simpson()
+test_that("gtropic_saffir_simpson returns the complete wind-category lookup", {
+  out <- gtropic_saffir_simpson()
 
   expect_s3_class(out, "tbl_df")
   expect_named(out, c("category", "threshold", "unit", "color"))
@@ -9,9 +9,9 @@ test_that("saffir_simpson returns the complete wind-category lookup", {
   expect_identical(out$color, c("#6EC1EA", "#5FF", "#FFFFD9", "#FBDA8C", "#F89F59", "#F6738A", "#A188FC"))
 })
 
-test_that("saffir_simpson returns a fresh mutable object", {
-  first <- saffir_simpson()
+test_that("gtropic_saffir_simpson returns a fresh mutable object", {
+  first <- gtropic_saffir_simpson()
   first$color[1] <- "#000000"
 
-  expect_identical(saffir_simpson()$color[1], "#6EC1EA")
+  expect_identical(gtropic_saffir_simpson()$color[1], "#6EC1EA")
 })

@@ -10,10 +10,10 @@
 #'   an infinite threshold.
 #'
 #' @examples
-#' saffir_simpson()
+#' gtropic_saffir_simpson()
 #'
 #' @export
-saffir_simpson <- function() {
+gtropic_saffir_simpson <- function() {
   tibble::tibble(
     category = c("TD", "TS", "Cat 1", "Cat 2", "Cat 3", "Cat 4", "Cat 5"),
     threshold = c(17, 32, 42, 49, 58, 70, Inf),
@@ -92,7 +92,7 @@ plot_validate_wind_category_key <- function(key, argument = "wind_categories") {
 #' @keywords internal
 #' @noRd
 plot_is_saffir_simpson_key <- function(key) {
-  standard <- saffir_simpson()
+  standard <- gtropic_saffir_simpson()
   identical(as.character(key$category), standard$category) &&
     identical(as.numeric(key$threshold), standard$threshold) &&
     identical(as.character(key$unit), standard$unit) &&

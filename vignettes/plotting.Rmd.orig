@@ -74,7 +74,7 @@ To see a list of all the available exposure metrics
 and how they are summarized for plotting, we can call:
 
 ```{r}
-gtropic_exposures()
+gtropic_metrics()
 ```
 
 The `metric` column let's us know the available exposures, and the `aggregate` column
@@ -151,13 +151,13 @@ gtropic_plot(
   katrina,
   type = "track",
   basemap = "admin1",
-  track_map_key = saffir_simpson(),
+  track_map_key = gtropic_saffir_simpson(),
   track_interval = 3,
 )
 ```
 
 By default, their points
-are classified with `saffir_simpson()`, which returns the conventional
+are classified with `gtropic_saffir_simpson()`, which returns the conventional
 Saffir-Simpson category key in meters per second. Supply a compatible data frame
 to `track_map_key` to use a different classification, and use `track_interval`
 to sample displayed points at three- or six-hour UTC intervals while retaining
@@ -169,21 +169,21 @@ key, even when no displayed track observation falls in a category.
 
 If you'd like to categorize ADM2s into buckets defined by the wind they've been exposed to, you can use the
 `wind_categories` argument and pass in a table that looks like the one returned by
-`saffir_simpson()`:
+`gtropic_saffir_simpson()`:
 
 ```{r}
-saffir_simpson()
+gtropic_saffir_simpson()
 ```
 
 ```{r}
-gtropic_plot(katrina, wind_categories = saffir_simpson())
+gtropic_plot(katrina, wind_categories = gtropic_saffir_simpson())
 ```
 
 The `wind_categories` argument classifies aggregated ADM2 wind exposure rather than drawing
 it on a continuous scale. It applies to non-binary exposure maps for metrics in
 the wind table, including interactive maps. For multiple selected metrics, use a named list keyed by the
 selected wind metric or metrics to classify; metrics without a supplied key
-retain their continuous fill. The built-in `saffir_simpson()` key is permitted
+retain their continuous fill. The built-in `gtropic_saffir_simpson()` key is permitted
 only for `VMAX_SUST_MS` with `aggregate = "max"`; it represents a local
 sustained-wind equivalent, not storm status. Use an explicitly custom key for
 other wind metrics or aggregations.

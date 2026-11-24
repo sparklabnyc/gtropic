@@ -182,7 +182,7 @@ are tibbles, \code{codebook} is a nested list, and \code{geometry} is an \code{s
 The object also stores the source-file manifest, original query, resolved
 filters, recorded diagnostics, retrieval time, and package version as
 attributes, including structured availability and coverage metadata. Use \code{\link[=gtropic_manifest]{gtropic_manifest()}}, \code{\link[=gtropic_filters]{gtropic_filters()}}, and
-\code{\link[=gtropic_warnings]{gtropic_warnings()}} to retrieve the principal metadata attributes.
+\code{\link[=gtropic_diagnostics]{gtropic_diagnostics()}} to retrieve the principal metadata attributes.
 }
 \description{
 Retrieves and filters published G-TROPIC data for assessing tropical cyclone

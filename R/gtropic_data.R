@@ -248,7 +248,7 @@
 #'   The object also stores the source-file manifest, original query, resolved
 #'   filters, recorded diagnostics, retrieval time, and package version as
 #'   attributes, including structured availability and coverage metadata. Use [gtropic_manifest()], [gtropic_filters()], and
-#'   [gtropic_warnings()] to retrieve the principal metadata attributes.
+#'   [gtropic_diagnostics()] to retrieve the principal metadata attributes.
 #'
 #' @examples
 #' \donttest{

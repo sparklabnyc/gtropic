@@ -3,7 +3,7 @@
 \name{gtropic_manifest}
 \alias{gtropic_manifest}
 \alias{gtropic_filters}
-\alias{gtropic_warnings}
+\alias{gtropic_diagnostics}
 \alias{gtropic_availability}
 \title{Extract metadata from a G-TROPIC result}
 \usage{
@@ -11,7 +11,7 @@ gtropic_manifest(x)
 
 gtropic_filters(x)
 
-gtropic_warnings(x)
+gtropic_diagnostics(x)
 
 gtropic_availability(x)
 }
@@ -23,9 +23,9 @@ gtropic_availability(x)
 \code{gtropic_filters()} returns a named \code{gtropic_filters} list of resolved
 query settings. List elements retain their complete values; printing shows
 a compact preview.
-\code{gtropic_warnings()} returns a named list of recorded diagnostics, which is
-empty when none were retained. \code{gtropic_availability()} returns a named
-list of source availability and coverage metadata.
+\code{gtropic_diagnostics()} returns a named list of recorded diagnostics,
+which is empty when none were retained. \code{gtropic_availability()} returns a
+named list of source availability and coverage metadata.
 }
 \description{
 These accessor functions retrieve provenance, resolved query settings, and
@@ -43,7 +43,7 @@ settings. These values support transparent reporting and quality assurance in
 downstream analyses. Resolved storm identifiers are unique \code{STORM_ID} values,
 the preferred keys for reproducible joins and grouping.
 
-\code{gtropic_warnings()} returns diagnostic details retained with the result.
+\code{gtropic_diagnostics()} returns diagnostic details retained with the result.
 This can include complete values that were abbreviated in a console warning,
 such as ADM2 units whose polygon membership varied over time. It is not a log
 of every warning that may have been emitted during retrieval.
@@ -56,7 +56,7 @@ coverage, and the requested time range used for availability diagnostics.
 res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
 manifest <- gtropic_manifest(res)
 filters <- gtropic_filters(res)
-diagnostics <- gtropic_warnings(res)
+diagnostics <- gtropic_diagnostics(res)
 }
 
 }

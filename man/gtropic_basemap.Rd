@@ -4,14 +4,14 @@
 \alias{gtropic_basemap}
 \title{Natural Earth basemaps cached for the current R session}
 \usage{
-gtropic_basemap(scale = "medium", what = c("countries", "admin1", "none"))
+gtropic_basemap(what = c("countries", "admin1", "none"), scale = "medium")
 }
 \arguments{
+\item{what}{One of \code{"countries"} (the default), \code{"admin1"}, or \code{"none"}.}
+
 \item{scale}{Country resolution: \code{"small"} (110) or \code{"medium"} (50).
 Large (10) country layers are deliberately unsupported. Ignored for admin1,
 which uses the resolution supplied by \code{rnaturalearth::ne_states()}.}
-
-\item{what}{One of \code{"countries"}, \code{"admin1"}, or \code{"none"}.}
 }
 \value{
 An sf object, or NULL for \code{what = "none"}. Layers are cached by

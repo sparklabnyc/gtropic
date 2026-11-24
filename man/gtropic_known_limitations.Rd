@@ -18,7 +18,7 @@ these gaps using finer-resolution ERA5 precipitation data.
 \code{\link[=gtropic_data]{gtropic_data()}} warns when a precipitation query includes an ADM2 unit with
 no non-missing precipitation values in the returned period. The complete
 vector of identifiers is retained in
-\code{gtropic_warnings(x)$precip_all_missing_adm2_ids}. Automatic precipitation
+\code{gtropic_diagnostics(x)$precip_all_missing_adm2_ids}. Automatic precipitation
 captions from \code{\link[=gtropic_plot]{gtropic_plot()}} include a shorter note for affected mapped
 units.
 
@@ -29,5 +29,5 @@ can also produce the same diagnostic.
 }
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_plot]{gtropic_plot()}}, \code{\link[=gtropic_warnings]{gtropic_warnings()}}
+\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_plot]{gtropic_plot()}}, \code{\link[=gtropic_diagnostics]{gtropic_diagnostics()}}
 }

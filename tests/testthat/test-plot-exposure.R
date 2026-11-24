@@ -58,7 +58,7 @@ test_that("static wind legends retain every Saffir-Simpson category", {
   testthat::skip_if_not_installed("ggnewscale")
   x <- plot_fixture()
   x$tracks$USA_WIND[] <- 50
-  key <- saffir_simpson()
+  key <- gtropic_saffir_simpson()
   expect_false(any(
     as.character(plot_categorize_track_wind(x$tracks$USA_WIND, key)) == "Cat 2"
   ))
@@ -79,7 +79,7 @@ test_that("static wind legends retain every Saffir-Simpson category", {
 })
 
 test_that("categorical ADM2 wind fills classify aggregated local exposure", {
-  key <- saffir_simpson()
+  key <- gtropic_saffir_simpson()
   p <- gtropic_plot(
     plot_fixture(), metric = "VMAX_SUST_MS", wind_categories = key,
     basemap = "none", track = FALSE
@@ -110,7 +110,7 @@ test_that("Saffir-Simpson keys accept equivalent metre-per-second units", {
   x$codebook$variables$VMAX_SUST_MS <- list(unit = "meters per second")
 
   p <- gtropic_plot(
-    x, metric = "VMAX_SUST_MS", wind_categories = saffir_simpson(),
+    x, metric = "VMAX_SUST_MS", wind_categories = gtropic_saffir_simpson(),
     basemap = "none", track = FALSE
   )
 
@@ -121,7 +121,7 @@ test_that("Saffir-Simpson keys accept equivalent metre-per-second units", {
   x$codebook$variables$VMAX_SUST_MS$unit <- "km/h"
   expect_error(
     gtropic_plot(
-      x, metric = "VMAX_SUST_MS", wind_categories = saffir_simpson(),
+      x, metric = "VMAX_SUST_MS", wind_categories = gtropic_saffir_simpson(),
       basemap = "none", track = FALSE
     ),
     "incompatible units"
@@ -137,21 +137,21 @@ test_that("categorical exposure keys validate scope, units, and scientific guard
 
   expect_error(
     gtropic_plot(x, type = "count", metric = "VMAX_SUST_MS",
-      wind_categories = saffir_simpson()),
+      wind_categories = gtropic_saffir_simpson()),
     "only to type = 'exposure'"
   )
   expect_error(
     gtropic_plot(x, metric = "VMAX_SUST_MS", binary = TRUE,
-      wind_categories = saffir_simpson()),
+      wind_categories = gtropic_saffir_simpson()),
     "binary = FALSE"
   )
   expect_error(
     gtropic_plot(x, metric = "VMAX_SUST_MS", aggregate = "mean",
-      wind_categories = saffir_simpson()),
+      wind_categories = gtropic_saffir_simpson()),
     "explicitly custom"
   )
   expect_error(
-    gtropic_plot(x, metric = "VMAX_GUST_MS", wind_categories = saffir_simpson()),
+    gtropic_plot(x, metric = "VMAX_GUST_MS", wind_categories = gtropic_saffir_simpson()),
     "explicitly custom"
   )
   expect_error(
@@ -160,7 +160,7 @@ test_that("categorical exposure keys validate scope, units, and scientific guard
     "incompatible units"
   )
   expect_error(
-    gtropic_plot(x, metric = "PRECIP_MM", wind_categories = saffir_simpson()),
+    gtropic_plot(x, metric = "PRECIP_MM", wind_categories = gtropic_saffir_simpson()),
     "only selected wind metrics"
   )
   expect_error(
@@ -172,7 +172,7 @@ test_that("categorical exposure keys validate scope, units, and scientific guard
   )
   expect_error(
     gtropic_plot(x, metric = c("VMAX_SUST_MS", "VMAX_GUST_MS"),
-      wind_categories = saffir_simpson()),
+      wind_categories = gtropic_saffir_simpson()),
     "named list"
   )
   expect_error(
