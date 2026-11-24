@@ -109,6 +109,10 @@
   that is interrupted still records the files it downloaded, and entries that
   another R session adds to the index meanwhile are kept.
 
+* Less overhead per file: dataset file listings are parsed in one pass,
+  planned file sizes are looked up with one join, and the manifest is
+  assembled once per query rather than rebuilt for every file.
+
 * When precipitation or flood is requested without the `zero_pairs` table,
   only the four `zero_pairs` columns that linkage needs are read. A `polygon`
   filter tests each distinct population centroid against the polygon once,

@@ -1038,7 +1038,7 @@ cache_manage_ctx <- function(ctx) {
   if (!isTRUE(ctx$cache$enabled) || !isTRUE(ctx$cache_state$written)) {
     return(invisible(NULL))
   }
-  mf <- ctx$manifest_out$value
+  mf <- ctx_manifest(ctx)
   files <- mf$files
   keep <- cache_key_string(
     mf$server, files$dataset_doi, files$directory_label, files$label,

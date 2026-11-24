@@ -69,7 +69,7 @@ test_that("live: manifest replay retrieves byte-identical input", {
   )
   first_context <- fetch_context(discovery, no_cache, quiet = TRUE)
   first <- fetch_file("historical", path[1], path[2], first_context)
-  manifest <- manifest_finalize(first_context$manifest_out$value)
+  manifest <- manifest_finalize(ctx_manifest(first_context))
 
   replay_context <- fetch_context(
     discovery, no_cache,

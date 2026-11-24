@@ -65,7 +65,19 @@ manifest_new <- function(discovery) {
 #' @noRd
 manifest_add <- function(manifest, doi, version, row, downloaded_at,
                          source_role = NULL) {
-  entry <- tibble::tibble(
+  entry <- manifest_entry(doi, version, row, downloaded_at, source_role)
+  manifest$files <- manifest_distinct_files(dplyr::bind_rows(manifest$files, entry))
+  manifest
+}
+
+#' One manifest row for a retrieved file
+#'
+#' @inheritParams manifest_add
+#' @return A one-row tibble shaped like `manifest_new()$files`.
+#' @keywords internal
+#' @noRd
+manifest_entry <- function(doi, version, row, downloaded_at, source_role = NULL) {
+  tibble::tibble(
     source_role = manifest_source_role(source_role),
     dataset_doi = doi,
     dataset_version = as.character(version),
@@ -77,15 +89,53 @@ manifest_add <- function(manifest, doi, version, row, downloaded_at,
     size_bytes = as.numeric(row$size_bytes),
     downloaded_at = manifest_utc(downloaded_at)
   )
+}
 
-  manifest$files <- dplyr::distinct(
-    dplyr::bind_rows(manifest$files, entry),
+#' Keep the first record of each file
+#' @param files A manifest `files` table.
+#' @keywords internal
+#' @noRd
+manifest_distinct_files <- function(files) {
+  dplyr::distinct(
+    files,
     .data$source_role, .data$dataset_doi, .data$dataset_version,
     .data$directory_label, .data$label,
     .keep_all = TRUE
   )
+}
 
-  manifest
+#' Record a retrieved file in a fetch context's manifest
+#'
+#' Entries are collected in a list and bound into the manifest once, by
+#' `ctx_manifest()`, rather than re-binding and de-duplicating the whole
+#' `files` table for every file.
+#'
+#' @param ctx A fetch context.
+#' @param entry A `manifest_entry()`.
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+ctx_manifest_add <- function(ctx, entry) {
+  out <- ctx$manifest_out
+  out$entries[[length(out$entries) + 1L]] <- entry
+  invisible(NULL)
+}
+
+#' The manifest a fetch context has accumulated
+#'
+#' @param ctx A fetch context.
+#' @return The (unfinalised) `gtropic_manifest`, with every recorded file.
+#' @keywords internal
+#' @noRd
+ctx_manifest <- function(ctx) {
+  out <- ctx$manifest_out
+  if (length(out$entries) > 0L) {
+    out$value$files <- manifest_distinct_files(
+      dplyr::bind_rows(c(list(out$value$files), out$entries))
+    )
+    out$entries <- list()
+  }
+  out$value
 }
 
 #' A download time as POSIXct in UTC

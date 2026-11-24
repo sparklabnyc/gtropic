@@ -29,6 +29,38 @@ test_that("listings drop checksums that are not hexadecimal digests", {
   expect_identical(listing$file_id, 1:2)
 })
 
+test_that("listings read every field from either checksum layout", {
+  records <- list(
+    list(
+      label = "a.parquet", directoryLabel = "x/y",
+      dataFile = list(
+        id = 1L, md5 = strrep("d", 32L), filesize = 10, contentType = "t"
+      )
+    ),
+    list(
+      label = "b.parquet",
+      dataFile = list(
+        id = 2L, filesize = 1e10,
+        checksum = list(type = "SHA-256", value = strrep("a", 64L))
+      )
+    ),
+    list(dataFile = list(id = 3L, filename = "c.json", checksum = list(type = "MD5"))),
+    list(label = "d")
+  )
+
+  listing <- dv_listing_from_records(records)
+
+  expect_identical(listing, tibble::tibble(
+    file_id = c(1L, 2L, 3L, NA),
+    label = c("a.parquet", "b.parquet", "c.json", "d"),
+    directory_label = c("x/y", "", "", ""),
+    checksum = c(strrep("d", 32L), strrep("a", 64L), NA, NA),
+    checksum_type = c("MD5", "SHA-256", "MD5", NA),
+    size_bytes = c(10, 1e10, NA, NA),
+    content_type = c("t", NA, NA, NA)
+  ))
+})
+
 test_that("validate_server() keeps bare host names and strips schemes", {
   expect_identical(validate_server("dataverse.harvard.edu"), "dataverse.harvard.edu")
   expect_identical(validate_server("https://dataverse.harvard.edu/"), "dataverse.harvard.edu")

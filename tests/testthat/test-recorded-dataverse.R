@@ -64,7 +64,7 @@ test_that("recorded downloads verify, cache and read", {
   expect_true(all(c("STORM_ID", "STORM_NAME") %in% names(hist)))
   expect_true(all(c("STORM_ID", "STORM_NAME") %in% names(curr)))
 
-  files <- ctx$manifest_out$value$files
+  files <- ctx_manifest(ctx)$files
   expect_identical(files$dataset_doi, c(discovery$historical$doi, discovery$current$doi))
   listed <- rbind(discovery$historical$listing, discovery$current$listing)
   expected <- listed[match(files$file_id, listed$file_id), ]

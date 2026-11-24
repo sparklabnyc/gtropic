@@ -300,34 +300,43 @@ dv_listing_from_records <- function(raw_files) {
 
   # The file records differ a little between Dataverse releases: the checksum
   # may be supplied in a legacy `md5` field or nested under `checksum`.
-  # Preserve its declared algorithm.
-  rows <- lapply(raw_files, function(f) {
-    df <- f$dataFile %||% list()
-    checksum_record <- df$checksum %||% list()
-    checksum_value <- if (is.list(checksum_record)) {
-      checksum_record$value %||% NA_character_
-    } else {
-      checksum_record
+  # Preserve its declared algorithm. Each column is built in one pass over the
+  # records (PERF-06), not one tibble per file.
+  field <- function(get, cast, na) {
+    vapply(raw_files, function(f) {
+      x <- get(f)
+      if (length(x) == 0L) na else cast(x[[1L]])
+    }, na, USE.NAMES = FALSE)
+  }
+  data_file <- function(f) f$dataFile %||% list()
+  checksum_record <- function(f) data_file(f)$checksum %||% list()
+  checksum_value <- function(f) {
+    record <- checksum_record(f)
+    data_file(f)$md5 %||% if (is.list(record)) record$value else record
+  }
+  checksum_type <- function(f) {
+    if (!is.null(data_file(f)$md5)) {
+      return("MD5")
     }
-    checksum_type <- if (is.list(checksum_record)) {
-      checksum_record$type %||% NA_character_
-    } else {
-      NA_character_
-    }
-    tibble::tibble(
-      file_id = as.integer(df$id %||% NA_integer_),
-      label = as.character(f$label %||% df$filename %||% NA_character_),
-      directory_label = as.character(f$directoryLabel %||% ""),
-      checksum = as.character(df$md5 %||% checksum_value),
-      checksum_type = as.character(
-        if (!is.null(df$md5)) "MD5" else checksum_type
-      ),
-      size_bytes = as.numeric(df$filesize %||% NA_real_),
-      content_type = as.character(df$contentType %||% NA_character_)
-    )
-  })
+    record <- checksum_record(f)
+    if (is.list(record)) record$type else NULL
+  }
 
-  out <- dplyr::bind_rows(rows)
+  out <- tibble::tibble(
+    file_id = field(function(f) data_file(f)$id, as.integer, NA_integer_),
+    label = field(
+      function(f) f$label %||% data_file(f)$filename, as.character, NA_character_
+    ),
+    directory_label = field(
+      function(f) f$directoryLabel %||% "", as.character, NA_character_
+    ),
+    checksum = field(checksum_value, as.character, NA_character_),
+    checksum_type = field(checksum_type, as.character, NA_character_),
+    size_bytes = field(function(f) data_file(f)$filesize, as.numeric, NA_real_),
+    content_type = field(
+      function(f) data_file(f)$contentType, as.character, NA_character_
+    )
+  )
   # Checksums later name files in the cache. Anything that is not a plain
   # hexadecimal digest is treated as "no checksum published".
   out$checksum[!is_hex_checksum(out$checksum)] <- NA_character_

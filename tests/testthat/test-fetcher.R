@@ -310,7 +310,7 @@ test_that("metadata remains historical when current listing contains a copy", {
     "historical", "metadata", "codebook.json", context,
     kind = "json"
   )
-  manifest <- context$manifest_out$value
+  manifest <- ctx_manifest(context)
 
   expect_equal(codebook$source, "historical")
   expect_equal(manifest$files$dataset_doi, "doi:10.0000/HIST")

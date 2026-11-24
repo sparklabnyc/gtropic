@@ -124,15 +124,16 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     if (is.null(downloaded_at) || is.na(downloaded_at)) downloaded_at <- Sys.time()
   }
 
-  ctx$manifest_out$value <- manifest_add(
-    ctx$manifest_out$value, doi, version,
-    tibble::tibble(
+  ctx_manifest_add(ctx, manifest_entry(
+    doi, version,
+    list(
       directory_label = directory_label, label = label,
-       file_id = file_id, checksum = checksum,
+      file_id = file_id, checksum = checksum,
       checksum_type = checksum_type,
       size_bytes = as.numeric(file.size(local_file))
-    ), downloaded_at = downloaded_at, source_role = dataset
-  )
+    ),
+    downloaded_at = downloaded_at, source_role = dataset
+  ))
 
   switch(kind,
     parquet = read_parquet_file(local_file,
@@ -236,6 +237,7 @@ fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE,
   if (isTRUE(cache$enabled)) cache$index <- cache_index_handle(cache$dir)
   out <- new.env(parent = emptyenv())
   out$value <- manifest_new(discovery)
+  out$entries <- list()
   cache_state <- new.env(parent = emptyenv())
   cache_state$written <- FALSE
 
@@ -668,7 +670,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   ))
 
   manifest <- manifest_finalize(
-    ctx$manifest_out$value,
+    ctx_manifest(ctx),
     resolved_query = manifest_query_from_args(
       args,
       resolved_adm2_ids = geo$adm2_ids,
@@ -722,18 +724,11 @@ attach_plan_sizes <- function(plan, discovery) {
     return(plan)
   }
 
-  plan$size_bytes <- vapply(seq_len(nrow(plan)), function(i) {
-    slot <- discovery[[plan$dataset[i]]]
-    if (is.null(slot)) {
-      return(NA_real_)
-    }
-    row <- slot$listing[
-      slot$listing$directory_label == plan$directory_label[i] &
-        slot$listing$label == plan$label[i], ,
-      drop = FALSE
-    ]
-    if (nrow(row) == 0L) NA_real_ else as.numeric(row$size_bytes[1])
-  }, numeric(1))
-
+  key <- c("dataset", "directory_label", "label")
+  sizes <- dplyr::left_join(
+    plan[key], discovery_files(discovery)[c(key, "size_bytes")],
+    by = key, relationship = "many-to-one"
+  )
+  plan$size_bytes <- sizes$size_bytes
   plan
 }

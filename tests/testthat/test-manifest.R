@@ -150,3 +150,37 @@ test_that("replaying a manifest from another server warns, naming both hosts", {
   withr::local_options(gtropic.server = "example.invalid")
   expect_no_warning(gtropic_data(manifest = m))
 })
+
+test_that("a context's manifest entries are bound once, first record kept", {
+  discovery <- fetcher_discovery(fetcher_listing()$listing)
+  ctx <- fetch_context(discovery, list(enabled = FALSE, dir = NULL), quiet = TRUE)
+  row <- function(label, id) {
+    list(
+      directory_label = "yearly", label = label, file_id = id,
+      checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
+    )
+  }
+  times <- as.POSIXct(c("2026-01-01", "2026-01-02", "2026-01-03"), tz = "UTC")
+  added <- list(
+    list("2001.parquet", 1L, times[1]), list("2002.parquet", 2L, times[2]),
+    list("2001.parquet", 1L, times[3])
+  )
+
+  sequential <- manifest_new(discovery)
+  for (a in added) {
+    ctx_manifest_add(ctx, manifest_entry(
+      "doi:10.0000/HIST", "1.0", row(a[[1]], a[[2]]), a[[3]], "historical"
+    ))
+    sequential <- manifest_add(sequential, "doi:10.0000/HIST", "1.0",
+      row(a[[1]], a[[2]]), a[[3]],
+      source_role = "historical"
+    )
+  }
+  expect_length(ctx$manifest_out$entries, 3L)
+
+  files <- ctx_manifest(ctx)$files
+  expect_identical(files, sequential$files)
+  expect_identical(files$label, c("2001.parquet", "2002.parquet"))
+  expect_identical(files$downloaded_at, times[1:2])
+  expect_length(ctx$manifest_out$entries, 0L)
+})

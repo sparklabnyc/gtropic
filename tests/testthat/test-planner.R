@@ -837,3 +837,21 @@ test_that("flood 'start' and 'overlap' select different rows", {
   expect_s3_class(overlap$FLOOD_START_DATE, "Date")
   expect_s3_class(overlap$FLOOD_END_DATE, "Date")
 })
+
+test_that("plan sizes come from the listing of the planned file's dataset", {
+  fixture <- fetcher_listing(2001:2002)
+  discovery <- fetcher_discovery(fixture$listing)
+  fixture$listing$size_bytes <- c(111, 222)
+  discovery$historical$listing <- fixture$listing
+  plan <- tibble::tibble(
+    dataset = c("historical", "historical", "historical", "current"),
+    directory_label = "yearly",
+    label = c("2002.parquet", "2001.parquet", "1999.parquet", "2001.parquet")
+  )
+
+  sized <- attach_plan_sizes(plan, discovery)
+
+  expect_identical(sized[names(plan)], plan)
+  expect_identical(sized$size_bytes, c(222, 111, NA, NA))
+  expect_identical(attach_plan_sizes(plan[0, ], discovery)$size_bytes, numeric(0))
+})
