@@ -2,10 +2,9 @@
 # (check-standard), with the edits from Plan 01 INFRA-03 (a).
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 #
-# Staged settings until Plan 01 session 7 (INFRA-03 final settings): no
-# --run-donttest and _R_CHECK_DONTTEST_EXAMPLES_=false (the \donttest{}
-# examples still download data), error-on "warning" on every job, and a
-# warn-only tarball size gate.
+# Final settings (Plan 01 INFRA-03, session 7): --run-donttest, error-on
+# "note" on Ubuntu release and "warning" elsewhere, and a blocking tarball
+# size gate.
 on:
   push:
     branches: [main]
@@ -36,7 +35,7 @@ jobs:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'release', error-on: '"note"'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
           - {os: ubuntu-latest,  r: '4.2'}   # Depends: R (>= 4.2.0)
 
@@ -47,8 +46,6 @@ jobs:
       # NOTE can be treated as a failure. The final local run (CRAN-15) has
       # incoming checks on.
       _R_CHECK_CRAN_INCOMING_: false
-      # Staged: \donttest{} examples still download data until CRAN-06.
-      _R_CHECK_DONTTEST_EXAMPLES_: false
       # Two threads at most (CRAN policy; Plan 06 G7).
       OMP_NUM_THREADS: 2
       OMP_THREAD_LIMIT: 2
@@ -85,13 +82,12 @@ jobs:
 
       - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
-          args: 'c("--no-manual", "--as-cran")'
+          args: 'c("--no-manual", "--as-cran", "--run-donttest")'
           build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
-          error-on: '"warning"'
+          error-on: ${{ matrix.config.error-on || '"warning"' }}
           upload-snapshots: true
 
-      # Thresholds from Plan 04 PERF-11. Staged: warn only above 5 MB until
-      # CRAN-04 is accepted (session 7).
+      # Thresholds from Plan 04 PERF-11: fail above 5 MB, warn above 4 MB.
       - name: Tarball size gate
         if: ${{ !cancelled() }}
         shell: bash
@@ -101,7 +97,7 @@ jobs:
           if [ -z "$f" ]; then echo "::warning::No tarball found in check/"; exit 0; fi
           s=$(wc -c < "$f" | tr -d ' ')
           echo "Tarball: $s bytes" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$s" -gt 5000000 ]; then echo "::warning::Tarball exceeds 5 MB ($s bytes)"; exit 0; fi
+          if [ "$s" -gt 5000000 ]; then echo "::error::Tarball exceeds 5 MB ($s bytes)"; exit 1; fi
           if [ "$s" -gt 4000000 ]; then echo "::warning::Tarball exceeds 4 MB ($s bytes)"; fi
 
       # Count files, not directories: an empty directory holds no user data.
