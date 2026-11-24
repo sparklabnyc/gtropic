@@ -9,7 +9,7 @@ capture_args <- function(env = parent.frame()) {
 
 test_that("the default tables leave out geometry when sf is missing", {
   capture_args()
-  local_mocked_bindings(geo_packages_missing = function() c("sf", "sfarrow"))
+  local_mocked_bindings(geo_packages_missing = function() "sf")
   withr::local_options(rlib_message_verbosity = "verbose")
 
   expect_message(
@@ -27,14 +27,14 @@ test_that("the default tables leave out geometry when sf is missing", {
 
 test_that("geometry named explicitly is kept, whatever is installed", {
   capture_args()
-  local_mocked_bindings(geo_packages_missing = function() c("sf", "sfarrow"))
+  local_mocked_bindings(geo_packages_missing = function() "sf")
 
   args <- gtropic_data(WHO_ENTITY = "Jamaica", tables = c("wind", "geometry"))
 
   expect_true("geometry" %in% args$tables)
 })
 
-test_that("the default tables include geometry when sf and sfarrow are installed", {
+test_that("the default tables include geometry when sf is installed", {
   capture_args()
   local_mocked_bindings(geo_packages_missing = function() character(0))
 

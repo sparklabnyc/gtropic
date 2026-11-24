@@ -121,6 +121,11 @@
   discovery that fell back to the configured DOIs is not reused. The
   per-dataset metadata requests are sent at most two at a time.
 
+* `sfarrow` is no longer used. ADM2 boundaries are read from GeoParquet with
+  `arrow` and converted with `sf`, and only the boundaries of the units a
+  query returns are built, instead of every unit in the world. The
+  `geometry` table and the `polygon` filter now need only `sf`.
+
 * When precipitation or flood is requested without the `zero_pairs` table,
   only the four `zero_pairs` columns that linkage needs are read. A `polygon`
   filter tests each distinct population centroid against the polygon once,
@@ -161,9 +166,9 @@
   the lines their `print()` methods display, as a character vector.
 
 * A `gtropic_data()` call that does not name `tables` now works with only the
-  required packages installed. When `sf` or `sfarrow` is missing, the
-  `geometry` table is left out and a message says so once per session.
-  Naming `"geometry"` in `tables` still requires both packages.
+  required packages installed. When `sf` is missing, the `geometry` table is
+  left out and a message says so once per session. Naming `"geometry"` in
+  `tables` still requires `sf`.
 
 ## Bug fixes
 

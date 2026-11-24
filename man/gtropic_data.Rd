@@ -56,8 +56,8 @@ matched case-insensitively.}
 
 \item{polygon}{An \code{sf} or \code{sfc} object defining a study area. ADM2 units are
 selected using their published population-weighted centroids. The object
-must have a coordinate reference system; use requires the \code{sf} and
-\code{sfarrow} packages. Centroids are read from the yearly population file of
+must have a coordinate reference system; use requires the \code{sf} package.
+Centroids are read from the yearly population file of
 every candidate year (about 2 MB each), so without a date filter a
 polygon query downloads one such file for every published year.}
 
@@ -101,9 +101,9 @@ retained. This argument does not filter returned \code{zero_pairs} records.}
 available tables are returned: \code{"wind"}, \code{"precip"}, \code{"flood"}, \code{"pop"},
 \code{"adm2"}, \code{"codebook"}, \code{"zero_pairs"}, \code{"tracks"}, \code{"geometry"}, and
 \code{"storm_metadata"}. Supply a smaller vector to reduce transfer and storage
-requirements. \code{"geometry"} needs the suggested \code{sf} and \code{sfarrow}
-packages: when \code{tables} is not supplied and they are not installed, it is
-left out with a message; naming it explicitly makes them required.
+requirements. \code{"geometry"} needs the suggested \code{sf} package: when
+\code{tables} is not supplied and \code{sf} is not installed, it is left out with a
+message; naming it explicitly makes \code{sf} required.
 \code{storm_metadata} is added whenever a storm-linked table is requested. A
 \code{links} table describing retained ADM2-storm pairs is also returned.}
 

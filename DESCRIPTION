@@ -56,14 +56,13 @@ Suggests:
     rnaturalearth,
     rnaturalearthdata,
     sf,
-    sfarrow,
     testthat (>= 3.0.0),
     webfakes,
     withr
 VignetteBuilder: 
     knitr
-Config/Needs/website: ggplot2, sf, sfarrow, rnaturalearth,
-    rnaturalearthdata, leaflet, ggnewscale
+Config/Needs/website: ggplot2, sf, rnaturalearth, rnaturalearthdata,
+    leaflet, ggnewscale
 Config/roxygen2/version: 8.1.1
 Config/testthat/edition: 3
 Encoding: UTF-8

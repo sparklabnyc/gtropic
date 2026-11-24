@@ -86,7 +86,7 @@ gtropic_adm2()
 
 The `polygon` argument in `gtropic_data()` takes an `sf` or `sfc` object.
 An administrative unit is included when its population-weighted centroid
-falls inside the polygon. This requires the optional `sf` and `sfarrow` packages.
+falls inside the polygon. This requires the optional `sf` package.
 
 ```{r}
 library(sf)

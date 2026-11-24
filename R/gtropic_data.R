@@ -145,8 +145,8 @@
 #'   matched case-insensitively.
 #' @param polygon An `sf` or `sfc` object defining a study area. ADM2 units are
 #'   selected using their published population-weighted centroids. The object
-#'   must have a coordinate reference system; use requires the `sf` and
-#'   `sfarrow` packages. Centroids are read from the yearly population file of
+#'   must have a coordinate reference system; use requires the `sf` package.
+#'   Centroids are read from the yearly population file of
 #'   every candidate year (about 2 MB each), so without a date filter a
 #'   polygon query downloads one such file for every published year.
 #' @param reproject Logical. If `TRUE` (the default), a `polygon` not already in
@@ -181,9 +181,9 @@
 #'   available tables are returned: `"wind"`, `"precip"`, `"flood"`, `"pop"`,
 #'   `"adm2"`, `"codebook"`, `"zero_pairs"`, `"tracks"`, `"geometry"`, and
 #'   `"storm_metadata"`. Supply a smaller vector to reduce transfer and storage
-#'   requirements. `"geometry"` needs the suggested `sf` and `sfarrow`
-#'   packages: when `tables` is not supplied and they are not installed, it is
-#'   left out with a message; naming it explicitly makes them required.
+#'   requirements. `"geometry"` needs the suggested `sf` package: when
+#'   `tables` is not supplied and `sf` is not installed, it is left out with a
+#'   message; naming it explicitly makes `sf` required.
 #'   `storm_metadata` is added whenever a storm-linked table is requested. A
 #'   `links` table describing retained ADM2-storm pairs is also returned.
 #' @param precip_days_before,precip_days_after Non-negative whole numbers of

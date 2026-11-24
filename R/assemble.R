@@ -33,8 +33,9 @@
 #' @param directory_label,label File path components.
 #' @param ctx Fetch context from `fetch_context()`.
 #' @param col_select Columns to project.
-#' @param keep Row filters for parquet files, `list(<column> = <values>)`,
-#'   applied on the Arrow Table before conversion (see `read_parquet_file()`).
+#' @param keep Row filters for parquet and GeoParquet files,
+#'   `list(<column> = <values>)`, applied on the Arrow Table before conversion
+#'   (see `read_parquet_file()`).
 #' @param kind `"parquet"`, `"json"` or `"geoparquet"`.
 #' @param optional When `TRUE`, a missing file yields `NULL` instead of an error.
 #'
@@ -140,7 +141,7 @@ fetch_file <- function(dataset, directory_label, label, ctx,
       col_select = col_select, keep = keep, label = path
     ),
     json = read_json_file(local_file, label = path),
-    geoparquet = read_geoparquet_file(local_file, label = path),
+    geoparquet = read_geoparquet_file(local_file, keep = keep, label = path),
     cli::cli_abort("Unknown file kind {.val {kind}}.")
   )
 }
@@ -630,7 +631,7 @@ assemble_gtropic_data <- function(args, call = NULL) {
   if ("geometry" %in% args$tables) {
     spec <- TABLE_SPEC[[paste0("geometry_", args$geometry_resolution)]]
     geometry <- fetch_file("historical", spec$dir, spec$label, ctx,
-      kind = "geoparquet"
+      kind = "geoparquet", keep = list(ADM2_ID = hazard_scope$adm2_ids)
     )
     geometry <- geometry[geometry$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
     geometry <- repair_invalid_geometry(geometry, args$make_valid)

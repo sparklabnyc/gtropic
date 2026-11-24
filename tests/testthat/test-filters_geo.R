@@ -67,7 +67,6 @@ test_that("no filters returns every unit", {
 
 skip_if_no_sf <- function() {
   testthat::skip_if_not_installed("sf")
-  testthat::skip_if_not_installed("sfarrow")
 }
 
 make_pop <- function(lat_phl) {

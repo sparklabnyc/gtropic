@@ -116,6 +116,17 @@ read_parquet_table <- function(path, col_select = NULL, keep = NULL) {
 #' @keywords internal
 #' @noRd
 arrow_keep_rows <- function(tbl, keep) {
+  tbl$Filter(arrow_keep_mask(tbl, keep))
+}
+
+#' Which rows of an Arrow Table do the row filters keep?
+#'
+#' @inheritParams arrow_keep_rows
+#' @return A boolean Arrow array, `TRUE` where every filter matches.
+#' @keywords internal
+#' @noRd
+arrow_keep_mask <- function(tbl, keep) {
+  mask <- NULL
   for (column in names(keep)) {
     values <- unique(keep[[column]])
     value_set <- tryCatch(
@@ -123,12 +134,12 @@ arrow_keep_rows <- function(tbl, keep) {
       # e.g. a dictionary column: let the kernel cast the plain values.
       error = function(e) arrow::Array$create(values)
     )
-    mask <- arrow::call_function("is_in", tbl[[column]],
+    hit <- arrow::call_function("is_in", tbl[[column]],
       options = list(value_set = value_set, skip_nulls = FALSE)
     )
-    tbl <- tbl$Filter(mask)
+    mask <- if (is.null(mask)) hit else arrow::call_function("and", mask, hit)
   }
-  tbl
+  mask
 }
 
 #' Read a JSON file into a nested list
@@ -154,23 +165,30 @@ read_json_file <- function(path, label = "file", call = rlang::caller_env()) {
 
 #' Read a GeoParquet file into an sf object
 #'
-#' `sf` and `sfarrow` are Suggests, not Imports: only the `polygon` filter and
-#' the `geometry` table need them. Users who do not need geometry can omit it
-#' from `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
+#' `sf` is a Suggests, not an Import: only the `polygon` filter and the
+#' `geometry` table need it. Users who do not need geometry can omit it from
+#' `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
+#'
+#' The file is read with Arrow and its well-known-binary (WKB) geometry
+#' converted by `sf`, as `sfarrow::st_read_parquet()` did, but `keep` filters
+#' the rows first, so only the requested units' geometries are ever built.
+#' Row names are the rows' positions in the file, as the whole-file read
+#' followed by subsetting gave.
 #'
 #' @param path GeoParquet file.
+#' @param keep Row filters, as for `read_parquet_file()`.
 #' @param label Path used in messages.
 #' @param call Calling environment.
 #'
 #' @return An `sf` object in EPSG:4326.
 #' @keywords internal
 #' @noRd
-read_geoparquet_file <- function(path, label = "file",
+read_geoparquet_file <- function(path, keep = NULL, label = "file",
                                  call = rlang::caller_env()) {
   check_installed_geo(call = call)
 
   geometry <- tryCatch(
-    sfarrow::st_read_parquet(path),
+    read_geoparquet_sf(path, keep = keep),
     error = function(e) {
       cli::cli_abort(
         c("Could not read {.path {label}} as GeoParquet.",
@@ -181,9 +199,9 @@ read_geoparquet_file <- function(path, label = "file",
     }
   )
 
-  # The published ADM2 coordinates are WGS 84. Some sfarrow/Arrow version
-  # combinations do not restore the GeoParquet CRS metadata, so enforce the
-  # reader's EPSG:4326 contract at this single I/O boundary.
+  # The published ADM2 coordinates are WGS 84. A file whose GeoParquet
+  # metadata carries no usable CRS is read as such, so enforce the reader's
+  # EPSG:4326 contract at this single I/O boundary.
   crs <- sf::st_crs(geometry)
   if (is.na(crs)) {
     geometry <- sf::st_set_crs(geometry, 4326)
@@ -191,6 +209,83 @@ read_geoparquet_file <- function(path, label = "file",
     geometry <- sf::st_transform(geometry, 4326)
   }
   geometry
+}
+
+#' Read the rows of a GeoParquet file into an sf data frame
+#'
+#' @inheritParams read_geoparquet_file
+#' @return An `sf` data frame, columns in file order, CRS from the metadata.
+#' @keywords internal
+#' @noRd
+read_geoparquet_sf <- function(path, keep = NULL) {
+  file <- arrow::ReadableFile$create(path)
+  on.exit(file$close(), add = TRUE)
+  reader <- arrow::ParquetFileReader$create(file)
+  schema <- reader$GetSchema()
+
+  geo <- geoparquet_metadata(schema$metadata$geo)
+  geom_cols <- intersect(names(schema), names(geo$columns))
+  if (length(geom_cols) == 0L) {
+    stop("The file has none of the geometry columns its metadata names.")
+  }
+  primary <- geo$primary_column
+  if (!primary %in% geom_cols) {
+    warning("Primary geometry column not found, using the next available.")
+    primary <- geom_cols[1L]
+  }
+
+  keep <- compact(keep[intersect(names(keep), names(schema))])
+  if (length(keep) == 0L || reader$num_row_groups == 0L) {
+    tbl <- reader$ReadTable()
+    rows <- seq_len(tbl$num_rows)
+  } else {
+    # One row group at a time, recording each kept row's position in the file.
+    parts <- list()
+    rows <- list()
+    offset <- 0L
+    for (i in seq_len(reader$num_row_groups) - 1L) {
+      group <- reader$ReadRowGroup(i)
+      mask <- as.vector(arrow_keep_mask(group, keep))
+      parts[[length(parts) + 1L]] <- group$Filter(mask)
+      rows[[length(rows) + 1L]] <- offset + which(mask)
+      offset <- offset + group$num_rows
+    }
+    tbl <- do.call(arrow::concat_tables, parts)
+    rows <- unlist(rows, use.names = FALSE)
+  }
+
+  out <- as.data.frame(tbl)
+  for (column in geom_cols) {
+    out[[column]] <- sf::st_as_sfc(out[[column]],
+      crs = sf::st_crs(geo$columns[[column]]$crs)
+    )
+  }
+  out <- sf::st_sf(out, sf_column_name = primary)
+  row.names(out) <- rows
+  out
+}
+
+#' Parse and check the `geo` metadata of a GeoParquet file
+#'
+#' @param json The `geo` entry of the file's key-value metadata.
+#' @return The parsed metadata.
+#' @keywords internal
+#' @noRd
+geoparquet_metadata <- function(json) {
+  if (is.null(json)) {
+    stop("No GeoParquet `geo` metadata found.")
+  }
+  geo <- jsonlite::fromJSON(json)
+  if (!is.list(geo) || !all(c("primary_column", "columns") %in% names(geo))) {
+    stop("The GeoParquet `geo` metadata lacks `primary_column` or `columns`.")
+  }
+  for (column in names(geo$columns)) {
+    encoding <- geo$columns[[column]]$encoding
+    if (!identical(encoding, "WKB")) {
+      stop("Only well-known binary (WKB) geometry is supported.")
+    }
+  }
+  geo
 }
 
 #' Normalize date-only columns from published tables
@@ -283,7 +378,7 @@ parse_published_date <- function(x, column, label = "table",
 #' @keywords internal
 #' @noRd
 geo_packages_missing <- function() {
-  pkgs <- c("sf", "sfarrow")
+  pkgs <- "sf"
   pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
 }
 

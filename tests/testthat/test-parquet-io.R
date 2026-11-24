@@ -93,53 +93,113 @@ test_that("an unreadable file is reported as a parquet read error", {
   )
 })
 
-geoparquet_test_geometry <- function(crs) {
-  geometry <- if (is.null(crs)) {
-    sf::st_sfc(sf::st_point(c(-80, 25)))
-  } else {
-    sf::st_sfc(sf::st_point(c(-80, 25)), crs = crs)
-  }
+# Writes a GeoParquet file: WKB geometry plus the `geo` metadata entry.
+local_geoparquet <- function(geometry, crs, encoding = "WKB", chunk_size = NULL,
+                             env = parent.frame()) {
+  path <- withr::local_tempfile(fileext = ".parquet", .local_envir = env)
+  wkb <- unclass(sf::st_as_binary(sf::st_geometry(geometry)))
+  tbl <- arrow::arrow_table(
+    ADM2_ID = geometry$ADM2_ID,
+    geometry = arrow::Array$create(wkb, type = arrow::binary())
+  )
+  column <- list(encoding = encoding)
+  column["crs"] <- list(crs)
+  tbl$metadata$geo <- as.character(jsonlite::toJSON(
+    list(primary_column = "geometry", columns = list(geometry = column)),
+    auto_unbox = TRUE, null = "null"
+  ))
+  arrow::write_parquet(tbl, path, chunk_size = chunk_size)
+  path
+}
+
+test_geometry <- function(crs = 4326) {
   sf::st_sf(
-    ADM2_ID = "TEST.1",
-    geometry = geometry
+    ADM2_ID = sprintf("TEST.%d", 1:7),
+    geometry = sf::st_sfc(lapply(1:7, function(i) {
+      sf::st_point(c(-80 + i, 25))
+    }), crs = crs)
   )
 }
 
-test_that("GeoParquet reading restores the published WGS 84 CRS", {
+test_that("GeoParquet is read with the CRS its metadata records", {
   skip_if_not_installed("sf")
-  skip_if_not_installed("sfarrow")
-  geometry <- geoparquet_test_geometry(NULL)
-  local_mocked_bindings(
-    st_read_parquet = function(...) geometry,
-    .package = "sfarrow"
-  )
+  expected <- test_geometry()
+  path <- local_geoparquet(expected, sf::st_crs(4326)$wkt)
 
-  result <- read_geoparquet_file("geometry.parquet", "geometry.parquet")
+  result <- read_geoparquet_file(path, label = "geometry.parquet")
 
   expect_s3_class(result, "sf")
   expect_equal(sf::st_crs(result)$epsg, 4326)
-  expect_identical(result$ADM2_ID, geometry$ADM2_ID)
-  expect_equal(sf::st_coordinates(result), sf::st_coordinates(geometry))
+  expect_identical(result$ADM2_ID, expected$ADM2_ID)
+  expect_equal(sf::st_coordinates(result), sf::st_coordinates(expected))
 })
 
-test_that("GeoParquet reading normalizes a known CRS to WGS 84", {
+test_that("GeoParquet without a usable CRS is read as WGS 84", {
   skip_if_not_installed("sf")
-  skip_if_not_installed("sfarrow")
-  expected <- geoparquet_test_geometry(4326)
-  projected <- sf::st_transform(expected, 3857)
-  local_mocked_bindings(
-    st_read_parquet = function(...) projected,
-    .package = "sfarrow"
-  )
+  path <- local_geoparquet(test_geometry(), crs = NULL)
 
-  result <- read_geoparquet_file("geometry.parquet", "geometry.parquet")
+  result <- read_geoparquet_file(path, label = "geometry.parquet")
+
+  expect_equal(sf::st_crs(result)$epsg, 4326)
+})
+
+test_that("GeoParquet in another CRS is transformed to WGS 84", {
+  skip_if_not_installed("sf")
+  expected <- test_geometry()
+  projected <- sf::st_transform(expected, 3857)
+  path <- local_geoparquet(projected, sf::st_crs(3857)$wkt)
+
+  result <- read_geoparquet_file(path, label = "geometry.parquet")
 
   expect_equal(sf::st_crs(result)$epsg, 4326)
   expect_equal(
-    sf::st_coordinates(result),
-    sf::st_coordinates(expected),
+    sf::st_coordinates(result), sf::st_coordinates(expected),
     tolerance = 1e-7
   )
+})
+
+test_that("GeoParquet rows are filtered before geometries are built", {
+  skip_if_not_installed("sf")
+  whole <- test_geometry()
+  path <- local_geoparquet(whole, sf::st_crs(4326)$wkt, chunk_size = 3)
+  reader <- arrow::ParquetFileReader$create(arrow::ReadableFile$create(path))
+  expect_gt(reader$num_row_groups, 1L)
+  keep <- list(ADM2_ID = c("TEST.6", "TEST.2", "TEST.4", "NONE"))
+  built <- 0L
+  as_sfc <- sf::st_as_sfc
+  local_mocked_bindings(
+    st_as_sfc = function(x, ...) {
+      built <<- built + length(x)
+      as_sfc(x, ...)
+    },
+    .package = "sf"
+  )
+
+  result <- read_geoparquet_file(path, keep = keep, label = "geometry.parquet")
+
+  expect_identical(built, 3L)
+  # The same rows, order and row names as reading everything and subsetting.
+  full <- read_geoparquet_file(path, label = "geometry.parquet")
+  expect_identical(result, full[full$ADM2_ID %in% keep$ADM2_ID, , drop = FALSE])
+  expect_identical(row.names(result), c("2", "4", "6"))
+})
+
+test_that("a file without GeoParquet metadata is a read error", {
+  skip_if_not_installed("sf")
+  path <- withr::local_tempfile(fileext = ".parquet")
+  arrow::write_parquet(data.frame(ADM2_ID = "A"), path)
+
+  expect_error(
+    read_geoparquet_file(path, label = "geometry.parquet"),
+    "Could not read .*geometry.parquet.* as GeoParquet"
+  )
+})
+
+test_that("only WKB-encoded GeoParquet is accepted", {
+  skip_if_not_installed("sf")
+  path <- local_geoparquet(test_geometry(), sf::st_crs(4326)$wkt, encoding = "WKT")
+
+  expect_error(read_geoparquet_file(path, label = "geometry.parquet"), "WKB")
 })
 
 test_that("plotting fixture retains an explicit geographic CRS", {
