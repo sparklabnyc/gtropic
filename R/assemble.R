@@ -199,6 +199,17 @@ fetch_yearly <- function(table, years, ctx, col_select = NULL, keep = NULL,
   dplyr::bind_rows(parts)
 }
 
+#' Columns of `zero_pairs` that linkage needs
+#'
+#' `build_links()` uses `ADM2_ID`, `STORM_ID`, `STORM_DIST_KM` and
+#' `LOCAL_DATE_STORM_CLOSEST`, which `derive_local_date()` takes from
+#' `LOCAL_DATETIME_STORM_CLOSEST`.
+#' @keywords internal
+#' @noRd
+ZERO_PAIRS_LINK_COLS <- c(
+  "ADM2_ID", "STORM_ID", "LOCAL_DATETIME_STORM_CLOSEST", "STORM_DIST_KM"
+)
+
 #' Build the shared fetch context
 #'
 #' @param discovery Output of `discover_datasets()`.
@@ -440,8 +451,12 @@ assemble_gtropic_data <- function(args, call = NULL) {
   if (needs_zero_pairs(args$tables)) {
     # Downloaded whenever precip or flood is requested, regardless of whether
     # the user asked for the table itself. STORM_DIST_KM for far-field ADM2s
-    # exists nowhere else, and those are the compound-hazard cases.
-    zero <- fetch_yearly("zero_pairs", storm_years, ctx, keep = pair_keep)
+    # exists nowhere else, and those are the compound-hazard cases. Unless the
+    # table is returned, only the columns build_links() uses are read.
+    zero_cols <- if ("zero_pairs" %in% args$tables) NULL else ZERO_PAIRS_LINK_COLS
+    zero <- fetch_yearly("zero_pairs", storm_years, ctx,
+      col_select = zero_cols, keep = pair_keep
+    )
   }
 
   if (!is.null(wind_links)) {

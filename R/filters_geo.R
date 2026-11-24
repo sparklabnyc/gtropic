@@ -189,20 +189,25 @@ resolve_polygon <- function(polygon,
   years <- names(pop_by_year)
   warnings <- list()
 
-  membership <- lapply(years, function(y) {
-    pop <- pop_by_year[[y]]
-    pop <- pop[pop$ADM2_ID %in% candidate_ids, , drop = FALSE]
+  coords <- c("POP_CENTROID_LON", "POP_CENTROID_LAT")
+  pops <- lapply(pop_by_year, function(pop) {
+    pop[pop$ADM2_ID %in% candidate_ids, , drop = FALSE]
+  })
+  # Many centroids are the same in several years, so each distinct point is
+  # tested against the polygon once, and the answer looked up for every year.
+  points <- dplyr::distinct(dplyr::bind_rows(lapply(pops, `[`, coords)))
+  if (nrow(points) > 0L) {
+    pts <- sf::st_as_sf(points, coords = coords, crs = 4326, remove = FALSE)
+    points$.inside <- lengths(sf::st_intersects(pts, polygon)) > 0L
+  }
+
+  membership <- lapply(pops, function(pop) {
     if (nrow(pop) == 0L) {
       return(character(0))
     }
-
-    pts <- sf::st_as_sf(
-      pop,
-      coords = c("POP_CENTROID_LON", "POP_CENTROID_LAT"),
-      crs = 4326,
-      remove = FALSE
-    )
-    inside <- lengths(sf::st_intersects(pts, polygon)) > 0L
+    inside <- dplyr::left_join(pop[coords], points,
+      by = coords, relationship = "many-to-one"
+    )$.inside
     as.character(pop$ADM2_ID[inside])
   })
   names(membership) <- years

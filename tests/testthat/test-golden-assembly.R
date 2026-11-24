@@ -57,6 +57,25 @@ test_that("golden: a country and date range with precip and flood", {
   expect_golden(res, "country-date-range")
 })
 
+test_that("golden: zero_pairs read only for linkage gives the same tables", {
+  local_golden_collection()
+
+  # Not returning zero_pairs reads only the columns linkage needs (PERF-05);
+  # every other table must match the query that returns it.
+  res <- golden_query(
+    WHO_ENTITY = "United States",
+    date_range = c("2002-01-01", "2003-12-31"),
+    tables = c("wind", "precip", "flood", "storm_metadata")
+  )
+
+  expected <- readRDS(testthat::test_path("golden", "country-date-range.rds"))
+  actual <- golden_tables(res)
+  expect_identical(names(actual), setdiff(names(expected), "zero_pairs"))
+  for (nm in names(actual)) {
+    expect_identical(actual[[nm]], expected[[nm]], label = nm)
+  }
+})
+
 test_that("golden: a polygon filter", {
   skip_if_not_installed("sf")
   local_golden_collection()

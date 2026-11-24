@@ -57,7 +57,9 @@ matched case-insensitively.}
 \item{polygon}{An \code{sf} or \code{sfc} object defining a study area. ADM2 units are
 selected using their published population-weighted centroids. The object
 must have a coordinate reference system; use requires the \code{sf} and
-\code{sfarrow} packages.}
+\code{sfarrow} packages. Centroids are read from the yearly population file of
+every candidate year (about 2 MB each), so without a date filter a
+polygon query downloads one such file for every published year.}
 
 \item{reproject}{Logical. If \code{TRUE} (the default), a \code{polygon} not already in
 EPSG:4326 is transformed before evaluation. If \code{FALSE}, a non-EPSG:4326

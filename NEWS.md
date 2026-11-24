@@ -99,6 +99,12 @@
   so a whole year-file of global precipitation is never decoded at once. The
   returned tables are unchanged, row order included.
 
+* When precipitation or flood is requested without the `zero_pairs` table,
+  only the four `zero_pairs` columns that linkage needs are read. A `polygon`
+  filter tests each distinct population centroid against the polygon once,
+  instead of once for every year evaluated. `?gtropic_data` now says what a
+  polygon query downloads.
+
 * Data is downloaded with `httr2` directly; the `dataverse` package is no
   longer a dependency (`httr2 (>= 1.2.0)` is now imported). Each file is
   streamed to disk as it arrives and then checked and read from disk, so a

@@ -146,7 +146,9 @@
 #' @param polygon An `sf` or `sfc` object defining a study area. ADM2 units are
 #'   selected using their published population-weighted centroids. The object
 #'   must have a coordinate reference system; use requires the `sf` and
-#'   `sfarrow` packages.
+#'   `sfarrow` packages. Centroids are read from the yearly population file of
+#'   every candidate year (about 2 MB each), so without a date filter a
+#'   polygon query downloads one such file for every published year.
 #' @param reproject Logical. If `TRUE` (the default), a `polygon` not already in
 #'   EPSG:4326 is transformed before evaluation. If `FALSE`, a non-EPSG:4326
 #'   polygon produces an error.

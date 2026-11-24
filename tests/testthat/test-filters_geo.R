@@ -124,6 +124,40 @@ test_that("polygon membership across multiple years is reported, not warned", {
   expect_no_message(resolve_geography(adm2, pops, polygon = poly, quiet = TRUE))
 })
 
+test_that("each distinct centroid is tested once, with the same membership", {
+  skip_if_no_sf()
+  poly <- sf::st_sfc(
+    sf::st_polygon(list(rbind(
+      c(120, 5), c(130, 5), c(130, 15), c(120, 15), c(120, 5)
+    ))),
+    crs = 4326
+  )
+  # The PHL centroid moves out of the polygon in 2003; the others never move.
+  pops <- list(
+    "2001" = make_pop(11.24), "2002" = make_pop(11.24),
+    "2003" = make_pop(16.50)
+  )
+  intersects <- sf::st_intersects
+  tested <- integer(0)
+  local_mocked_bindings(
+    st_intersects = function(x, y, ...) {
+      tested <<- c(tested, nrow(x))
+      intersects(x, y, ...)
+    },
+    .package = "sf"
+  )
+
+  expect_warning(
+    geo <- resolve_geography(adm2, pops, polygon = poly, quiet = TRUE),
+    class = "gtropic_warning_polygon"
+  )
+
+  # Four units, one of which has two positions: five distinct points, once.
+  expect_identical(tested, 5L)
+  expect_identical(geo$adm2_ids, adm2$ADM2_ID[3])
+  expect_identical(geo$inconsistent_adm2_ids, adm2$ADM2_ID[3])
+})
+
 # --- guardrail --------------------------------------------------------------
 
 test_that("an under-threshold estimate proceeds silently", {
