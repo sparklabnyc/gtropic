@@ -24,7 +24,7 @@ test_that("printing or summarising a result does not evaluate its strings", {
   attr(x, "manifest") <- mf
 
   expect_no_error(cli::cli_fmt(print(x)))
-  expect_no_error(cli::cli_fmt(summary(x)))
+  expect_no_error(cli::cli_fmt(print(summary(x))))
   expect_false(file.exists(flag))
 })
 
@@ -41,7 +41,7 @@ test_that("braces in a DOI or version are printed literally", {
   expect_match(out, "doi:10.0000/{A} (version 1.{0})", fixed = TRUE)
   out <- paste(cli::cli_fmt(print(x)), collapse = "\n")
   expect_match(out, "doi:10.0000/{A} (version 1.{0})", fixed = TRUE)
-  out <- paste(cli::cli_fmt(summary(x)), collapse = "\n")
+  out <- paste(cli::cli_fmt(print(summary(x))), collapse = "\n")
   expect_match(out, "doi:10.0000/{A} v1.{0}", fixed = TRUE)
 })
 

@@ -242,16 +242,20 @@ print.gtropic_data <- function(x, ...) {
 
 #' Summarize a G-TROPIC data result
 #'
-#' Displays an extended overview of a G-TROPIC retrieval. The output includes
+#' Builds an extended overview of a G-TROPIC retrieval; printing it shows
 #' dataset provenance, retrieval time and size, returned table dimensions,
 #' resolved geographic and storm filters, hazard-specific temporal and spatial
 #' windows, and any diagnostics retained with the result.
 #'
 #' @param object A `gtropic_data` object.
-#' @param ... Additional arguments passed to the summary method. Currently
-#'   ignored.
+#' @param x A `summary.gtropic_data` object.
+#' @param ... Additional arguments. Currently ignored.
 #'
-#' @return `object`, invisibly.
+#' @return `summary()` returns an object of class `summary.gtropic_data`: a
+#'   list with the result's `manifest`, resolved `filters`, retained
+#'   `diagnostics`, `retrieved_at` time and the dimensions of each returned
+#'   table (`tables`, a named character vector). Its `print()` method displays
+#'   it and returns `x` invisibly.
 #'
 #' @examples
 #' \donttest{
@@ -261,9 +265,27 @@ print.gtropic_data <- function(x, ...) {
 #'
 #' @export
 summary.gtropic_data <- function(object, ...) {
-  mf <- attr(object, "manifest")
-  fl <- attr(object, "filters_resolved")
-  wn <- attr(object, "warnings")
+  tables <- vapply(names(object), function(nm) {
+    as.character(table_dim_label(object[[nm]]))
+  }, character(1), USE.NAMES = FALSE)
+  structure(
+    list(
+      manifest = attr(object, "manifest"),
+      filters = attr(object, "filters_resolved"),
+      diagnostics = attr(object, "warnings"),
+      retrieved_at = attr(object, "retrieved_at"),
+      tables = stats::setNames(tables, names(object))
+    ),
+    class = "summary.gtropic_data"
+  )
+}
+
+#' @rdname summary.gtropic_data
+#' @export
+print.summary.gtropic_data <- function(x, ...) {
+  mf <- x$manifest
+  fl <- x$filters
+  wn <- x$diagnostics
   datasets <- manifest_datasets(mf)
 
   cli::cli_h1("G-TROPIC data summary")
@@ -274,12 +296,14 @@ summary.gtropic_data <- function(object, ...) {
   cli::cli_bullets(c(
     "*" = "Files retrieved: {nrow(mf$files)}
            ({format_bytes(sum(mf$files$size_bytes, na.rm = TRUE))})",
-    "*" = "Retrieved at: {format(attr(object, 'retrieved_at'), usetz = TRUE)}"
+    "*" = "Retrieved at: {format(x$retrieved_at, usetz = TRUE)}"
   ))
 
   cli::cli_h2("Tables")
-  for (nm in names(object)) {
-    cli::cli_li("{.field {nm}}: {table_dim_label(object[[nm]])}")
+  tables <- x$tables
+  for (nm in names(tables)) {
+    dims <- tables[[nm]]
+    cli::cli_li("{.field {nm}}: {dims}")
   }
 
   cli::cli_h2("Resolved filters")
@@ -309,7 +333,45 @@ summary.gtropic_data <- function(object, ...) {
     }
   }
 
-  invisible(object)
+  invisible(x)
+}
+
+#' Format G-TROPIC objects as text
+#'
+#' The lines the corresponding `print()` method displays, as a character
+#' vector, for example to include in a log or a report.
+#'
+#' @param x A `gtropic_data`, `summary.gtropic_data`, `gtropic_manifest` or
+#'   `gtropic_filters` object.
+#' @param ... Passed to the `print()` method.
+#'
+#' @return A character vector with one element per printed line.
+#'
+#' @examples
+#' format(gtropic_manifest(gtropic_example()))
+#'
+#' @name format.gtropic_data
+#' @export
+format.gtropic_data <- function(x, ...) {
+  cli::cli_fmt(print(x, ...))
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.summary.gtropic_data <- function(x, ...) {
+  cli::cli_fmt(print(x, ...))
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.gtropic_manifest <- function(x, ...) {
+  cli::cli_fmt(print(x, ...))
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.gtropic_filters <- function(x, ...) {
+  cli::cli_fmt(print(x, ...))
 }
 
 #' Print one bullet per source dataset

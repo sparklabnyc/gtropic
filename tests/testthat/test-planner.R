@@ -713,7 +713,7 @@ test_that("assembly reports finite hazard scope while preserving source links", 
     "Storms: 1", testthat::capture_messages(print(finite)), fixed = TRUE
   )))
   expect_true(any(grepl(
-    "ADM2 units: 1", testthat::capture_messages(summary(finite)), fixed = TRUE
+    "ADM2 units: 1", testthat::capture_messages(print(summary(finite))), fixed = TRUE
   )))
 
   unbounded <- assemble_gtropic_data(args(Inf))

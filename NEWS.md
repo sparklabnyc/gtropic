@@ -2,6 +2,11 @@
 
 ## Breaking changes
 
+* `summary()` of a `gtropic_data` result now returns an object of class
+  `summary.gtropic_data`, which prints the same overview as before. It used
+  to print and return the result itself, so `y <- summary(x)` now gives the
+  summary, not the data.
+
 * Renamed exported functions, with no aliases:
   * `gtropic_warnings()` is now `gtropic_diagnostics()`. It returns retained
     diagnostics, not warnings, and the old name was easy to confuse with
@@ -65,6 +70,9 @@
   invented.
 
 ## Improvements
+
+* `format()` methods for results, summaries, manifests and filters return
+  the lines their `print()` methods display, as a character vector.
 
 * A `gtropic_data()` call that does not name `tables` now works with only the
   required packages installed. When `sf` or `sfarrow` is missing, the

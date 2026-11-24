@@ -390,7 +390,7 @@ test_that("dataset roles appear in manifest and data summaries", {
     "Current-year dataset: doi:10.0000/CURRENT (version 2.0)", fixed = TRUE
   )
   expect_match(
-    paste(testthat::capture_messages(summary(result)), collapse = "\n"),
+    paste(testthat::capture_messages(print(summary(result))), collapse = "\n"),
     "Current-year dataset: doi:10.0000/CURRENT v2.0", fixed = TRUE
   )
 })
