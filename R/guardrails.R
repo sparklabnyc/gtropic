@@ -64,10 +64,14 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
   gb <- estimate$bytes / 1024^3
 
   if (gb <= threshold_gb) {
+    cached <- if (estimate$n_cached > 0) {
+      paste0("; ", estimate$n_cached, " already cached")
+    } else {
+      ""
+    }
     inform_unless_quiet(
       "Retrieving {estimate$n_files} file{?s}
-       ({format_bytes(estimate$bytes)}){cli::qty(estimate$n_cached)}{?; / ;
-       }{if (estimate$n_cached > 0) glue::glue('{estimate$n_cached} already cached')}.",
+       ({format_bytes(estimate$bytes)}){cached}.",
       quiet = quiet
     )
     return(invisible(TRUE))

@@ -176,6 +176,10 @@
 
 ## Bug fixes
 
+* The download estimate printed before a retrieval no longer reads
+  "Retrieving 3 files (11.4 MB) ; ." when nothing is cached, or puts a space
+  before the semicolon when some files are.
+
 * When a published file lacks a column the query asks for, the warning that
   says so is now shown. Before, building the warning failed with a
   pluralisation error that stopped the query.

@@ -56,3 +56,22 @@ test_that("confirm_action() accepts y and yes, in any case", {
   local_mocked_bindings(read_answer = function(prompt) "")
   expect_false(suppressMessages(confirm_action("Delete?")))
 })
+
+test_that("the download estimate reads cleanly with and without cached files", {
+  estimate <- function(n_cached) {
+    list(bytes = 12e6, n_files = 3L, n_cached = n_cached)
+  }
+  msg <- function(n_cached) {
+    conditionMessage(rlang::catch_cnd(
+      apply_guardrail(estimate(n_cached)),
+      classes = "message"
+    ))
+  }
+  expect_identical(trimws(msg(0L)), "Retrieving 3 files (11.4 MB).")
+  expect_identical(
+    trimws(msg(1L)), "Retrieving 3 files (11.4 MB); 1 already cached."
+  )
+  expect_identical(
+    trimws(msg(5L)), "Retrieving 3 files (11.4 MB); 5 already cached."
+  )
+})
