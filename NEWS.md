@@ -133,6 +133,12 @@
 
 ## Bug fixes
 
+* A failed request is reported once. When automatic dataset discovery fails,
+  gtropic still falls back to the configured DOI options, but warns only if
+  the fallback works. If it fails too, for example with no network
+  connection, the result is a single `gtropic_error_network` error instead of
+  a warning followed by an error.
+
 * `options(gtropic.timeout = )` (default 600 seconds) now takes effect; it
   was documented but never applied. A metadata request that takes longer is
   abandoned and retried, and a download is abandoned when no data arrives for

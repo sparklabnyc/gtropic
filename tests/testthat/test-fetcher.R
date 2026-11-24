@@ -26,7 +26,7 @@ test_that("yearly population rows are tagged with their source file year", {
   )
 })
 
-test_that("failed automatic discovery warns before using configured DOIs", {
+test_that("failed automatic discovery warns when the configured DOIs work", {
   fallback <- list(source = "configured options")
   local_mocked_bindings(
     discover_datasets_impl = function(...) stop("collection unavailable"),
@@ -35,9 +35,24 @@ test_that("failed automatic discovery warns before using configured DOIs", {
 
   expect_warning(
     result <- discover_datasets(refresh = TRUE, quiet = TRUE),
-    "falling back to the configured DOI options"
+    "fell back to the configured DOI options"
   )
   expect_identical(result, fallback)
+})
+
+test_that("a fallback that fails too is reported once, as an error", {
+  local_mocked_bindings(
+    discover_datasets_impl = function(...) stop("collection unavailable"),
+    discovery_from_options = function(...) {
+      gtropic_abort("No connection.", class = "gtropic_error_network")
+    }
+  )
+
+  expect_no_warning(expect_error(
+    discover_datasets(refresh = TRUE, quiet = TRUE),
+    "No connection",
+    class = "gtropic_error_network"
+  ))
 })
 
 test_that("checksum verification rejects changed bytes", {

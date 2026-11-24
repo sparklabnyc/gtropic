@@ -417,3 +417,49 @@ test_that("a stalled download is abandoned, a slow steady one is not", {
   dv_get_file(97L, server = "dv.invalid", quiet = TRUE, dest = dest)
   expect_identical(read_bytes(dest), as.raw(rep(1:5, each = 100)))
 })
+
+# --- failing gracefully (Plan 06 CRAN-08) ---------------------------------------
+
+test_that("tests never wait between retries", {
+  # tests/testthat/setup.R sets this, so a failing request costs no sleep.
+  expect_identical(opt("max_tries"), 1L)
+})
+
+test_that("a server that fails every request gives one error and no warning", {
+  httr2::local_mocked_responses(function(req) {
+    httr2::response(503,
+      headers = list(`Content-Type` = "application/json"),
+      body = charToRaw('{"status":"ERROR","message":"Service unavailable"}')
+    )
+  })
+  withr::local_options(gtropic.server = "dv.invalid")
+
+  expect_no_warning(expect_error(
+    gtropic_storms(STORM_NAME = "Katrina-2005", cache = FALSE),
+    "Could not complete",
+    class = "gtropic_error_network"
+  ))
+  expect_no_warning(expect_error(
+    gtropic_data(
+      STORM_NAME = "Katrina-2005", tables = "wind",
+      cache = FALSE, quiet = TRUE
+    ),
+    "Service unavailable",
+    class = "gtropic_error_network"
+  ))
+})
+
+test_that("an unreachable server gives one error and no warning", {
+  skip_on_cran()
+  local_mocked_bindings(dv_api_url = function(server) "http://127.0.0.1:9/api")
+  withr::local_options(gtropic.server = "dv.invalid")
+
+  expect_no_warning(expect_error(
+    gtropic_data(
+      STORM_NAME = "Katrina-2005", tables = "wind",
+      cache = FALSE, quiet = TRUE
+    ),
+    "dv.invalid",
+    class = "gtropic_error_network"
+  ))
+})

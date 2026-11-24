@@ -67,16 +67,19 @@ discover_datasets <- function(versions = list(
     discover_datasets_impl(versions, server, collection, quiet),
     error = function(e) {
       # Fall back to the configured DOIs so a discovery outage degrades to the
-      # previous behaviour rather than to a hard failure.
+      # previous behaviour rather than to a hard failure. If the fallback
+      # fails too (typically: no connection at all), its error is the one
+      # report; a warning about the first attempt would only repeat it.
+      fallback <- discovery_from_options(versions, server, quiet)
       cli::cli_warn(
-        c("Automatic dataset discovery failed; falling back to the configured
+        c("Automatic dataset discovery failed; fell back to the configured
            DOI options.",
           x = "{conditionMessage(e)}",
           i = "If the current-year DOI has rolled over, set
                {.code options(gtropic.doi_current = )} explicitly."
         )
       )
-      discovery_from_options(versions, server, quiet)
+      fallback
     }
   )
 
