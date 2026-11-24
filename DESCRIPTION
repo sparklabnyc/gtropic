@@ -61,8 +61,7 @@ Suggests:
     withr
 VignetteBuilder: 
     knitr
-Config/Needs/website: ggplot2, sf, rnaturalearth, rnaturalearthdata,
-    leaflet, ggnewscale, ragg
+Config/Needs/website: ggplot2, sf, rnaturalearth, rnaturalearthdata, leaflet, ggnewscale, ragg, rmarkdown
 Config/roxygen2/version: 8.1.1
 Config/testthat/edition: 3
 Encoding: UTF-8

@@ -30,118 +30,78 @@ knitr::opts_chunk$set(optipng = "-o5 -strip all")
 library(gtropic)
 ```
 
-This vignette covers how to use the `gtropic_plot()` function to turn the exposure data
-tables returned by `gtropic_data()` into static
-exposure maps, exposure-count maps, and storm-track maps, as well as
-interactive exposure and count maps.
+`gtropic_plot()` turns a `gtropic_data()` result into static exposure, count
+and track maps, or interactive exposure and count maps. It never downloads
+data or recomputes published values.
 
-## Plotting a single storm
+## A single storm
 
-Let's begin by plotting Hurricane Katrina (2005):
+Look Hurricane Katrina up by name, then retrieve it by its unique `STORM_ID`
+(a name such as `"Katrina-2005"` can match more than one storm):
 
 ```{r katrina-query}
-katrina_matches <- gtropic_storms(STORM_NAME = "Katrina-2005")
-katrina_matches
-
-# This example has one match; if several appear, choose the intended row
-katrina_id <- katrina_matches$STORM_ID[[1]]
-katrina <- gtropic_data(
-  STORM_ID = katrina_id,
-  date_range = c(2005, 2005)
-)
+katrina_id <- gtropic_storms(STORM_NAME = "Katrina-2005")$STORM_ID
+katrina <- gtropic_data(STORM_ID = katrina_id, date_range = 2005)
 ```
 
-This lookup-first workflow matters because `STORM_NAME` is only a convenience
-display label: a complete name can select multiple `STORM_ID`s, including
-across basins. Plot with the unique `STORM_ID` when the intended storm must be
-unambiguous. In `Name-YYYY`, `YYYY` is the published `SEASON` year, not
-necessarily the genesis calendar year.
-
-With the default 500 km radii applied to the wind, precipitation, and flood fields,
-the data we get back will only include those ADM2s within 500km of Katrina's storm track.
-We're also implicitly using the default precipitation and flood temporal windows (-2/+1 days).
+With the default 500 km radii and windows of two days before to one day after
+closest approach, the result holds the units within 500 km of Katrina's track.
 
 ### Exposure maps
 
-When we call the `gtropic_plot()` function and pass in `katrina`, the default caption
-that gets rendered reminds us of this by examining the data present in `katrina`:
+The default is an exposure map with a panel for each core metric: maximum
+sustained wind (`VMAX_SUST_MS`), total precipitation (`PRECIP_MM`) and
+largest flooded share (`PROP_FLOODED_AREA`). The caption records the radii and
+windows of the plotted data.
 
 ```{r katrina-plot}
 gtropic_plot(katrina)
 ```
 
-Specifying none of the optional arguments by default renders an exposure map (implicitly, `type = "exposure"`),
-summarizing a selected published metric for each ADM2. With
-`type = "exposure"` and no provided `metric`, the default is every available core metric
-in this order: maximum sustained wind (`VMAX_SUST_MS`), cumulative precipitation
-(`PRECIP_MM`), and maximum flooded area (`PROP_FLOODED_AREA`). This makes the
-default plot a multi-panel overview rather than a single-metric map.
-To see a list of all the available exposure metrics
-and how they are summarized for plotting, we can call:
+`gtropic_metrics()` lists every metric that can be mapped and how it is
+aggregated per unit by default:
 
 ```{r}
 gtropic_metrics()
 ```
 
-The `metric` column let's us know the available exposures, and the `aggregate` column
-informs us how that metric is summarized when plotted. For example, the `PRECIP_MM` metric has
-a default aggregate value of `sum`, meaning our plot visualizes the sum of each ADM2's
-precipitation data over the temporal window present the `$precip` data table we passed in
-to the plotting function as part of `katrina`.
-
-We can override how exposures are summarized
-using the `aggregate` argument of the plotting function. For instance,
-let's compare plots showing each ADM2's total precipitation recorded in our temporal window,
+`aggregate` overrides the default, for example total against largest daily
+precipitation:
 
 ```{r}
-gtropic_plot(
-  katrina,
-  metric = "PRECIP_MM",
-  aggregate = "sum"
-)
+gtropic_plot(katrina, metric = "PRECIP_MM", aggregate = "sum")
 ```
 
-versus their maximum daily precipitation:
-
 ```{r}
-gtropic_plot(
-  katrina,
-  metric = "PRECIP_MM",
-  aggregate = "max"
-)
+gtropic_plot(katrina, metric = "PRECIP_MM", aggregate = "max")
 ```
 
-We can also swap out which exposure metrics we want to visualize:
+`metric` chooses which exposures to show, one panel each:
 
 ```{r}
 gtropic_plot(
   katrina,
-  metric = c("VMAX_SUST_MS", "VMAX_GUST_MS", "WIND_RADII_VMAX_SUST_MS"),
+  metric = c("VMAX_SUST_MS", "VMAX_GUST_MS", "WIND_RADII_VMAX_SUST_MS")
 )
 ```
 
 ```{r}
 gtropic_plot(
   katrina,
-  metric = c("SUST_DUR_MINUTES", "GUST_DUR_MINUTES", "WIND_RADII_SUST_DUR_MINUTES"),
+  metric = c("SUST_DUR_MINUTES", "GUST_DUR_MINUTES", "WIND_RADII_SUST_DUR_MINUTES")
 )
 ```
 
-Take a look at the help page for the plotting function with `?gtropic_plot` to examine other elements of the
-map you can manipulate, for example, the `basemap`, or color `palette`.
-
-The `metric`, `aggregate`, `palette`, and `direction` accept vectors aligned by
-position. This makes a panel for each selected metric while preserving a
-separate, hazard-appropriate scale for every panel.
+`metric`, `aggregate`, `palette` and `direction` take vectors aligned by
+position, so each panel keeps its own scale. `?gtropic_plot` lists the other
+settings, such as `basemap`:
 
 ```{r multi-metric-map}
 gtropic_plot(
   katrina,
-  type = "exposure",
   metric = c("VMAX_SUST_MS", "PRECIP_MM"),
   aggregate = c("max", "sum"),
   palette = c("inferno", "mako"),
-  direction = c(1, 1),
   track = FALSE,
   basemap = "admin1"
 )
@@ -149,33 +109,19 @@ gtropic_plot(
 
 ### Track maps
 
-If we're only interested in visualizing the storm track, then we can set
-`type = "track"`:
+`type = "track"` draws only the storm track. Points are coloured by the
+Saffir-Simpson categories of `gtropic_saffir_simpson()`, in metres per second;
+`track_map_key` takes another key, and `track_interval` shows points every
+three or six hours while the path keeps every observation:
 
 ```{r}
-gtropic_plot(
-  katrina,
-  type = "track",
-  basemap = "admin1",
-  track_map_key = gtropic_saffir_simpson(),
-  track_interval = 3,
-)
+gtropic_plot(katrina, type = "track", basemap = "admin1", track_interval = 3)
 ```
 
-By default, their points
-are classified with `gtropic_saffir_simpson()`, which returns the conventional
-Saffir-Simpson category key in meters per second. Supply a compatible data frame
-to `track_map_key` to use a different classification, and use `track_interval`
-to sample displayed points at three- or six-hour UTC intervals while retaining
-the complete path. Static wind legends always show every category in the supplied
-key, even when no displayed track observation falls in a category.
+### Categorical maps
 
-### Categorical ADM2 maps
-
-
-If you'd like to categorize ADM2s into buckets defined by the wind they've been exposed to, you can use the
-`wind_categories` argument and pass in a table that looks like the one returned by
-`gtropic_saffir_simpson()`:
+`wind_categories` sorts units into classes by the wind they received, using a
+key like the one `gtropic_saffir_simpson()` returns:
 
 ```{r}
 gtropic_saffir_simpson()
@@ -185,24 +131,14 @@ gtropic_saffir_simpson()
 gtropic_plot(katrina, wind_categories = gtropic_saffir_simpson())
 ```
 
-The `wind_categories` argument classifies aggregated ADM2 wind exposure rather than drawing
-it on a continuous scale. It applies to non-binary exposure maps for metrics in
-the wind table, including interactive maps. For multiple selected metrics, use a named list keyed by the
-selected wind metric or metrics to classify; metrics without a supplied key
-retain their continuous fill. The built-in `gtropic_saffir_simpson()` key is permitted
-only for `VMAX_SUST_MS` with `aggregate = "max"`; it represents a local
-sustained-wind equivalent, not storm status. Use an explicitly custom key for
-other wind metrics or aggregations.
-
-Custom category keys use `category`, `threshold`, `unit`, and `color` columns.
-Categories must be unique; thresholds are strictly increasing
-upper bounds ending in `Inf`; and `unit` must be one arbitrary, nonempty,
-consistent value matching the source metric's unit. Conventional spellings of
-meters per second, such as `m/s` and `meters per second`, are treated as
-compatible.
-Values equal to a threshold belong to that category. Unlike `track_map_key`,
-categorical exposure keys are not limited to a fixed set of track-wind units.
-For example, this two-class key is intentionally coarse:
+The Saffir-Simpson key is allowed only for `VMAX_SUST_MS` with
+`aggregate = "max"`, where it describes local sustained wind, not storm
+status. Other metrics and aggregates need a custom key with `category`,
+`threshold`, `unit` and `color` columns. Categories must be unique, thresholds
+are increasing upper bounds ending in `Inf` (a value equal to a threshold
+belongs to that category), and `unit` is one value matching the metric's unit
+(`"m/s"` and `"meters per second"` both work). With several metrics, pass a
+list of keys named by metric. For example, two classes:
 
 ```{r}
 two_class_wind <- data.frame(
@@ -222,27 +158,19 @@ gtropic_plot(
 
 ### Interactive maps
 
-Set `interactive = TRUE` for a Leaflet exposure or count map. Interactive maps
-use vector layers and do not require a tile-server API key. Static gridlines do
-not apply to this output because Leaflet maps have no plot axes.
+`interactive = TRUE` returns a Leaflet exposure or count map. It uses vector
+layers and needs no tile-server key.
 
 ```{r interactive-map, eval=FALSE}
-gtropic_plot(
-  katrina,
-  interactive = TRUE,
-  basemap = "none"
-)
+gtropic_plot(katrina, interactive = TRUE, basemap = "none")
 ```
 
-## Plotting multiple storms
+## Several storms
 
-Now let's plot all the storms whose genesis date fell inside 2019, coming within 500km of India:
+The storms of 2019 that came within 500 km of a unit in India:
 
 ```{r}
-india_19 <- gtropic_data(
-  WHO_ENTITY = "India",
-  date_range = c(2019, 2019)
-)
+india_19 <- gtropic_data(WHO_ENTITY = "India", date_range = 2019)
 
 india_19$storm_metadata
 ```
@@ -251,17 +179,20 @@ india_19$storm_metadata
 gtropic_plot(india_19, type = "track")
 ```
 
-Let's look at the maximum sustained winds each ADM2 was exposed to as a result of these storms:
+The largest sustained wind each unit received from any of them:
+
 ```{r}
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track_labels = FALSE)
 ```
 
-Or if the tracks are making it difficult for us to see the data clearly:
+Without the tracks:
+
 ```{r}
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track = FALSE)
 ```
 
-We can use the `bbox` argument to zoom in on a region of interest:
+`bbox` zooms in on a region:
+
 ```{r}
 gtropic_plot(
   india_19,
@@ -274,29 +205,19 @@ gtropic_plot(
 
 ### Count maps
 
-Count maps apply metric-specific thresholds before counting the number of distinct
-storms or local exposure days that meet those thresholds.
-The automatic caption records the selected definitions.
+Count maps count, per unit, the storms or local days on which a metric met its
+threshold. The caption records the definitions used.
 
 ```{r count-map}
-gtropic_plot(
-  india_19,
-  type = "count",
-  count_unit = "days",
-  track = FALSE
-)
+gtropic_plot(india_19, type = "count", count_unit = "days", track = FALSE)
 ```
 
 ```{r}
-gtropic_plot(
-  india_19,
-  type = "count",
-  count_unit = "storms",
-  track = FALSE
-)
+gtropic_plot(india_19, type = "count", count_unit = "storms", track = FALSE)
 ```
 
-We can use the `threshold` argument to change how we define an exposure:
+`threshold` changes the definitions:
+
 ```{r}
 gtropic_plot(
   india_19,
@@ -310,37 +231,23 @@ gtropic_plot(
 
 ## Saving plots
 
-Static calls return ggplot objects, which can be extended with ggplot2 layers
-and saved with `gtropic_save()` when the analysis is ready for publication.
+Static maps are ggplot objects: add layers, then save them with
+`gtropic_save()`.
 
 ```{r save-plot, eval=FALSE}
-p <- gtropic_plot(
-  katrina,
-  type = "exposure",
-  metric = "VMAX_SUST_MS",
-  storm = katrina_id,
-  basemap = "none"
-) + theme_gtropic(base_size = 11)
+p <- gtropic_plot(katrina, metric = "VMAX_SUST_MS", basemap = "none") +
+  theme_gtropic(base_size = 11)
 
 gtropic_save(p, "katrina-wind-exposure.png", dpi = 300)
 ```
 
 ## Summary
 
-- `gtropic_plot()` produces exposure, count, and track maps directly from a
-  `gtropic_data` object.
-- Select metrics, aggregation methods, category keys, map extent, and track
-  options to make the displayed exposure definition explicit.
-- Static plots can be extended with ggplot2 and saved with `gtropic_save()`;
-  exposure and count maps can also be interactive.
+- `gtropic_plot()` draws exposure, count and track maps from a `gtropic_data`
+  object; exposure and count maps can also be interactive.
+- Metrics, aggregation, category keys, thresholds and the map extent make the
+  displayed exposure definition explicit, and the caption records it.
+- Static maps can be extended with ggplot2 and saved with `gtropic_save()`.
 
-## Where to go next
-
-- `vignette("getting-started")` introduces data retrieval and the structure of
-  G-TROPIC results.
-- `vignette("filtering")` covers how all the spatio-temporal/storm filters in `gtropic_data()`
-  combine.
-- `vignette("linkage")` covers joining precipitation and flood records to storms
-  before summarizing or mapping them.
-- `vignette("versions-and-caching")` shows how to preserve the versions and
-  source files behind a plotted result.
+```{r, child = "_next.Rmd.orig"}
+```

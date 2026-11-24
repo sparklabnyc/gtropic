@@ -30,101 +30,72 @@ library(gtropic)
 library(dplyr)
 ```
 
-This vignette covers how to link precipitation and flood exposure data to
-specific `STORM_ID`s, and how to avoid double-counting exposure data in your analyses.
-`STORM_ID` is the unique, preferred storm key for these joins and groupings;
-`STORM_NAME` is a potentially duplicated convenience display label and should
-not be used as a relational key.
+This vignette covers how precipitation and flood records are linked to storms,
+and how to aggregate them without counting the same record twice. Use
+`STORM_ID` for every join and grouping: `STORM_NAME` can repeat.
 
-We'll start by noting that the wind exposures come already linked to `STORM_ID`s,
-the `$wind` table contains rows for every `ADM2_ID`-`STORM_ID` pairing:
+Wind exposure comes already linked: the `wind` table has one row per unit and
+storm.
 
 ```{r}
-jam_05 <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
+jam_05 <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = 2005)
 
 jam_05$wind
 ```
 
-Linking precipitation and flooding data to specific storms is a task left up to you, the user,
-since different use cases may require different spatial and temporal fields, and these fields may even be
-hazard-specific. Deciding which precipitation/flooding data "belong" to a given storm is therefore
-a modeling choice you need to make.
+Precipitation and floods are different. Which rainy days or flood events
+"belong" to a storm is a modelling choice, so `gtropic` returns them once each
+and lets you make the link.
 
-## Hazard-specific spatial fields and temporal windows
+## Radii and windows
 
-When calling `gtropic_data()` to retrieve exposure data, you need to be aware of
-the following hazard-specific arguments that determine the wind/precip/flood
-spatial fields and temporal windows:
+Each hazard has a **radius**. `wind_radius_km`, `precip_radius_km` and
+`flood_radius_km`, all 500 km by default, are compared with `STORM_DIST_KM`,
+the published distance between the storm track and the unit's
+population-weighted centroid. A pair is kept for a hazard when that distance is
+at most the radius; `Inf` or `NULL` removes the bound. Storms that come within
+no radius of any selected unit are left out of the result.
 
-### The wind, precip, and flood radius filters
-
-The `[wind/precip/flood]_radius_km` arguments (all `500` by default) specify the maximum
-distance (in km) an ADM2 must be from the closest approach made by a storm track
-for that ADM2's corresponding wind/precip/flood data to be returned. These filters
-are applied directly to the `STORM_DIST_KM` data column in the `$links` table.
-Set these `[wind/precip/flood]_radius_km`
-arguments to `Inf` or `NULL` to retrieve wind/precip/flood data for all ADM2s regardless
-of their distance to the selected storm tracks.
-
-These filters also restric the set of storms returned in your query. For example, using the
-defaults mean that storms failing to come within 500km of any ADM2 in your search will be excluded
-from your resulting `gtropic_data` object.
-
-**Note that these defaults of `500`km
-are not prescriptive, and we do not claim to define an "exposure" with these default values. We leave this
-configurable per data retrieval query so that you the user can define your specific wind/precipitation/flood
-fields of interest. Smaller values for these arguments will also result in smaller data tables
-being returned, which can help save on memory consumption.**
-
-### The precip and flood temporal window filters
-
-Both the precipitation and flooding data use a **temporal window** centered on the
-`LOCAL_DATE_STORM_CLOSEST` value for an `ADM2_ID`-`STORM_ID` pair, which captures
-the local datetime when that `STORM_ID`'s storm track came nearest to that
-`ADM2_ID`'s population-weighted centroid:
+Precipitation and floods also have a **window** of local dates around
+`LOCAL_DATE_STORM_CLOSEST`, the date the storm passed closest to the unit:
 
 ```
 [ LOCAL_DATE_STORM_CLOSEST - days_before , LOCAL_DATE_STORM_CLOSEST + days_after ]
 ```
 
-The `[precip/flood]_days_[before/after]` arguments in `gtropic_data()` are used to define this temporal window.
-By default, `[precip/flood]_days_before = 2`, and
-`[precip/flood]_days_after = 1`, meaning precipitation/flood data is obtained for an `ADM2_ID` for all days inside
-the window given by the 2 days before and 1 day after a `STORM_ID`'s `LOCAL_DATETIME_STORM_CLOSEST` date.
-These windows are computed
-independently for rainfall and flooding, so you can widen or narrow one without adjusting
-the other.
+It is set by `precip_days_before` and `precip_days_after` (2 and 1 by
+default), and separately by `flood_days_before` and `flood_days_after`, so
+one can be widened without the other.
 
-### The returned `$links` table
+**The defaults are not a definition of exposure.** Choose radii and windows
+for your study; smaller values also return smaller tables.
+
+## The links table
 
 ```{r}
 jam_05$links
 ```
 
-Each row in the `$links` table is one unit-storm pair retained by the union of the requested hazard spatial fields:
+Each row of `links` is one unit-storm pair inside the largest requested
+radius:
 
 | Column | Meaning |
 | --- | --- |
 | `STORM_ID`, `ADM2_ID` | the pair |
-| `LOCAL_DATE_STORM_CLOSEST` | local date of closest approach -- the window anchor |
-| `STORM_DIST_KM` | how close the storm track came to the ADM2 |
-| `WIND_EXPOSURE` | `TRUE` for nonzero wind exposure; `FALSE` for zero |
-| `WIND_IN_FIELD` | was this pair inside the requested wind radius? |
-| `PRECIP_IN_FIELD` | was this pair inside the rainfall radius? |
-| `PRECIP_WINDOW_START`, `PRECIP_WINDOW_END` | the computed rainfall window |
-| `FLOOD_IN_FIELD` | was this pair inside the flood radius? |
-| `FLOOD_WINDOW_START`, `FLOOD_WINDOW_END` | the computed flood window |
+| `LOCAL_DATE_STORM_CLOSEST` | local date of closest approach, the window anchor |
+| `STORM_DIST_KM` | how close the storm track came to the unit |
+| `WIND_EXPOSURE` | `TRUE` for nonzero wind exposure, `FALSE` for none |
+| `WIND_IN_FIELD`, `PRECIP_IN_FIELD`, `FLOOD_IN_FIELD` | is the pair inside that hazard's radius? |
+| `PRECIP_WINDOW_START`, `PRECIP_WINDOW_END` | the rainfall window |
+| `FLOOD_WINDOW_START`, `FLOOD_WINDOW_END` | the flood window |
 
-A larger `precip_radius_km` or `flood_radius_km` can therefore
-retain an `ADM2_ID`-`STORM_ID` pair that falls outside of the specified `wind_radius_km`.
-The `WIND_IN_FIELD`, `PRECIP_IN_FIELD`, and `FLOOD_IN_FIELD` columns of the `$links` table
-state which exposures contain each retained pair.
+A larger `precip_radius_km` or `flood_radius_km` therefore keeps pairs outside
+the wind radius; the `*_IN_FIELD` columns say which hazards each pair counts
+for.
 
-Note that any geographic filters you supply to `gtropic_data()` (such as `WHO_ENTITY = "United States"`)
-act as outer bounds. The supplied radii arguments `wind/precip/flood_radius_km` narrows the selected
-`ADM2_ID`s within the context of the geographic filters, but they never widen beyond it.
-In this way, asking for only ADM2s within the "United States", but with a large `wind_radius_km`,
-will not return `ADM2_ID`s within to "Mexico" even if the a storm's wind field happens to reach Mexico from the U.S.
+Geographic filters are outer bounds. The radii narrow the units within them
+but never add others: a query for the United States with a large wind radius
+does not return units in Mexico, even if the storm's wind field reached it.
 
 Two more rules decide what the other tables hold. A finite radius leaves out
 pairs without a published `STORM_DIST_KM`, while `Inf` or `NULL` keeps them.
@@ -133,39 +104,34 @@ And when a requested hazard table has a finite radius, the returned `adm2`,
 units and storms in its qualifying links (the union, for several such
 hazards); with no finite radius they keep the whole selected scope.
 
-## How to avoid double-counting exposure data
+## Avoiding double counting
 
-Depending on how you define your precipitation data's temporal window,
-one ADM2's rainy day can fall inside two distinct storms' temporal windows
-(E.g. two storms hit the same region within days of one another). If the package
-returned that day once per storm, then calculating something like:
+When two storms pass the same unit within days of each other, one rainy day
+can fall inside both storms' windows. If that day were returned once per
+storm,
 
 ```{r, eval = FALSE}
-sum(res$precip$PRECIP_MM)   # WRONG if rows were duplicated
+sum(res$precip$PRECIP_MM) # wrong if rows were duplicated
 ```
 
-would silently overstate total rainfall. So `precip` and `flood` come back as tidy tables at their natural grain --
-one row per unit per date, one row per flood event -- and you join through
-`links` deliberately.
+would overstate the rainfall. So `precip` has one row per unit and date, and
+`flood` one row per flood event, and you join through `links` on purpose.
 
 ### Joining rainfall to storms
 
-Let's take a look at all storms whose genesis date fell in 2019 that came within
-500km of any ADM2 within India. We'll examine precipitation data 1 week either side
-of the storm's `LOCAL_DATE_STORM_CLOSEST`:
+Take the storms of 2019 that came within 500 km of a unit in India, with a
+precipitation window of a week either side of closest approach:
 
 ```{r}
 india_19 <- gtropic_data(
   WHO_ENTITY = "India",
-  date_range = c(2019, 2019),
+  date_range = 2019,
   precip_days_before = 7,
   precip_days_after = 7
 )
 ```
 
-Let's say we want to calculate **total rainfall per ADM2** within the temporal
-window defined during our `gtropic_data()` call.
-Then we simply aggregate the returned `$precip` table:
+**Total rainfall per unit** over the windows needs no join:
 
 ```{r}
 india_19$precip |>
@@ -173,9 +139,8 @@ india_19$precip |>
   summarise(total_mm = sum(PRECIP_MM, na.rm = TRUE))
 ```
 
-But let's say instead we want to calculate the **rainfall per storm** within the
-spatial & temporal window we defined.
-Use a non-equi join, matching on unit and on the date falling inside the window:
+**Rainfall per storm** needs a join on the unit and on the date falling inside
+the window:
 
 ```{r}
 storm_rain <- india_19$precip |>
@@ -187,9 +152,9 @@ storm_rain <- india_19$precip |>
     )
   )
 ```
-This expands the data: a day inside two windows would now appears twice, once per
-storm, as intended. We can use the `storm_rain` table to first check whether
-overlap affects our data at all:
+
+A day inside two windows now appears twice, once per storm, as intended. Check
+whether that happens in your data:
 
 ```{r, eval = FALSE}
 storm_rain |>
@@ -197,15 +162,14 @@ storm_rain |>
   filter(n > 1)
 ```
 
-Then, sum the joined table, knowing that a shared day contributes to both storms:
+Then sum per storm and unit, or per storm, knowing that a shared day counts
+for both storms:
 
 ```{r}
 storm_rain |>
   group_by(STORM_ID, ADM2_ID) |>
   summarise(storm_adm2_mm = sum(PRECIP_MM, na.rm = TRUE), .groups = "drop")
 ```
-
-Or alternatively:
 
 ```{r}
 storm_rain |>
@@ -215,45 +179,30 @@ storm_rain |>
 
 ## Flood matching
 
-The flood event data shipped in G-TROPIC span intervals defined by the `FLOOD_START_DATE` and
-`FLOOD_END_DATE` columns:
+Flood events span an interval, from `FLOOD_START_DATE` to `FLOOD_END_DATE`:
+
 ```{r}
 india_19$flood
 ```
 
-This gives rise to two possible ways of matching flood events to storm data via `gtropic_data()`'s
-`flood_match` argument:
+`gtropic_data()`'s `flood_match` argument decides how an interval is matched
+to a window:
 
-**`flood_match = "start"`** (the default) matches floods whose `FLOOD_START_DATE` falls inside
-the temporal window defined by `flood_days_before` and `flood_days_after` arguments (again
-with the temporal window anchored by the `LOCAL_DATE_STORM_CLOSEST`). Using this option
-retrieves those flood events the storm may have initiated.
-
-**`flood_match = "overlap"`** includes any flood interval that overlaps the window,
-including events already in progress at the beginning of the window.
-
-Which option is more appropriate for your analysis depends on your research question.
-For attributing flooding to a storm,
-`"start"` is the conservative choice. For studying compound events, e.g. a storm
-striking an already-flooded region, `"overlap"` may be the better choice.
+- **`"start"`** (the default) keeps floods that start inside the window: the
+  events the storm may have caused. It is the conservative choice for
+  attributing flooding to a storm.
+- **`"overlap"`** keeps any flood that overlaps the window, including one
+  already under way when it opens. It suits studies of compound events, such
+  as a storm striking an already flooded region.
 
 ## Summary
 
-- Rainfall and flooding are linked to storms per unit-storm pair, by a temporal
-  window and a distance radius.
-- Your geographic filter bounds everything; the radius only narrows within it.
-- Tables are returned at their natural grain. You must join using the
-  `$links` yourself, and be careful about aggregation afterwards.
-- Window and radius settings are recorded in the resulting metadata. Make sure these
-  arguments are set appropriately for your analysis!
+- Precipitation and floods are linked to storms per unit-storm pair, by a
+  radius and a window of local dates.
+- Geographic filters bound everything; radii only narrow within them.
+- `precip` and `flood` hold each record once: join through `links` and take
+  care when aggregating.
+- Radii and windows are recorded in the result's filters and manifest.
 
-## Where to go next
-
-- `vignette("getting-started")` introduces G-TROPIC data retrieval and result
-  metadata.
-- `vignette("filtering")` explains how geographic, temporal, and storm filters
-  define the records available for linking.
-- `vignette("plotting")` shows how to visualize linked exposure data and storm
-  tracks.
-- `vignette("versions-and-caching")` covers manifests and cache settings for
-  reproducible data retrieval.
+```{r, child = "_next.Rmd.orig"}
+```
