@@ -445,3 +445,60 @@ test_that("download estimates require the resolved version and checksum", {
   cache_put(cache, fetcher_key(version = "2.0"), current, checksum_raw(current))
   expect_equal(estimate_download(plan, cache, discovery)$n_cached, 1L)
 })
+
+test_that("a pinned version downloads and records that version's files", {
+  log <- local_golden_collection()
+  served <- log$listings
+  # Version 2.0 of the historical dataset: the same bytes under other file ids
+  # and published with SHA-256 checksums, so ids and checksums both differ
+  # from what :latest lists.
+  pinned <- served$historical
+  pinned$file_id <- pinned$file_id + 100L
+  pinned$checksum <- unname(vapply(
+    served$path[as.character(served$historical$file_id)], digest::digest,
+    character(1),
+    algo = "sha256", file = TRUE
+  ))
+  pinned$checksum_type <- "SHA-256"
+  local_mocked_bindings(
+    dv_list_files = function(doi, version = ":latest", ...) {
+      role <- names(golden_doi)[match(doi, golden_doi)]
+      if (role == "historical" && identical(version, "2.0")) {
+        return(pinned)
+      }
+      served[[role]]
+    },
+    dv_version_label = function(doi, version = ":latest", ...) {
+      role <- names(golden_doi)[match(doi, golden_doi)]
+      if (identical(version, ":latest")) unname(golden_version[role]) else version
+    },
+    dv_get_file = function(file_id, ...) {
+      log$downloads <- c(log$downloads, as.integer(file_id))
+      id <- as.integer(file_id)
+      if (id > 100L) id <- id - 100L
+      path <- served$path[[as.character(id)]]
+      readBin(path, "raw", file.size(path))
+    }
+  )
+
+  res <- gtropic_data(
+    STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
+    version = c(historical = "2.0", current = ":latest"),
+    cache = FALSE, quiet = TRUE, confirm = FALSE
+  )
+  files <- gtropic_manifest(res)$files
+  historical <- files[files$dataset_doi == golden_doi[["historical"]], ]
+
+  expect_gt(nrow(historical), 0L)
+  expect_true(all(historical$dataset_version == "2.0"))
+  expect_true(all(historical$file_id > 100L))
+  expected <- pinned[match(
+    paste(historical$directory_label, historical$label),
+    paste(pinned$directory_label, pinned$label)
+  ), ]
+  expect_identical(historical$file_id, expected$file_id)
+  expect_identical(historical$checksum, expected$checksum)
+  expect_true(all(historical$checksum_type == "SHA-256"))
+  expect_true(all(log$downloads[log$downloads %in% pinned$file_id] > 100L))
+  expect_false(any(log$downloads %in% served$historical$file_id))
+})

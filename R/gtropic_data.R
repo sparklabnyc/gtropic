@@ -205,7 +205,9 @@
 #'   retrieval manifest.
 #' @param version Dataset version specification. Use `":latest"` (the default),
 #'   a single version applied to both datasets, or a named character vector such
-#'   as `c(historical = "2.0", current = "3.0")`.
+#'   as `c(historical = "2.0", current = "3.0")`. A pinned version reads the
+#'   files of that version, and the manifest records their file ids and
+#'   checksums.
 #' @param manifest Optional `gtropic_manifest` from [gtropic_manifest()]. When
 #'   supplied, its recorded source files and canonical resolved query are used.
 #'   Data-shaping arguments cannot also be supplied; only `cache`, `as`,

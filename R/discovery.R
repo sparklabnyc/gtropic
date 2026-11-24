@@ -145,9 +145,9 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
     cli::cli_abort("Collection {.val {collection}} contains no datasets.")
   }
 
-  # One listing per dataset. We ask for :latest here regardless of the requested
-  # version, because identification is about which dataset is which, not about
-  # which snapshot of it we will end up reading.
+  # One listing per dataset at :latest. Identification is about which dataset
+  # is which, not about which snapshot of it we will end up reading; a pinned
+  # version is listed separately once the roles are known (see below).
   profiles <- lapply(dois$doi, function(d) {
     listing <- dv_list_files(d,
       version = ":latest", server = server,
@@ -216,7 +216,35 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
     )
   }
 
+  # File ids and checksums must come from the version that will be read. The
+  # :latest listing only identified the datasets, so a pinned version is
+  # listed again at that version; :latest reuses the listing it already has.
+  hist <- profile_at_version(hist, versions$historical, server, quiet)
+  if (!is.null(current)) {
+    current <- profile_at_version(current, versions$current, server, quiet)
+  }
+
   build_discovery(hist, current, versions, server, quiet)
+}
+
+#' List a dataset at the requested version unless it already is
+#'
+#' @param profile A dataset profile from `discover_datasets_impl()`, listed at
+#'   `":latest"`.
+#' @param version Requested version string.
+#' @return `profile` with `listing` and `years` taken from `version`.
+#' @keywords internal
+#' @noRd
+profile_at_version <- function(profile, version, server, quiet) {
+  if (identical(version, ":latest")) {
+    return(profile)
+  }
+  profile$listing <- dv_list_files(profile$doi,
+    version = version, server = server,
+    quiet = quiet
+  )
+  profile$years <- listing_years(profile$listing)
+  profile
 }
 
 #' @keywords internal

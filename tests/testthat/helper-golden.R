@@ -42,13 +42,15 @@ golden_listings <- function(dir) {
 #' Serve the fixture collection through mocked transport functions
 #'
 #' @return An environment whose `downloads` element records every file id
-#'   requested from the mocked server.
+#'   requested from the mocked server, and whose `listings` element holds the
+#'   served listings and fixture paths (see `golden_listings()`).
 #' @noRd
 local_golden_collection <- function(env = parent.frame()) {
   dir <- local_parquet_fixtures(env)
   listings <- golden_listings(dir)
   log <- new.env(parent = emptyenv())
   log$downloads <- integer(0)
+  log$listings <- listings
   role_of <- function(doi) names(golden_doi)[match(doi, golden_doi)]
 
   testthat::local_mocked_bindings(

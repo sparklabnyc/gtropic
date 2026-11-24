@@ -230,3 +230,92 @@ test_that("unreachable servers produce a contextual Dataverse error", {
     class = "rlang_error"
   )
 })
+
+discovery_listing <- function(file_ids, years = 2001:2002) {
+  labels <- c(paste0(years, ".parquet"), "codebook.json")
+  tibble::tibble(
+    file_id = as.integer(file_ids),
+    label = labels,
+    directory_label = c(rep("yearly", length(years)), "metadata"),
+    checksum = vapply(paste(labels, file_ids), function(x) {
+      checksum_raw(charToRaw(x))
+    }, character(1), USE.NAMES = FALSE),
+    checksum_type = "MD5",
+    size_bytes = 10,
+    content_type = "application/octet-stream"
+  )
+}
+
+test_that("a pinned version lists the files of that version", {
+  latest <- discovery_listing(901:903)
+  pinned <- discovery_listing(101:103)
+  local_mocked_bindings(
+    dv_list_datasets = function(...) tibble::tibble(doi = "doi:10.0000/HIST"),
+    dv_list_files = function(doi, version = ":latest", ...) {
+      if (identical(version, "1.0")) pinned else latest
+    },
+    dv_version_label = function(doi, version = ":latest", ...) {
+      if (identical(version, ":latest")) "2.0" else version
+    }
+  )
+
+  discovery <- discover_datasets(
+    list(historical = "1.0", current = ":latest"),
+    server = "example.invalid", collection = "gtropic",
+    refresh = TRUE, quiet = TRUE
+  )
+
+  expect_identical(discovery$historical$version, "1.0")
+  expect_identical(discovery$historical$listing$file_id, 101:103)
+  expect_identical(discovery$historical$listing$checksum, pinned$checksum)
+  expect_identical(discovery$historical$years, 2001:2002)
+})
+
+test_that("a pinned version can cover different years than :latest", {
+  latest <- discovery_listing(901:904, years = 2001:2003)
+  pinned <- discovery_listing(101:102, years = 2001)
+  local_mocked_bindings(
+    dv_list_datasets = function(...) tibble::tibble(doi = "doi:10.0000/HIST"),
+    dv_list_files = function(doi, version = ":latest", ...) {
+      if (identical(version, "1.0")) pinned else latest
+    },
+    dv_version_label = function(doi, version = ":latest", ...) "1.0"
+  )
+
+  discovery <- discover_datasets_impl(
+    list(historical = "1.0", current = ":latest"),
+    "example.invalid", "gtropic", TRUE
+  )
+
+  expect_identical(discovery$historical$years, 2001L)
+  expect_identical(discovery$year_index$year, 2001L)
+})
+
+test_that(":latest discovery lists each dataset once", {
+  calls <- character(0)
+  local_mocked_bindings(
+    dv_list_datasets = function(...) {
+      tibble::tibble(doi = c("doi:10.0000/HIST", "doi:10.0000/CURR"))
+    },
+    dv_list_files = function(doi, version = ":latest", ...) {
+      calls <<- c(calls, paste(doi, version))
+      if (identical(doi, "doi:10.0000/HIST")) {
+        discovery_listing(1:3)
+      } else {
+        # The current-year dataset: one year-file, no metadata/ copy.
+        discovery_listing(4:5, years = 2003)[1, ]
+      }
+    },
+    dv_version_label = function(doi, ...) "1.0"
+  )
+
+  discover_datasets_impl(
+    list(historical = ":latest", current = ":latest"),
+    "example.invalid", "gtropic", TRUE
+  )
+
+  expect_identical(
+    sort(calls),
+    c("doi:10.0000/CURR :latest", "doi:10.0000/HIST :latest")
+  )
+})

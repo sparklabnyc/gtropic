@@ -15,6 +15,14 @@
   examples and the plotting functions can be tried offline. Its values are
   invented.
 
+## Bug fixes
+
+* A pinned `version` (for example `gtropic_data(version = "2.0")`) now reads
+  the files of that version. Earlier development versions always read the
+  files of the latest version and recorded them in the manifest under the
+  pinned version number, so results obtained with a pinned version before
+  this fix should be re-run.
+
 ## Security
 
 * `arrow (>= 17.0.0)` is now required. Earlier versions of the Arrow R

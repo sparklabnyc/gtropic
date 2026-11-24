@@ -139,7 +139,9 @@ retrieval manifest.}
 
 \item{version}{Dataset version specification. Use \code{":latest"} (the default),
 a single version applied to both datasets, or a named character vector such
-as \code{c(historical = "2.0", current = "3.0")}.}
+as \code{c(historical = "2.0", current = "3.0")}. A pinned version reads the
+files of that version, and the manifest records their file ids and
+checksums.}
 
 \item{manifest}{Optional \code{gtropic_manifest} from \code{\link[=gtropic_manifest]{gtropic_manifest()}}. When
 supplied, its recorded source files and canonical resolved query are used.
