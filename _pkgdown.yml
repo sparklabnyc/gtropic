@@ -18,11 +18,6 @@ authors:
     href: https://www.publichealth.columbia.edu/
     html: <img src='https://www.publichealth.columbia.edu/sites/default/files/logo-mailman-blue-horizontal.svg?stefxf'
       width=240 alt=''>
-home:
-  title: Retrieve, filter, and plot G-TROPIC global tropical cyclone exposure data
-    at ADM2/daily resolution (1980-present)
-  description: |
-    A retrieval, filtering, and plotting client for the live "G-TROPIC" dataset containing global tropical cyclone exposure data at ADM2/daily resolution from 1980-present, published weekly on Harvard Dataverse.
 reference:
 - title: Retrieval
   desc: |
@@ -88,3 +83,9 @@ articles:
   - linkage
   - plotting
   - versions-and-caching
+- title: More on the website
+  desc: |
+    Articles published only on this site.
+  navbar: More
+  contents:
+  - articles/data-sources
