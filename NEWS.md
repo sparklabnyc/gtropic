@@ -2,6 +2,10 @@
 
 ## Breaking changes
 
+* gtropic now requires R 4.2.0 or later. Current releases of the Arrow R
+  package need R 4.2, so an R 4.1 installation could not install gtropic's
+  dependencies anyway; the declared minimum now matches what is tested.
+
 * The cache index, the offline discovery snapshot and the persisted cache
   setting are now stored as JSON (`index.json`, `discovery.json` and
   `config.json`). Files written by earlier development versions
