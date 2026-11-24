@@ -302,3 +302,72 @@ test_that("retry notices respect quiet", {
   withr::local_options(gtropic.max_tries = 2L)
   expect_no_message(dv_list_datasets("flaky", server = "dv.invalid", quiet = TRUE))
 })
+
+# --- bounded downloads (Plan 05 SEC-08) ----------------------------------------
+
+test_that("the download bound is the listed size plus 1 MB or 1 %", {
+  mb <- 1024^2
+  expect_identical(download_limit(0), mb)
+  expect_identical(download_limit(10 * mb), 11 * mb)
+  expect_identical(download_limit(1000 * mb), 1010 * mb)
+  for (unknown in list(NA, NA_real_, NULL, -1, Inf, "x")) {
+    expect_identical(download_limit(unknown), 8 * 1024^3)
+  }
+})
+
+test_that("a download larger than its listed size is stopped and removed", {
+  bytes <- as.raw(rep(1L, 2 * 1024^2))
+  bodies <- list(
+    complete = function(req) httr2::response(200, body = bytes),
+    streamed = function(req) streaming_response(req, bytes),
+    declared = function(req) {
+      streaming_response(req, bytes, list(`Content-Length` = length(bytes)))
+    }
+  )
+  for (kind in names(bodies)) {
+    httr2::local_mocked_responses(bodies[[kind]])
+    dest <- withr::local_tempfile()
+    err <- expect_error(
+      dv_get_file(1L, server = "example.invalid", quiet = TRUE, dest = dest,
+        size_bytes = 10
+      ),
+      class = "gtropic_error_download_size"
+    )
+    expect_match(conditionMessage(err), "listed as 10.0 B", fixed = TRUE)
+    expect_false(file.exists(dest), label = kind)
+  }
+})
+
+test_that("a download within its bound is written in full", {
+  bytes <- as.raw(rep(1:255, 1000))
+  httr2::local_mocked_responses(function(req) streaming_response(req, bytes))
+  dest <- withr::local_tempfile()
+  dv_get_file(1L, server = "example.invalid", quiet = TRUE, dest = dest,
+    size_bytes = length(bytes)
+  )
+  expect_identical(read_bytes(dest), bytes)
+})
+
+test_that("a file listed without a size is bounded by the fixed ceiling", {
+  local_mocked_bindings(DOWNLOAD_CEILING_BYTES = 1024)
+  httr2::local_mocked_responses(function(req) {
+    streaming_response(req, as.raw(rep(1L, 2048)))
+  })
+  err <- expect_error(
+    dv_get_file(1L, server = "example.invalid", quiet = TRUE),
+    class = "gtropic_error_download_size"
+  )
+  expect_match(conditionMessage(err), "gives no size")
+})
+
+test_that("a live transfer is stopped once it passes the bound", {
+  web <- local_dataverse_app(dataverse_test_app())
+  dest <- withr::local_tempfile()
+  expect_error(
+    dv_get_file(99L, server = "dv.invalid", quiet = TRUE, dest = dest,
+      size_bytes = 1
+    ),
+    class = "gtropic_error_download_size"
+  )
+  expect_false(file.exists(dest))
+})

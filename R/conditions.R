@@ -17,7 +17,10 @@
 #' * `gtropic_error_no_match`: a filter value matches nothing in the published
 #'   metadata, or the filters together select no storm or ADM2 unit.
 #' * `gtropic_error_download_size`: a query is larger than
-#'   `getOption("gtropic.confirm_threshold_gb")` and was not confirmed.
+#'   `getOption("gtropic.confirm_threshold_gb")` and was not confirmed, or a
+#'   download was stopped because the server sent more than the file's listed
+#'   size (plus 1 MB or 1 %, whichever is more), or more than 8 GB for a file
+#'   listed without a size.
 #' * `gtropic_error_manifest`: a manifest failed validation before replay.
 #'
 #' Other errors, such as an invalid argument value, are ordinary `rlang`

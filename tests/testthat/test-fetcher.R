@@ -326,3 +326,24 @@ test_that(":latest discovery lists each dataset once", {
     c("doi:10.0000/CURR :latest", "doi:10.0000/HIST :latest")
   )
 })
+
+test_that("the listed size bounds a download and nothing is cached", {
+  listing <- fetcher_listing(2001)$listing
+  listing$size_bytes <- 4
+  discovery <- fetcher_discovery(listing)
+  dir <- withr::local_tempdir()
+  cache <- fetcher_cache(dir)
+  httr2::local_mocked_responses(function(req) {
+    httr2::response(200, body = as.raw(rep(1L, 2 * 1024^2)))
+  })
+  context <- fetch_context(discovery, cache, quiet = TRUE)
+
+  expect_error(
+    fetch_file("historical", "yearly", "2001.parquet", context, kind = "json"),
+    class = "gtropic_error_download_size"
+  )
+  expect_identical(nrow(cache_index_read(dir)), 0L)
+  expect_length(
+    list.files(file.path(dir, "blobs"), all.files = TRUE, no.. = TRUE), 0L
+  )
+})

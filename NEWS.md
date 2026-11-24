@@ -172,6 +172,13 @@
   and a cache index entry with such a checksum can no longer make the cache
   read or delete a file outside its own directory.
 
+* Downloads are bounded while they transfer. A server that sends more than a
+  file's listed size (plus 1 MB or 1 %, whichever is more), or more than 8 GB
+  for a file listed without a size, is stopped; the partial file is removed
+  and an error of class `gtropic_error_download_size` is raised. The
+  large-download confirmation relies on the listed sizes, which are now
+  enforced.
+
 * When Dataverse answers a download with a redirect to its storage (Harvard
   Dataverse redirects to Amazon S3), the redirect is followed without
   `DATAVERSE_KEY`, which belongs to the Dataverse host only. A redirect from

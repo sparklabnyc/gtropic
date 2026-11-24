@@ -396,27 +396,100 @@ dv_resolve_file <- function(listing, directory_label, label, doi = NULL,
 #' the storage host, and so a redirect cannot downgrade the request to plain
 #' HTTP.
 #'
+#' The transfer is bounded (see `download_limit()`): a server that sends more
+#' than the file's listed size allows is stopped, and the partial file
+#' removed, with an error of class `gtropic_error_download_size`.
+#'
 #' @param file_id Numeric Dataverse file id.
 #' @param server Dataverse host.
 #' @param quiet Suppress progress messages.
 #' @param dest Path to write. It must not exist yet; on failure it is removed.
+#' @param size_bytes The file's size in the listing (or manifest), or `NA`
+#'   when none is given.
 #'
 #' @return `dest`, invisibly.
 #' @keywords internal
 #' @noRd
 dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE,
-                        dest = tempfile(fileext = ".download")) {
+                        dest = tempfile(fileext = ".download"),
+                        size_bytes = NA_real_) {
   req <- dv_request(server, "access", "datafile", dv_file_id(file_id))
   req <- httr2::req_url_query(req, format = "original")
+  what <- glue::glue("download of file {file_id}")
   done <- FALSE
   on.exit(if (!done) unlink(dest), add = TRUE)
   dv_perform(
-    dv_download(req, dest),
-    what = glue::glue("download of file {file_id}"),
-    server = server, quiet = quiet
+    dv_download(req, dest, bound = download_bound(size_bytes, what)),
+    what = what, server = server, quiet = quiet
   )
   done <- TRUE
   invisible(dest)
+}
+
+#' Most bytes a download may deliver when the listing gives no size (8 GB)
+#'
+#' A fixed ceiling, deliberately not an option. Files with a listed size are
+#' bounded by that size instead.
+#' @keywords internal
+#' @noRd
+DOWNLOAD_CEILING_BYTES <- 8 * 1024^3
+
+#' The most bytes a download may deliver
+#'
+#' A file listed with a size may exceed it by 1 MB or 1 %, whichever is more,
+#' to allow for a listing that rounds. A file listed without a size is bounded
+#' by `DOWNLOAD_CEILING_BYTES`.
+#'
+#' @param size_bytes Listed size, or `NA`.
+#' @return A number of bytes.
+#' @keywords internal
+#' @noRd
+download_limit <- function(size_bytes) {
+  size <- suppressWarnings(as.numeric(size_bytes))
+  if (length(size) != 1L || !is.finite(size) || size < 0) {
+    return(DOWNLOAD_CEILING_BYTES)
+  }
+  size + max(1024^2, 0.01 * size)
+}
+
+#' The size bound for one download
+#'
+#' @param size_bytes Listed size, or `NA`.
+#' @param what Description of the download, used in the error.
+#' @return A list with `limit` (bytes), `listed` (`size_bytes` as a number)
+#'   and `what`.
+#' @keywords internal
+#' @noRd
+download_bound <- function(size_bytes, what = "download") {
+  listed <- suppressWarnings(as.numeric(size_bytes))
+  if (length(listed) != 1L || !is.finite(listed) || listed < 0) listed <- NA_real_
+  list(limit = download_limit(listed), listed = listed, what = what)
+}
+
+#' Abort a download that exceeds its bound
+#'
+#' @param bound Output of `download_bound()`.
+#' @param call Calling environment.
+#' @keywords internal
+#' @noRd
+abort_download_size <- function(bound, call = rlang::caller_env()) {
+  what <- bound$what
+  limit <- format_bytes(bound$limit)
+  listed <- format_bytes(bound$listed)
+  gtropic_abort(
+    c(
+      "Stopped the {what}: the server sent more than {limit}.",
+      i = if (is.na(bound$listed)) {
+        "The file listing gives no size, so a download may be at most {limit}."
+      } else {
+        "The file is listed as {listed}."
+      },
+      i = "The partial file was removed. If the file was republished, list
+           the dataset again; otherwise report it to the dataset maintainers."
+    ),
+    class = "gtropic_error_download_size",
+    call = call
+  )
 }
 
 #' A Dataverse file id as a URL path segment
@@ -438,12 +511,14 @@ dv_file_id <- function(file_id, call = rlang::caller_env()) {
 #'
 #' @param req Request from `dv_request()`.
 #' @param dest Destination path.
+#' @param bound Size bound from `download_bound()`.
 #' @param max_redirects Redirects followed before giving up.
 #'
 #' @return `dest`, invisibly.
 #' @keywords internal
 #' @noRd
-dv_download <- function(req, dest, max_redirects = 5L) {
+dv_download <- function(req, dest, bound = download_bound(NA),
+                        max_redirects = 5L) {
   for (hop in seq_len(max_redirects + 1L)) {
     resp <- httr2::req_perform_connection(
       httr2::req_options(req, followlocation = 0L)
@@ -451,7 +526,7 @@ dv_download <- function(req, dest, max_redirects = 5L) {
     status <- httr2::resp_status(resp)
     if (status < 300L || status >= 400L) {
       on.exit(close(resp), add = TRUE)
-      return(invisible(dv_write_body(resp, dest)))
+      return(invisible(dv_write_body(resp, dest, bound)))
     }
     location <- httr2::resp_header(resp, "Location")
     from <- resp$url
@@ -482,27 +557,45 @@ dv_redirect_request <- function(location, from) {
   gtropic_request(httr2::url_build(url))
 }
 
-#' Write a response body to a file in chunks
+#' Write a response body to a file in chunks, within a size bound
 #'
 #' A live response is read from its connection as it arrives. A complete
 #' response (as replayed by `httptest2` or `httr2` mocks) is written as is.
+#' A declared `Content-Length` over the bound stops the transfer before any
+#' of the body is read; otherwise the bytes are counted as they arrive.
 #'
 #' @param resp An `httr2` response from [httr2::req_perform_connection()].
 #' @param dest Destination path.
+#' @param bound Size bound from `download_bound()`.
 #'
 #' @return `dest`.
 #' @keywords internal
 #' @noRd
-dv_write_body <- function(resp, dest) {
+dv_write_body <- function(resp, dest, bound = download_bound(NA)) {
+  declared <- suppressWarnings(
+    as.numeric(httr2::resp_header(resp, "Content-Length", default = NA))
+  )
+  if (isTRUE(declared > bound$limit)) {
+    abort_download_size(bound)
+  }
+
   con <- file(dest, open = "wb")
   on.exit(close(con), add = TRUE)
   if (is.raw(resp$body)) {
+    if (length(resp$body) > bound$limit) abort_download_size(bound)
     writeBin(resp$body, con)
     return(dest)
   }
-  while (!httr2::resp_stream_is_complete(resp)) {
+  received <- 0
+  repeat {
     chunk <- httr2::resp_stream_raw(resp, kb = 256)
-    if (length(chunk) > 0L) writeBin(chunk, con)
+    if (length(chunk) == 0L) {
+      if (httr2::resp_stream_is_complete(resp)) break
+      next
+    }
+    received <- received + length(chunk)
+    if (received > bound$limit) abort_download_size(bound)
+    writeBin(chunk, con)
   }
   dest
 }

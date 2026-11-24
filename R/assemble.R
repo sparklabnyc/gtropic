@@ -62,6 +62,7 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     file_id <- row$file_id
     checksum <- row$checksum
     checksum_type <- row$checksum_type
+    size_bytes <- row$size_bytes
   } else {
     slot <- discovery_slot(ctx$discovery, dataset)
     row <- dv_resolve_file(slot$listing, directory_label, label, doi = slot$doi)
@@ -79,6 +80,7 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     file_id <- row$file_id
     checksum <- row$checksum
     checksum_type <- row$checksum_type
+    size_bytes <- row$size_bytes
   }
 
   key <- list(
@@ -101,10 +103,12 @@ fetch_file <- function(dataset, directory_label, label, ctx,
     # Removed once read, unless the cache took it over.
     tmp <- cache_download_path(ctx$cache)
     on.exit(unlink(tmp), add = TRUE)
+    # The listed size bounds the transfer (SEC-08).
     dv_get_file(file_id,
       server = ctx$discovery$server,
       quiet = ctx$quiet,
-      dest = tmp
+      dest = tmp,
+      size_bytes = size_bytes %||% NA_real_
     )
     verify_checksum(tmp, checksum, label = path, checksum_type = checksum_type)
     stored <- cache_put(ctx$cache, key, tmp,

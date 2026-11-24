@@ -147,6 +147,12 @@ dataverse_test_app <- function() {
       dv_json(res, 200L, '{"status":"OK","data":[]}')
     }
   })
+  # 3 MB sent in chunks, with no Content-Length.
+  app$get("/api/access/datafile/99", function(req, res) {
+    res$set_type("application/octet-stream")
+    for (i in 1:3) res$send_chunk(as.raw(rep(1L, 1024^2)))
+    res$send_chunk(raw(0))
+  })
   app$get("/api/dataverses/missing/contents", function(req, res) {
     count(req, "missing")
     dv_json(res, 404L, '{"status":"ERROR","message":"Collection not found"}')
@@ -160,4 +166,14 @@ app_hits <- function(web, name) {
   as.integer(httr2::resp_body_json(
     httr2::req_perform(httr2::request(web$url(paste0("/hits/", name))))
   ))
+}
+
+#' A mocked streaming response, as `httr2::req_perform_connection()` returns
+#' @noRd
+streaming_response <- function(req, bytes, headers = list()) {
+  httr2::new_response(
+    "GET", req$url, 200L,
+    headers = headers,
+    body = httr2::StreamingBody$new(rawConnection(bytes))
+  )
 }
