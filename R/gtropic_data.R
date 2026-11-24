@@ -174,10 +174,11 @@
 #'   available tables are returned: `"wind"`, `"precip"`, `"flood"`, `"pop"`,
 #'   `"adm2"`, `"codebook"`, `"zero_pairs"`, `"tracks"`, `"geometry"`, and
 #'   `"storm_metadata"`. Supply a smaller vector to reduce transfer and storage
-#'   requirements. Because the default includes `"geometry"`, it requires the
-#'   suggested `sf` and `sfarrow` packages. `storm_metadata` is added whenever a
-#'   storm-linked table is requested. A `links` table describing retained
-#'   ADM2-storm pairs is also returned.
+#'   requirements. `"geometry"` needs the suggested `sf` and `sfarrow`
+#'   packages: when `tables` is not supplied and they are not installed, it is
+#'   left out with a message; naming it explicitly makes them required.
+#'   `storm_metadata` is added whenever a storm-linked table is requested. A
+#'   `links` table describing retained ADM2-storm pairs is also returned.
 #' @param precip_days_before,precip_days_after Non-negative whole numbers of
 #'   days before and after local storm closest approach to include in each
 #'   precipitation window.
@@ -314,6 +315,9 @@ gtropic_data <- function(ADM2_ID = NULL,
                          quiet = FALSE,
                          offline = FALSE) {
   call <- match.call()
+  if (missing(tables) && is.null(manifest)) {
+    tables <- default_tables(quiet = quiet)
+  }
 
   if (!is.null(manifest)) {
     manifest <- manifest_validate(manifest)

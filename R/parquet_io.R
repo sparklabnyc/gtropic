@@ -209,6 +209,48 @@ parse_published_date <- function(x, column, label = "table",
   parsed
 }
 
+#' Which optional geospatial packages are not installed?
+#'
+#' @return Character vector of missing package names (empty when all are
+#'   installed).
+#' @keywords internal
+#' @noRd
+geo_packages_missing <- function() {
+  pkgs <- c("sf", "sfarrow")
+  pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+}
+
+#' Default tables for a query that did not name any
+#'
+#' Every table, except `"geometry"` when the packages it needs are not
+#' installed: a first query should work with only the hard dependencies. Says
+#' so once per session, unless `quiet`.
+#'
+#' @param quiet Suppress the message.
+#' @return Character vector of table names.
+#' @keywords internal
+#' @noRd
+default_tables <- function(quiet = FALSE) {
+  missing <- geo_packages_missing()
+  if (length(missing) == 0L) {
+    return(VALID_TABLES)
+  }
+  if (!isTRUE(quiet)) {
+    cli::cli_inform(
+      c(
+        "i" = "Leaving out the {.val geometry} table: it needs the
+               {.pkg {missing}} package{?s}.",
+        " " = "Install {cli::qty(length(missing))}{?it/them} to include ADM2
+               boundaries by default, or name {.val geometry} in {.arg tables}
+               to require {?it/them}."
+      ),
+      .frequency = "once",
+      .frequency_id = "gtropic_default_tables_geometry"
+    )
+  }
+  setdiff(VALID_TABLES, "geometry")
+}
+
 #' Require the optional geospatial packages
 #'
 #' @param what Description of the feature requiring them.
@@ -219,9 +261,7 @@ parse_published_date <- function(x, column, label = "table",
 #' @noRd
 check_installed_geo <- function(what = "this feature",
                                 call = rlang::caller_env()) {
-  missing <- c("sf", "sfarrow")[
-    !vapply(c("sf", "sfarrow"), requireNamespace, logical(1), quietly = TRUE)
-  ]
+  missing <- geo_packages_missing()
   if (length(missing) == 0L) {
     return(invisible(TRUE))
   }

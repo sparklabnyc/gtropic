@@ -31,6 +31,13 @@
   examples and the plotting functions can be tried offline. Its values are
   invented.
 
+## Improvements
+
+* A `gtropic_data()` call that does not name `tables` now works with only the
+  required packages installed. When `sf` or `sfarrow` is missing, the
+  `geometry` table is left out and a message says so once per session.
+  Naming `"geometry"` in `tables` still requires both packages.
+
 ## Bug fixes
 
 * A pinned `version` (for example `gtropic_data(version = "2.0")`) now reads
