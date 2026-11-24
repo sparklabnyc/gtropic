@@ -27,11 +27,10 @@
 #' in local time, the local calendar date is simply its first 10 characters. No
 #' timezone arithmetic is required, and doing any would be a bug.
 #'
-#' The extraction is expressed with [stringr::str_sub()] so that it is pushed
-#' down into the Arrow pipeline rather than materialising every row in R.
+#' `x` is an already-collected data frame (see `assemble_gtropic_data()`), so
+#' this is plain `substr()`.
 #'
-#' @param x An Arrow Table or data frame containing
-#'   `LOCAL_DATETIME_STORM_CLOSEST`.
+#' @param x A data frame containing `LOCAL_DATETIME_STORM_CLOSEST`.
 #' @param validate Whether to check the string format on a sample.
 #' @param label Path used in error messages.
 #' @param call Calling environment.
@@ -55,7 +54,7 @@ derive_local_date <- function(x, validate = TRUE, label = "file",
 
   out <- dplyr::mutate(
     x,
-    LOCAL_DATE_STORM_CLOSEST = stringr::str_sub(
+    LOCAL_DATE_STORM_CLOSEST = substr(
       .data$LOCAL_DATETIME_STORM_CLOSEST, 1L, 10L
     )
   )

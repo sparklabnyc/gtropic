@@ -406,10 +406,15 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
 }
 
 #' Insert stable line breaks before long captions reach the plot boundary
+#'
+#' Lines hold at most `width` characters. `strwrap()` keeps lines shorter
+#' than its own `width`, hence `width + 1`.
 #' @keywords internal
 #' @noRd
 plot_wrap_caption <- function(caption, width = 80L) {
-  stringr::str_wrap(caption, width = width)
+  vapply(caption, function(x) {
+    paste(strwrap(x, width = width + 1L), collapse = "\n")
+  }, character(1), USE.NAMES = FALSE)
 }
 
 #' Preserve automatic caption lines for static maps

@@ -77,6 +77,12 @@
 
 ## Improvements
 
+* Fewer dependencies: `stringr` is no longer imported, and the unused
+  suggested packages `curl`, `memoise` and `scales` are gone. User-supplied
+  plot captions are now wrapped with base `strwrap()`, which fills lines
+  greedily, so their line breaks can fall in different places, and blank-line
+  paragraph breaks are kept.
+
 * Data-availability warnings for recent periods are shown once per session
   for each kind of warning; the full detail is still kept in
   `gtropic_diagnostics()`.
