@@ -5,22 +5,18 @@
 .gtropic_session <- new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
+  # Defaults come from the options registry (gtropic_default_options()).
+  # Resolving the cache path does not create it; directories are made only
+  # when a retrieval writes its first cached file or caching is explicitly
+  # enabled.
+  defaults <- lapply(gtropic_default_options(), `[[`, "default")
+  names(defaults) <- paste0("gtropic.", names(defaults))
+  # The config file is read without creating it. A user-supplied option takes
+  # precedence over this persisted setting.
   persisted_cache_enabled <- cache_config_read()
-  defaults <- list(
-    gtropic.server = DEFAULT_SERVER,
-    gtropic.doi_historical = "doi:10.7910/DVN/EAVWC3",
-    gtropic.doi_current = "doi:10.7910/DVN/FZBAKO",
-    gtropic.collection = "gtropic",
-    # The config file is read without creating it. A user-supplied option takes
-    # precedence over this persisted setting.
-    gtropic.cache_enabled = persisted_cache_enabled %||% TRUE,
-    # Resolving this path does not create it; directories are made only when a
-    # retrieval writes its first cached file or caching is explicitly enabled.
-    gtropic.cache_dir = tools::R_user_dir("gtropic", "cache"),
-    gtropic.confirm_threshold_gb = 1,
-    gtropic.timeout = 600,
-    gtropic.max_tries = 3
-  )
+  if (!is.null(persisted_cache_enabled)) {
+    defaults$gtropic.cache_enabled <- persisted_cache_enabled
+  }
 
   # Only fill in options the user has not already set (e.g. in .Rprofile).
   unset <- !(names(defaults) %in% names(options()))

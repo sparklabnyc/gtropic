@@ -32,7 +32,7 @@ test_that("listings drop checksums that are not hexadecimal digests", {
 test_that("validate_server() keeps bare host names and strips schemes", {
   expect_identical(validate_server("dataverse.harvard.edu"), "dataverse.harvard.edu")
   expect_identical(validate_server("https://dataverse.harvard.edu/"), "dataverse.harvard.edu")
-  expect_identical(validate_server("HTTP://demo.dataverse.org//"), "demo.dataverse.org")
+  expect_identical(validate_server("HTTP://dataverse.example.org//"), "dataverse.example.org")
   expect_identical(validate_server("localhost:8080"), "localhost:8080")
   expect_identical(validate_server("example.invalid"), "example.invalid")
 })
@@ -55,9 +55,9 @@ test_that("an invalid gtropic.server option is rejected when it is read", {
 
 test_that("the default server is defined once", {
   withr::local_options(gtropic.server = NULL)
-  expect_identical(opt_server(), DEFAULT_SERVER)
+  expect_identical(opt_server(), opt_default("server"))
   .onLoad(NULL, "gtropic")
-  expect_identical(getOption("gtropic.server"), DEFAULT_SERVER)
+  expect_identical(getOption("gtropic.server"), opt_default("server"))
 })
 
 test_that("DATAVERSE_KEY is sent only to the configured server", {

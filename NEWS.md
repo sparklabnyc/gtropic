@@ -2,6 +2,13 @@
 
 ## Breaking changes
 
+* `gtropic.*` options are checked when they are read. A value of the wrong
+  type or out of range (for example `options(gtropic.max_tries = 0)` or
+  `options(gtropic.cache_enabled = "yes")`) is now an error that names the
+  option, instead of being coerced or silently treated as `FALSE`. The
+  defaults, `?gtropic_options` and the package's load-time settings now come
+  from one definition.
+
 * `gtropic_data()` no longer has an `as` argument. `as = "arrow"` never kept
   data on disk: every table was collected into memory and returned as a
   tibble either way. Results are always tibbles; convert a table with

@@ -87,7 +87,7 @@ abort_dataverse <- function(err, what = "request", server = opt_server(),
 
 #' List the files in a Dataverse dataset version
 #'
-#' @param doi Dataset DOI, e.g. `"doi:10.70122/FK2/SWEYST"`.
+#' @param doi Dataset DOI, e.g. `"doi:10.7910/DVN/EAVWC3"`.
 #' @param version Version string; `":latest"` for the newest published version.
 #' @param server Dataverse host.
 #' @param quiet Suppress progress messages.

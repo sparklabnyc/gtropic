@@ -187,7 +187,7 @@ test_that("metadata remains historical when current listing contains a copy", {
   discovery <- withCallingHandlers(
     discover_datasets_impl(
       list(historical = ":latest", current = ":latest"),
-      "demo.dataverse.org", "gtropic", TRUE
+      "example.invalid", "gtropic", TRUE
     ),
     warning = function(condition) {
       warnings <<- c(warnings, conditionMessage(condition))

@@ -37,7 +37,7 @@
 #' @seealso [gtropic_cache_enable()], [gtropic_cache_clear()]
 #' @export
 gtropic_cache_dir <- function() {
-  opt("cache_dir", tools::R_user_dir("gtropic", "cache"))
+  opt("cache_dir")
 }
 
 #' Enable or disable caching
@@ -383,7 +383,7 @@ cache_index_write <- function(dir, idx) {
 #' @keywords internal
 #' @noRd
 cache_resolve <- function(cache = NULL, quiet = FALSE) {
-  enabled <- cache %||% isTRUE(opt("cache_enabled", TRUE))
+  enabled <- cache %||% opt("cache_enabled")
   if (!isTRUE(enabled)) {
     return(list(enabled = FALSE, dir = NULL))
   }

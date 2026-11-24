@@ -9,14 +9,13 @@ exists for documentation only.
 }
 \description{
 \code{gtropic} is configured entirely through \code{options()}. Setting these is how
-you point the package at a different Dataverse installation -- for example
-moving from the demonstration server to a production repository -- without
-needing a package update.
+you point the package at a different Dataverse installation, or change how
+it caches and confirms downloads, without needing a package update.
 }
 \details{
 \tabular{lll}{
    Option \tab Default \tab Meaning \cr
-   \code{gtropic.server} \tab \code{"dataverse.harvard.edu"} \tab Dataverse host (HTTPS only). \cr
+   \code{gtropic.server} \tab \code{"dataverse.harvard.edu"} \tab Dataverse host name (requests always use HTTPS), optionally with a port. \cr
    \code{gtropic.doi_historical} \tab \code{"doi:10.7910/DVN/EAVWC3"} \tab DOI of the historical dataset. \cr
    \code{gtropic.doi_current} \tab \code{"doi:10.7910/DVN/FZBAKO"} \tab DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. \cr
    \code{gtropic.collection} \tab \code{"gtropic"} \tab Dataverse collection (alias) searched during discovery. \cr
@@ -28,11 +27,15 @@ needing a package update.
 }
 
 
+Each option is checked when it is read, and an invalid value is an error
+that names the option.
+
 A "cache" here means a folder of previously downloaded files on your own
 computer. It is enabled by default and uses a standard per-user location
 chosen by R. Use \code{\link[=gtropic_cache_disable]{gtropic_cache_disable()}} or \code{cache = FALSE} on a retrieval
 to bypass it. See \code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} to persist an enabled or disabled
-choice across R sessions.
+choice across R sessions; a persisted choice replaces the default of
+\code{gtropic.cache_enabled} when the package is loaded.
 }
 \examples{
 # Point the package at a different installation:
