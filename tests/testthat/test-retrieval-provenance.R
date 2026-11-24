@@ -101,14 +101,14 @@ test_that("gtropic_data replays the stored canonical query", {
   manifest <- manifest_finalize(manifest, resolved_query = query)
   local_mocked_bindings(assemble_gtropic_data = function(args, ...) args)
 
-  replay <- gtropic_data(manifest = manifest, cache = FALSE, as = "arrow")
+  replay <- gtropic_data(manifest = manifest, cache = FALSE, quiet = TRUE)
 
   expect_identical(replay$resolved_adm2_ids, query$resolved_adm2_ids)
   expect_identical(replay$resolved_storm_ids, query$resolved_storm_ids)
   expect_identical(replay$storm_metadata_years, query$storm_metadata_years)
   expect_identical(replay$tables, query$tables)
   expect_false(replay$make_valid)
-  expect_identical(replay$as, "arrow")
+  expect_true(replay$quiet)
   expect_error(gtropic_data(manifest = manifest, tables = "flood"), "data-shaping")
   expect_error(gtropic_data(manifest = manifest, make_valid = TRUE), "data-shaping")
 
@@ -191,7 +191,6 @@ test_that("unrestricted current-only wind retrieval avoids historical metadata",
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
     flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
-    as = "tibble",
     confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
     storm_metadata_years = NULL, resolved_query = NULL
   )
@@ -333,7 +332,6 @@ test_that("an old named storm without a date filter emits no current-period warn
     precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
     flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
     flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
-    as = "tibble",
     confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
     storm_metadata_years = NULL, resolved_query = NULL
   )

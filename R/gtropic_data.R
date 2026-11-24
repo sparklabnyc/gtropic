@@ -210,16 +210,11 @@
 #'   checksums.
 #' @param manifest Optional `gtropic_manifest` from [gtropic_manifest()]. When
 #'   supplied, its recorded source files and canonical resolved query are used.
-#'   Data-shaping arguments cannot also be supplied; only `cache`, `as`,
-#'   `confirm`, `quiet`, and `offline` may differ during replay.
+#'   Data-shaping arguments cannot also be supplied; only `cache`, `confirm`,
+#'   `quiet`, and `offline` may differ during replay.
 #' @param cache Whether downloaded source files may be cached. `NULL` uses
 #'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
 #'   setting for this call.
-#' @param as Requested representation for tabular output: `"tibble"` (the
-#'   default) or `"arrow"`. Source tables are currently collected while filters
-#'   are applied, so tables may be returned as tibbles for either setting.
-#'   Non-tabular elements, including the codebook, retain their natural
-#'   representation.
 #' @param confirm Controls the large-download guardrail. `NULL` or `TRUE`
 #'   applies the configured threshold. `FALSE` permits the transfer without
 #'   interactive confirmation.
@@ -315,7 +310,6 @@ gtropic_data <- function(ADM2_ID = NULL,
                          version = ":latest",
                          manifest = NULL,
                          cache = NULL,
-                         as = c("tibble", "arrow"),
                          confirm = NULL,
                          quiet = FALSE,
                          offline = FALSE) {
@@ -333,7 +327,6 @@ gtropic_data <- function(ADM2_ID = NULL,
 
   flood_match <- rlang::arg_match(flood_match)
   geometry_resolution <- rlang::arg_match(geometry_resolution)
-  as <- rlang::arg_match(as)
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
 
   args <- list(
@@ -381,7 +374,6 @@ gtropic_data <- function(ADM2_ID = NULL,
     version = version,
     manifest = manifest,
     cache = cache,
-    as = as,
     confirm = confirm,
     quiet = isTRUE(quiet),
     offline = check_offline(offline),
@@ -395,8 +387,8 @@ gtropic_data <- function(ADM2_ID = NULL,
 
   if (!is.null(manifest)) {
     # Only the data-shaping query is replayed. How it is executed (`cache`,
-    # `as`, `confirm`, `quiet`, `offline`) stays the caller's choice, whatever
-    # the manifest contains.
+    # `confirm`, `quiet`, `offline`) stays the caller's choice, whatever the
+    # manifest contains.
     q <- manifest$resolved_query
     replayed <- intersect(names(q), manifest_query_fields())
     args[replayed] <- q[replayed]
@@ -425,7 +417,7 @@ manifest_assert_replay_arguments <- function(call, call_env = rlang::caller_env(
     cli::cli_abort(c(
       "A manifest already defines the resolved query.",
       x = "Do not also supply data-shaping argument{?s}: {.arg {conflicts}}.",
-      i = "You may change {.arg cache}, {.arg as}, {.arg confirm}, {.arg quiet}, or {.arg offline}."
+      i = "You may change {.arg cache}, {.arg confirm}, {.arg quiet}, or {.arg offline}."
     ), call = call_env)
   }
   invisible(TRUE)

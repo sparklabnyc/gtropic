@@ -33,7 +33,6 @@ gtropic_data(
   version = ":latest",
   manifest = NULL,
   cache = NULL,
-  as = c("tibble", "arrow"),
   confirm = NULL,
   quiet = FALSE,
   offline = FALSE
@@ -145,18 +144,12 @@ checksums.}
 
 \item{manifest}{Optional \code{gtropic_manifest} from \code{\link[=gtropic_manifest]{gtropic_manifest()}}. When
 supplied, its recorded source files and canonical resolved query are used.
-Data-shaping arguments cannot also be supplied; only \code{cache}, \code{as},
-\code{confirm}, \code{quiet}, and \code{offline} may differ during replay.}
+Data-shaping arguments cannot also be supplied; only \code{cache}, \code{confirm},
+\code{quiet}, and \code{offline} may differ during replay.}
 
 \item{cache}{Whether downloaded source files may be cached. \code{NULL} uses
 \code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
 setting for this call.}
-
-\item{as}{Requested representation for tabular output: \code{"tibble"} (the
-default) or \code{"arrow"}. Source tables are currently collected while filters
-are applied, so tables may be returned as tibbles for either setting.
-Non-tabular elements, including the codebook, retain their natural
-representation.}
 
 \item{confirm}{Controls the large-download guardrail. \code{NULL} or \code{TRUE}
 applies the configured threshold. \code{FALSE} permits the transfer without

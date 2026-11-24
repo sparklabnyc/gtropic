@@ -2,6 +2,11 @@
 
 ## Breaking changes
 
+* `gtropic_data()` no longer has an `as` argument. `as = "arrow"` never kept
+  data on disk: every table was collected into memory and returned as a
+  tibble either way. Results are always tibbles; convert a table with
+  `arrow::as_arrow_table()` if you want Arrow.
+
 * gtropic now requires R 4.2.0 or later. Current releases of the Arrow R
   package need R 4.2, so an R 4.1 installation could not install gtropic's
   dependencies anyway; the declared minimum now matches what is tested.

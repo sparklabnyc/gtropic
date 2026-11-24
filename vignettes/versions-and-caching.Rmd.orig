@@ -276,36 +276,23 @@ options(gtropic.confirm_threshold_gb = 3)
 
 Usually the better response is to narrow the query (by requesting fewer years' worth of data, or fewer `tables`).
 
-## Working with data larger than memory
+## Keeping memory use down
 
-By default results are ordinary data frames, held in memory. Setting
-`as = "arrow"` returns them in a form that stays on disk or in a compact
-in-memory representation until you ask for it.
+Results are ordinary data frames (tibbles), held in memory. How much memory a
+query needs depends on how much it asks for, so the levers are in the query
+itself:
 
-**Arrow** is a format for holding tabular data efficiently and reading only the
-columns and rows you need. In practice you use the same `dplyr` verbs, and add
-`collect()` when you want ordinary data frames back:
+- request only the `tables` you need; precipitation tables are by far the
+  largest;
+- narrow `date_range`, so fewer yearly files are read;
+- narrow the geographic filters and the `*_radius_km` arguments, so fewer rows
+  are returned.
+
+If you prefer to work with a table in Arrow, convert it after retrieval:
 
 ```{r, eval = FALSE}
-library(dplyr)
-
-res <- gtropic_data(
-  WHO_ENTITY = "India",
-  date_range = c(2000, 2010),
-  as = "arrow"
-)
-
-heavy_days <- res$precip |>
-  filter(PRECIP_MM > 100) |>
-  group_by(ADM2_ID) |>
-  summarise(days = n()) |>
-  collect()
+precip <- arrow::as_arrow_table(res$precip)
 ```
-
-Genuine out-of-memory processing needs caching
-switched on, because that is what puts the files on disk where they can be
-streamed. Without caching, `as = "arrow"` mainly saves conversion time rather
-than memory.
 
 ## What to record in a paper
 

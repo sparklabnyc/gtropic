@@ -632,7 +632,6 @@ test_that("assembly reports finite hazard scope while preserving source links", 
       flood_match = "start",
       geometry_resolution = "simplified",
       make_valid = TRUE,
-      as = "tibble",
       confirm = TRUE
     )
   }

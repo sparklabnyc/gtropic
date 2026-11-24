@@ -564,39 +564,29 @@ assemble_gtropic_data <- function(args, call = NULL) {
   # --- 12. build the result -------------------------------------------------
   out <- compact(list(
     wind = if ("wind" %in% args$tables) {
-      finalize_table(wind %||%
-        tibble::tibble(), args$as)
+      finalize_table(wind %||% tibble::tibble())
     },
     precip = if ("precip" %in% args$tables) {
-      finalize_table(precip %||%
-        tibble::tibble(), args$as)
+      finalize_table(precip %||% tibble::tibble())
     },
     flood = if ("flood" %in% args$tables) {
-      finalize_table(flood %||%
-        tibble::tibble(), args$as)
+      finalize_table(flood %||% tibble::tibble())
     },
     zero_pairs = if ("zero_pairs" %in% args$tables) {
-      finalize_table(zero %||%
-        tibble::tibble(), args$as)
+      finalize_table(zero %||% tibble::tibble())
     },
     tracks = if ("tracks" %in% args$tables) {
-      finalize_table(tracks %||%
-        tibble::tibble(), args$as)
+      finalize_table(tracks %||% tibble::tibble())
     },
     pop = if ("pop" %in% args$tables) {
-      finalize_table(pop %||%
-        tibble::tibble(), args$as)
+      finalize_table(pop %||% tibble::tibble())
     },
     storm_metadata = if ("storm_metadata" %in% args$tables) {
-      finalize_table(
-        dplyr::select(storm_metadata, -".gtropic_file_year"),
-        args$as
-      )
+      finalize_table(dplyr::select(storm_metadata, -".gtropic_file_year"))
     },
     adm2 = if ("adm2" %in% args$tables) {
       finalize_table(
-        adm2[adm2$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE],
-        args$as
+        adm2[adm2$ADM2_ID %in% hazard_scope$adm2_ids, , drop = FALSE]
       )
     },
     geometry = geometry,

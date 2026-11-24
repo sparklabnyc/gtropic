@@ -236,24 +236,13 @@ check_installed_geo <- function(what = "this feature",
   )
 }
 
-#' Materialise an Arrow Table according to the `as` argument
+#' Normalise a collected table for the result
 #'
-#' @param x An Arrow Table or data frame.
-#' @param as `"tibble"` or `"arrow"`.
+#' @param x A data frame.
 #'
-#' @return A tibble, or the Arrow object unchanged.
+#' @return A tibble.
 #' @keywords internal
 #' @noRd
-finalize_table <- function(x, as = c("tibble", "arrow")) {
-  as <- match.arg(as)
-  if (is.data.frame(x)) {
-    x <- normalize_table_types(x)
-  }
-  if (identical(as, "arrow")) {
-    return(x)
-  }
-  if (inherits(x, c("Table", "ArrowTabular", "arrow_dplyr_query", "Dataset"))) {
-    return(tibble::as_tibble(dplyr::collect(x)))
-  }
-  tibble::as_tibble(x)
+finalize_table <- function(x) {
+  tibble::as_tibble(normalize_table_types(x))
 }

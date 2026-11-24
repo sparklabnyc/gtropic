@@ -5,8 +5,8 @@ example_manifest <- function() gtropic_manifest(gtropic_example())
 test_that("a manifest cannot set how its replay is executed", {
   withr::local_options(gtropic.server = "example.invalid")
   m <- example_manifest()
-  m$resolved_query[c("confirm", "quiet", "cache", "offline", "as")] <-
-    list(FALSE, TRUE, TRUE, TRUE, "arrow")
+  m$resolved_query[c("confirm", "quiet", "cache", "offline")] <-
+    list(FALSE, TRUE, TRUE, TRUE)
   local_mocked_bindings(assemble_gtropic_data = function(args, ...) args)
 
   args <- gtropic_data(manifest = m)
@@ -15,7 +15,7 @@ test_that("a manifest cannot set how its replay is executed", {
   expect_false(args$quiet)
   expect_null(args$cache)
   expect_false(args$offline)
-  expect_identical(args$as, "tibble")
+  expect_false("as" %in% names(args))
   expect_identical(args$resolved_adm2_ids, m$resolved_query$resolved_adm2_ids)
 })
 

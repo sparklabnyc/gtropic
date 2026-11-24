@@ -351,10 +351,6 @@ manifest_datasets <- function(manifest) {
 
 #' Describe a table's dimensions for printing
 #'
-#' Arrow objects are not materialised just to print a row count; for a lazy
-#' query we say so rather than triggering the computation the user was trying to
-#' defer.
-#'
 #' @param x A table.
 #' @return A single string.
 #' @keywords internal
@@ -365,12 +361,6 @@ table_dim_label <- function(x) {
   }
   if (inherits(x, "list") && !is.data.frame(x)) {
     return(glue::glue("{length(x)} entries (list)"))
-  }
-  if (inherits(x, "arrow_dplyr_query") || inherits(x, "Dataset")) {
-    return("lazy Arrow query (not yet collected)")
-  }
-  if (inherits(x, c("Table", "ArrowTabular"))) {
-    return(glue::glue("{nrow(x)} x {ncol(x)} (Arrow Table)"))
   }
   glue::glue("{nrow(x)} rows x {ncol(x)} columns")
 }
