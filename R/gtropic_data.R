@@ -19,6 +19,11 @@
 #' whereas `ADM2_NAME = "San Jose", ADM2_GROUP = "CRI"` requires both
 #' conditions to be met.
 #'
+#' The filter arguments are written in capitals (`ADM2_ID`, `STORM_NAME`,
+#' `WHO_ENTITY`, ...) because each one is named after the published column it
+#' filters, exactly as that column appears in the returned tables and the
+#' codebook.
+#'
 #' `ADM2_ID`, `STORM_ID`, and `USA_ATCF_ID` are exact, case-sensitive
 #' identifiers. Names and geographic classifications are matched
 #' case-insensitively after whitespace normalization. Every supplied value must
@@ -216,9 +221,9 @@
 #' @param cache Whether downloaded source files may be cached. `NULL` uses
 #'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
 #'   setting for this call.
-#' @param confirm Controls the large-download guardrail. `NULL` or `TRUE`
-#'   applies the configured threshold. `FALSE` permits the transfer without
-#'   interactive confirmation.
+#' @param confirm Logical. If `TRUE` (the default), the large-download
+#'   guardrail applies the configured threshold. `FALSE` permits the transfer
+#'   without interactive confirmation.
 #' @param quiet Logical. If `TRUE`, progress and informational messages are
 #'   suppressed. Warnings and errors are still reported.
 #' @param offline Logical. If `TRUE`, use only cached source files and a
@@ -311,7 +316,7 @@ gtropic_data <- function(ADM2_ID = NULL,
                          version = ":latest",
                          manifest = NULL,
                          cache = NULL,
-                         confirm = NULL,
+                         confirm = TRUE,
                          quiet = FALSE,
                          offline = FALSE) {
   call <- match.call()
@@ -325,6 +330,7 @@ gtropic_data <- function(ADM2_ID = NULL,
     manifest_warn_server(manifest)
   }
 
+  # The canonical query (and so the manifest) records both endpoints.
   if (!is.null(date_range) && length(date_range) == 1L) {
     date_range <- c(date_range, date_range)
   }
@@ -349,7 +355,7 @@ gtropic_data <- function(ADM2_ID = NULL,
     storm_name_years = storm_name_years(storm_name),
     wind_radius_km = check_wind_radius_km(wind_radius_km),
     polygon = polygon,
-    reproject = reproject,
+    reproject = check_flag(reproject),
     date_range = date_range,
     date_list = date_list,
     date_format = date_format,
@@ -374,13 +380,13 @@ gtropic_data <- function(ADM2_ID = NULL,
     flood_radius_km = check_positive_num(flood_radius_km, "flood_radius_km"),
     flood_match = flood_match,
     geometry_resolution = geometry_resolution,
-    make_valid = check_make_valid(make_valid),
+    make_valid = check_flag(make_valid),
     version = version,
     manifest = manifest,
     cache = cache,
-    confirm = confirm,
-    quiet = isTRUE(quiet),
-    offline = check_offline(offline),
+    confirm = check_flag(confirm),
+    quiet = check_flag(quiet),
+    offline = check_flag(offline),
     # Populated after source metadata has resolved the user-facing filters.
     # They are separate from the original filters so a replay does not need to
     # read ADM2 metadata merely to validate already-canonical IDs.
@@ -452,16 +458,6 @@ manifest_query_from_args <- function(args, resolved_adm2_ids = NULL,
     out$storm_metadata_years <- sort(unique(as.integer(storm_metadata_years)))
   }
   out
-}
-
-#' Validate offline mode
-#' @keywords internal
-#' @noRd
-check_offline <- function(x, call = rlang::caller_env()) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    cli::cli_abort("{.arg offline} must be a single `TRUE` or `FALSE` value.", call = call)
-  }
-  x
 }
 
 #' Validate a non-negative whole-number argument

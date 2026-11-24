@@ -380,7 +380,7 @@ manifest_validate_query <- function(q) {
       q$geometry_resolution %in% c("simplified", "full"),
     "geometry_resolution"
   )
-  if ("make_valid" %in% names(q)) check_make_valid(q$make_valid, call = NULL)
+  if ("make_valid" %in% names(q)) check_flag(q$make_valid, "make_valid", call = NULL)
   expect(is.null(q$resolved_adm2_ids) || is_chr(q$resolved_adm2_ids), "resolved_adm2_ids")
   expect(is.null(q$resolved_storm_ids) || is_chr(q$resolved_storm_ids), "resolved_storm_ids")
   expect(

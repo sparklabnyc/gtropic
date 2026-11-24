@@ -76,7 +76,7 @@ gtropic_cache_dir <- function() {
 #' @seealso [gtropic_cache_dir()], [gtropic_cache_prune()]
 #' @export
 gtropic_cache_enable <- function(dir = NULL, persist = FALSE) {
-  cache_validate_persist(persist)
+  check_flag(persist)
   if (!is.null(dir)) {
     if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
       cli::cli_abort("{.arg dir} must be a non-empty character path or {.code NULL}.")
@@ -94,7 +94,7 @@ gtropic_cache_enable <- function(dir = NULL, persist = FALSE) {
 #' @rdname gtropic_cache_enable
 #' @export
 gtropic_cache_disable <- function(persist = FALSE) {
-  cache_validate_persist(persist)
+  check_flag(persist)
   options(gtropic.cache_enabled = FALSE)
   if (persist) cache_config_write(FALSE)
   invisible(gtropic_cache_dir())
@@ -156,6 +156,7 @@ gtropic_cache_size <- function() {
 #'
 #' @export
 gtropic_cache_clear <- function(confirm = TRUE) {
+  check_flag(confirm)
   dir <- gtropic_cache_dir()
   blobs <- list.files(file.path(dir, "blobs"), full.names = TRUE)
 
@@ -164,7 +165,7 @@ gtropic_cache_clear <- function(confirm = TRUE) {
     return(invisible(0L))
   }
 
-  if (isTRUE(confirm) && is_interactive()) {
+  if (confirm && is_interactive()) {
     cli::cli_inform(
       "About to delete {length(blobs)} cached file{?s}
        ({format_bytes(gtropic_cache_size())}) from {.path {dir}}."
@@ -382,7 +383,9 @@ cache_index_write <- function(dir, idx) {
 #' @return A list with `enabled` (logical) and `dir` (path).
 #' @keywords internal
 #' @noRd
-cache_resolve <- function(cache = NULL, quiet = FALSE) {
+cache_resolve <- function(cache = NULL, quiet = FALSE,
+                          call = rlang::caller_env()) {
+  check_flag(cache, "cache", allow_null = TRUE, call = call)
   enabled <- cache %||% opt("cache_enabled")
   if (!isTRUE(enabled)) {
     return(list(enabled = FALSE, dir = NULL))
@@ -431,15 +434,6 @@ cache_config_write <- function(enabled) {
     cli::cli_abort("Could not save the gtropic cache setting at {.path {path}}.")
   }
   invisible(enabled)
-}
-
-#' @keywords internal
-#' @noRd
-cache_validate_persist <- function(persist) {
-  if (!is.logical(persist) || length(persist) != 1L || is.na(persist)) {
-    cli::cli_abort("{.arg persist} must be a single `TRUE` or `FALSE` value.")
-  }
-  invisible(persist)
 }
 
 #' Retrieve a cached file's bytes

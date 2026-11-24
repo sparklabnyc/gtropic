@@ -11,7 +11,7 @@ test_that("a manifest cannot set how its replay is executed", {
 
   args <- gtropic_data(manifest = m)
 
-  expect_null(args$confirm)
+  expect_true(args$confirm)
   expect_false(args$quiet)
   expect_null(args$cache)
   expect_false(args$offline)

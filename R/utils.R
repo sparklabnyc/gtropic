@@ -127,14 +127,6 @@ inform_unless_quiet <- function(..., quiet = FALSE,
 #' @noRd
 is_interactive <- function() interactive()
 
-#' Coerce a year-ish value to integer
-#'
-#' @param x Numeric or character years.
-#' @return Integer vector.
-#' @keywords internal
-#' @noRd
-as_year_int <- function(x) as.integer(as.character(x))
-
 #' Sequence of years spanning a set of dates
 #'
 #' @param ... Date vectors; `NA`s are dropped.
@@ -149,4 +141,43 @@ year_span <- function(...) {
   }
   yrs <- as.integer(format(dates, "%Y"))
   seq.int(min(yrs), max(yrs))
+}
+
+#' Validate a logical flag argument
+#'
+#' One check for every `TRUE`/`FALSE` argument, so `quiet = "yes"` is an error
+#' rather than silently `FALSE`.
+#'
+#' @param x Value supplied.
+#' @param arg Argument name, for the error message.
+#' @param allow_null Whether `NULL` is also accepted (for arguments where it
+#'   means "use the option").
+#' @param call Calling environment for error reporting.
+#'
+#' @return `x`, unchanged.
+#' @keywords internal
+#' @noRd
+check_flag <- function(x, arg = rlang::caller_arg(x), allow_null = FALSE,
+                       call = rlang::caller_env()) {
+  if (allow_null && is.null(x)) {
+    return(x)
+  }
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    cli::cli_abort(
+      c(
+        if (allow_null) {
+          "{.arg {arg}} must be {.code TRUE}, {.code FALSE} or {.code NULL}."
+        } else {
+          "{.arg {arg}} must be a single {.code TRUE} or {.code FALSE} value."
+        },
+        x = if (length(x) == 1L) {
+          "Got {.val {x}}."
+        } else {
+          "Got an object of class {.cls {class(x)}} and length {length(x)}."
+        }
+      ),
+      call = call
+    )
+  }
+  x
 }

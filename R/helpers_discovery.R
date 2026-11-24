@@ -93,20 +93,19 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' to identify the intended `STORM_ID`, then query [gtropic_data()] with
 #' `STORM_ID`, which is unique and preferred.
 #'
-#' @param date_range Optional vector of length two defining an inclusive range
-#'   of storm genesis dates. Bare years, year-month values, complete dates, and
-#'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of storm genesis calendar years to retrieve.
-#'   Ignored when `date_range` is supplied. Years outside the published
-#'   collection are omitted.
+#' @param date_range Optional vector of one or two endpoints defining an
+#'   inclusive range of storm genesis dates; a single value is used for both
+#'   endpoints, so `date_range = 2005` selects storms that formed in 2005. Bare
+#'   years, year-month values, complete dates, and `Date` or `POSIXct` values
+#'   are accepted as described in [gtropic_data()]. Years outside the
+#'   published collection are omitted.
 #' @param STORM_NAME Optional character vector of published convenience labels
 #'   in `Name-YYYY` form, such as `Katrina-2005`. Labels can duplicate across
 #'   distinct `STORM_ID`s. Matching is case-insensitive; every supplied value
 #'   must match a published name. The suffix is the storm season. Because
 #'   Southern Hemisphere storms can form in the preceding calendar year,
 #'   partitions for both `YYYY - 1` and `YYYY` are considered. This candidate
-#'   set is combined with an explicit genesis `year` or `date_range` filter using
-#'   AND.
+#'   set is combined with a `date_range` filter using AND.
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
 #' @param cache Whether downloaded files may be cached. `NULL` uses
@@ -121,7 +120,7 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' @examples
 #' \donttest{
 #' # Review storms that formed during calendar year 2005
-#' gtropic_storms(year = 2005)
+#' gtropic_storms(date_range = 2005)
 #'
 #' # Retrieve the published identifiers and dates for Hurricane Katrina
 #' gtropic_storms(STORM_NAME = "Katrina-2005")
@@ -130,7 +129,6 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' @seealso [gtropic_data()], [gtropic_adm2()], [gtropic_excluded_storms()]
 #' @export
 gtropic_storms <- function(date_range = NULL,
-                            year = NULL,
                             STORM_NAME = NULL,
                             version = ":latest",
                             cache = NULL) {
@@ -142,14 +140,12 @@ gtropic_storms <- function(date_range = NULL,
 
   years <- if (!identical(date_spec$type, "none")) {
     year_span(date_spec$start, date_spec$end)
-  } else if (!is.null(year)) {
-    as_year_int(year)
   } else {
     ctx$discovery$year_index$year
   }
   if (!is.null(storm_name_year)) {
     storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
+    years <- if (!identical(date_spec$type, "none")) {
       intersect(years, storm_genesis_year)
     } else {
       storm_genesis_year
@@ -204,18 +200,18 @@ gtropic_storms <- function(date_range = NULL,
 #' first best-track observation. They do not select storms by landfall, closest
 #' approach, or date of exposure.
 #'
-#' @param date_range Optional vector of length two defining an inclusive range
-#'   of storm genesis dates. Bare years, year-month values, complete dates, and
-#'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of storm genesis calendar years to retrieve.
-#'   Ignored when `date_range` is supplied. Years outside the published
-#'   collection are omitted.
+#' @param date_range Optional vector of one or two endpoints defining an
+#'   inclusive range of storm genesis dates; a single value is used for both
+#'   endpoints, so `date_range = 2005` selects storms that formed in 2005. Bare
+#'   years, year-month values, complete dates, and `Date` or `POSIXct` values
+#'   are accepted as described in [gtropic_data()]. Years outside the
+#'   published collection are omitted.
 #' @param STORM_NAME Optional character vector of published convenience labels
 #'   in `Name-YYYY` form. Labels can duplicate across distinct `STORM_ID`s.
 #'   Matching is case-insensitive; every supplied value must match an
 #'   excluded-storm record. The suffix is the storm season; partitions for
-#'   genesis years `YYYY - 1` and `YYYY` are considered and combined with an
-#'   explicit genesis `year` or `date_range` filter using AND.
+#'   genesis years `YYYY - 1` and `YYYY` are considered and combined with a
+#'   `date_range` filter using AND.
 #' @param version Dataset version to use. The default, `":latest"`, uses the
 #'   most recent published version. See [gtropic_data()] for version formats.
 #' @param cache Whether downloaded files may be cached. `NULL` uses
@@ -231,13 +227,12 @@ gtropic_storms <- function(date_range = NULL,
 #' @examples
 #' \donttest{
 #' # Review exclusion records for storms that formed during calendar year 2005
-#' gtropic_excluded_storms(year = 2005)
+#' gtropic_excluded_storms(date_range = 2005)
 #' }
 #'
 #' @seealso [gtropic_storms()], [gtropic_data()]
 #' @export
 gtropic_excluded_storms <- function(date_range = NULL,
-                                     year = NULL,
                                      STORM_NAME = NULL,
                                      version = ":latest",
                                      cache = NULL) {
@@ -248,14 +243,12 @@ gtropic_excluded_storms <- function(date_range = NULL,
   date_spec <- parse_date_input(date_range = date_range)
   years <- if (!identical(date_spec$type, "none")) {
     year_span(date_spec$start, date_spec$end)
-  } else if (!is.null(year)) {
-    as_year_int(year)
   } else {
     ctx$discovery$year_index$year
   }
   if (!is.null(storm_name_year)) {
     storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
+    years <- if (!identical(date_spec$type, "none")) {
       intersect(years, storm_genesis_year)
     } else {
       storm_genesis_year

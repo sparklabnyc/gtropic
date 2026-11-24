@@ -89,11 +89,11 @@ gtropic_adm2(WHO_ENTITY = "United States")
 
 Similarly, we can also get a list of all the available storms in the dataset.
 By default, `gtropic_storms()` returns all storms from 1980 onward,
-but if we pass in a `year`, then
-we can get the list of storms for that given `year`:
+but if we pass a single year as `date_range`, then
+we can get the list of storms that formed in that year:
 
 ```{r}
-gtropic_storms(year = 2025)
+gtropic_storms(date_range = 2025)
 ```
 
 The `STORM_GENESIS_DATE_UTC` column in that last result is the date used by every

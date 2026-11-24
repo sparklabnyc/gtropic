@@ -56,16 +56,16 @@ estimate_download <- function(plan, cache, discovery) {
 #' Apply the download confirmation guardrail
 #'
 #' @param estimate Output of `estimate_download()`.
-#' @param confirm `NULL` applies the guardrail; `FALSE` skips it.
+#' @param confirm `TRUE` applies the guardrail; `FALSE` skips it.
 #' @param quiet Suppress informational output.
 #' @param call Calling environment for error reporting.
 #'
 #' @return Invisibly `TRUE` when the download may proceed.
 #' @keywords internal
 #' @noRd
-apply_guardrail <- function(estimate, confirm = NULL, quiet = FALSE,
+apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
                             call = rlang::caller_env()) {
-  if (isFALSE(confirm)) {
+  if (!confirm) {
     return(invisible(TRUE))
   }
 

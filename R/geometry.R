@@ -24,15 +24,3 @@ repair_invalid_geometry <- function(geometry, make_valid = TRUE) {
   geometry
 }
 
-#' Validate the geometry-repair flag
-#' @keywords internal
-#' @noRd
-check_make_valid <- function(x, call = rlang::caller_env()) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    cli::cli_abort(
-      "{.arg make_valid} must be a single `TRUE` or `FALSE` value.",
-      call = call
-    )
-  }
-  x
-}

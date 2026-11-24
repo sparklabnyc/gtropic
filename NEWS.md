@@ -2,6 +2,17 @@
 
 ## Breaking changes
 
+* `gtropic_storms()` and `gtropic_excluded_storms()` no longer have a `year`
+  argument; use `date_range`, which now also accepts a single value
+  (`date_range = 2005` selects storms that formed in 2005). When both were
+  supplied, `date_range` silently won.
+* `confirm` in `gtropic_data()` is a plain logical with default `TRUE`
+  (`NULL` meant the same as `TRUE` and is no longer accepted).
+* Logical arguments (`quiet`, `reproject`, `offline`, `make_valid`, `confirm`,
+  `persist`, and `cache`, which may also be `NULL`) must be a single `TRUE` or
+  `FALSE`. Previously `quiet = "yes"` was silently treated as `FALSE` and
+  `reproject` was not checked.
+
 * `gtropic.*` options are checked when they are read. A value of the wrong
   type or out of range (for example `options(gtropic.max_tries = 0)` or
   `options(gtropic.cache_enabled = "yes")`) is now an error that names the

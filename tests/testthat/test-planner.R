@@ -184,7 +184,7 @@ test_that("storm discovery scans both genesis partitions for a season name", {
   expect_equal(fetched_years, 2004L)
   expect_equal(by_date$STORM_ID, "A")
 
-  by_year <- gtropic_storms(year = 2004, STORM_NAME = "name-2005")
+  by_year <- gtropic_storms(date_range = 2004, STORM_NAME = "name-2005")
   expect_equal(fetched_years, 2004L)
   expect_equal(by_year$STORM_ID, "A")
 
@@ -199,7 +199,7 @@ test_that("storm discovery scans both genesis partitions for a season name", {
   expect_equal(nrow(date_conflict), 0L)
 
   expect_warning(
-    year_conflict <- gtropic_storms(year = 2006, STORM_NAME = "name-2005"),
+    year_conflict <- gtropic_storms(date_range = 2006, STORM_NAME = "name-2005"),
     "No storm metadata"
   )
   expect_identical(fetched_years, integer(0))

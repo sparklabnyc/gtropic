@@ -189,9 +189,9 @@ provenance and method caption.}
 
 \item{quiet}{Logical; if \code{FALSE} (the default), report data-preparation progress.}
 
-\item{...}{Named arguments passed to \code{\link[ggplot2:geom_sf]{ggplot2::geom_sf()}} for static exposure or
-count polygons, or to \code{\link[leaflet:addPolygons]{leaflet::addPolygons()}} for interactive polygons.
-Track plots accept no additional arguments.}
+\item{...}{For static exposure and count maps, named arguments passed to
+\code{\link[ggplot2:geom_sf]{ggplot2::geom_sf()}} for the ADM2 polygons. For interactive maps, named
+arguments passed to \code{\link[leaflet:addPolygons]{leaflet::addPolygons()}}. Track plots accept none.}
 }
 \value{
 A ggplot for static output or a leaflet widget for interactive output.

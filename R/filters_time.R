@@ -13,7 +13,8 @@
 
 #' Parse the temporal filter arguments
 #'
-#' @param date_range Length-2 vector of range endpoints, or `NULL`.
+#' @param date_range Vector of one or two range endpoints (one value is both
+#'   endpoints), or `NULL`.
 #' @param date_list Vector of specific genesis dates, or `NULL`.
 #' @param date_format Explicit order/format string. When supplied, inference is
 #'   skipped entirely.
@@ -45,16 +46,19 @@ parse_date_input <- function(date_range = NULL,
   }
 
   if (!is.null(date_range)) {
-    if (length(date_range) != 2L) {
+    if (!length(date_range) %in% 1:2) {
       cli::cli_abort(
-        c("{.arg date_range} must have exactly 2 elements.",
+        c("{.arg date_range} must have one or two elements.",
           x = "Got {length(date_range)}.",
-          i = 'For example {.code date_range = c("2005-08-01", "2005-09-30")}
-               or {.code date_range = c(2005, 2010)}.'
+          i = 'For example {.code date_range = 2005},
+               {.code date_range = c("2005-08-01", "2005-09-30")} or
+               {.code date_range = c(2005, 2010)}.'
         ),
         call = call
       )
     }
+    # A single value is both endpoints: 2005 means all of 2005.
+    if (length(date_range) == 1L) date_range <- c(date_range, date_range)
 
     order <- resolve_date_order(date_range, date_format, call = call)
     start <- expand_date_element(date_range[[1]], "start", order$order,

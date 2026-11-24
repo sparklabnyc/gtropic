@@ -129,9 +129,9 @@
 #'   an automatic title/subtitle/caption. A supplied caption replaces the automatic
 #'   provenance and method caption.
 #' @param quiet Logical; if `FALSE` (the default), report data-preparation progress.
-#' @param ... Named arguments passed to [ggplot2::geom_sf()] for static exposure or
-#'   count polygons, or to [leaflet::addPolygons()] for interactive polygons.
-#'   Track plots accept no additional arguments.
+#' @param ... For static exposure and count maps, named arguments passed to
+#'   [ggplot2::geom_sf()] for the ADM2 polygons. For interactive maps, named
+#'   arguments passed to [leaflet::addPolygons()]. Track plots accept none.
 #'
 #' @details
 #' Maps use the actual date range of contributing observations after storm, ADM2,

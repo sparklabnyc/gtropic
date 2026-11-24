@@ -43,6 +43,6 @@ test_that("plot preparation repairs custom ADM2 geometry unless disabled", {
 
 test_that("make_valid requires one non-missing logical value", {
   for (value in list(NULL, NA, 1, "TRUE", c(TRUE, FALSE))) {
-    expect_error(check_make_valid(value), "make_valid")
+    expect_error(check_flag(value, "make_valid"), "make_valid")
   }
 })

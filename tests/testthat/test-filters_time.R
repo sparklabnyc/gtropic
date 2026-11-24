@@ -89,12 +89,15 @@ test_that("a reversed range errors", {
   )
 })
 
-test_that("date_range must have exactly two elements", {
-  expect_error(parse_date_input(date_range = "2001"), "exactly 2 elements")
+test_that("date_range takes one or two elements", {
+  one <- parse_date_input(date_range = "2001")
+  expect_identical(one$start, as.Date("2001-01-01"))
+  expect_identical(one$end, as.Date("2001-12-31"))
   expect_error(
     parse_date_input(date_range = c("2001", "2002", "2003")),
-    "exactly 2 elements"
+    "one or two elements"
   )
+  expect_error(parse_date_input(date_range = character(0)), "one or two elements")
 })
 
 test_that("date_list rejects partial dates", {

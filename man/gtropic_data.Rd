@@ -33,7 +33,7 @@ gtropic_data(
   version = ":latest",
   manifest = NULL,
   cache = NULL,
-  confirm = NULL,
+  confirm = TRUE,
   quiet = FALSE,
   offline = FALSE
 )
@@ -152,9 +152,9 @@ Data-shaping arguments cannot also be supplied; only \code{cache}, \code{confirm
 \code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
 setting for this call.}
 
-\item{confirm}{Controls the large-download guardrail. \code{NULL} or \code{TRUE}
-applies the configured threshold. \code{FALSE} permits the transfer without
-interactive confirmation.}
+\item{confirm}{Logical. If \code{TRUE} (the default), the large-download
+guardrail applies the configured threshold. \code{FALSE} permits the transfer
+without interactive confirmation.}
 
 \item{quiet}{Logical. If \code{TRUE}, progress and informational messages are
 suppressed. Warnings and errors are still reported.}
@@ -202,6 +202,11 @@ filters are combined with AND. For example,
 \code{WHO_ENTITY = c("United States", "Mexico")} includes units in either country,
 whereas \verb{ADM2_NAME = "San Jose", ADM2_GROUP = "CRI"} requires both
 conditions to be met.
+
+The filter arguments are written in capitals (\code{ADM2_ID}, \code{STORM_NAME},
+\code{WHO_ENTITY}, ...) because each one is named after the published column it
+filters, exactly as that column appears in the returned tables and the
+codebook.
 
 \code{ADM2_ID}, \code{STORM_ID}, and \code{USA_ATCF_ID} are exact, case-sensitive
 identifiers. Names and geographic classifications are matched
