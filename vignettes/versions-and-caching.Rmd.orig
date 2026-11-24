@@ -128,8 +128,9 @@ does not fetch them again. It is on by default, lives in R's per-user cache
 directory, and is created only when a retrieval first stores a file; a message
 says where.
 
-```{r}
+```{r, eval = FALSE}
 gtropic_cache_dir()
+#> On Linux, for example: "~/.cache/R/gtropic"
 ```
 
 ```{r, eval = FALSE}

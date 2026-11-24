@@ -108,7 +108,9 @@ Two points to keep in mind:
    shift, so a unit near the boundary can be inside in one year and outside in
    the next. A unit is selected if its centroid was inside in *any* year the
    query covers. A multi-year polygon query says so, and warns, listing the
-   units, when membership actually varied. The full list is kept:
+   units, when membership actually varied. The full list is kept in the
+   diagnostics; in North Carolina in 2010-2011 no unit changed, so it is
+   empty:
 
 ```{r}
 gtropic_diagnostics(nc_10to11)$polygon_inconsistent

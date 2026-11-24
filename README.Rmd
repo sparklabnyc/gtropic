@@ -13,10 +13,12 @@ knitr::opts_chunk$set(
   optipng = "-o5 -strip all"
 )
 # Lossless figure recompression, as in vignettes/precompute.R, and a
-# throwaway cache, so building the README never touches your own.
+# throwaway cache (or GTROPIC_PRECOMPUTE_CACHE), never your own.
 if (!nzchar(Sys.which("optipng"))) stop("optipng is required to build the README.")
 knitr::knit_hooks$set(optipng = knitr::hook_optipng)
-options(gtropic.cache_dir = file.path(tempdir(), "gtropic-readme-cache"))
+options(gtropic.cache_dir = Sys.getenv(
+  "GTROPIC_PRECOMPUTE_CACHE", file.path(tempdir(), "gtropic-readme-cache")
+))
 ```
 
 # gtropic <img src="man/figures/logo.png" align="right" height="145" alt="" />

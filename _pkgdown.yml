@@ -89,3 +89,4 @@ articles:
   navbar: More
   contents:
   - articles/data-sources
+  - articles/plot-gallery
