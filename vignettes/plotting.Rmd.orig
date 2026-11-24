@@ -31,7 +31,7 @@ library(gtropic)
 
 `gtropic_plot()` turns a `gtropic_data()` result into static exposure, count
 and track maps, or interactive exposure and count maps. It never downloads
-data or recomputes published values. This vignette shows six maps; the
+data or recomputes published values. This vignette shows five maps; the
 [plot gallery](https://sparklabnyc.github.io/gtropic/articles/plot-gallery.html) on the package website shows many more
 variations, each with its code.
 
@@ -75,7 +75,7 @@ Saffir-Simpson categories of `gtropic_saffir_simpson()`, in metres per second;
 three or six hours while the path keeps every observation:
 
 ```{r katrina-track, fig.alt = "Map of Hurricane Katrina (2005)'s track from the Bahamas across Florida and the Gulf of Mexico into the eastern United States, with points every three hours coloured by Saffir-Simpson category."}
-gtropic_plot(katrina, type = "track", basemap = "admin1", track_interval = 3)
+gtropic_plot(katrina, type = "track", track_interval = 3)
 ```
 
 ### Categorical maps
@@ -87,7 +87,7 @@ key like the one `gtropic_saffir_simpson()` returns:
 gtropic_saffir_simpson()
 ```
 
-```{r katrina-categories, fig.alt = "Map of the eastern United States, Cuba and the Bahamas classifying each administrative unit near Hurricane Katrina (2005)'s track into Saffir-Simpson wind categories, from tropical depression to category 5, with the track overlaid."}
+```{r katrina-categories, fig.alt = "Map of the eastern United States, Cuba and the Bahamas classifying each administrative unit near Hurricane Katrina (2005)'s track into Saffir-Simpson-equivalent wind categories (tropical depression to category 1 strength on land), with the track overlaid."}
 gtropic_plot(
   katrina,
   metric = "VMAX_SUST_MS",
@@ -123,14 +123,8 @@ india_19 <- gtropic_data(WHO_ENTITY = "India", date_range = 2019)
 india_19$storm_metadata
 ```
 
-The largest sustained wind each unit received from any of them, with their
-tracks:
-
-```{r multi-storm-exposure, fig.alt = "Map of India's coastal administrative units shaded by the maximum sustained wind each received from any 2019 storm, with the storm tracks over the Arabian Sea and the Bay of Bengal drawn on top."}
-gtropic_plot(india_19, metric = "VMAX_SUST_MS", track_labels = FALSE)
-```
-
-`facet_by` draws a panel for each value of a column, here one per storm:
+The largest sustained wind each unit received from each storm, one panel per
+storm (`facet_by` draws a panel for each value of a column):
 
 ```{r facet-by-storm, fig.alt = "Map panels, one per storm that formed in 2019 and came within 500 km of India, each shading India's administrative units by the maximum sustained wind that storm brought them.", fig.height = 9}
 gtropic_plot(

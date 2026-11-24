@@ -109,7 +109,14 @@ The tracks of the 2019 storms near India:
 gtropic_plot(india_19, type = "track")
 ```
 
-Their maximum sustained wind per unit, without tracks:
+The largest sustained wind each unit received from any of them, with their
+tracks:
+
+```{r multi-storm-exposure, fig.alt = "Map of India's coastal administrative units shaded by the maximum sustained wind each received from any 2019 storm, with the storm tracks over the Arabian Sea and the Bay of Bengal drawn on top."}
+gtropic_plot(india_19, metric = "VMAX_SUST_MS", track_labels = FALSE)
+```
+
+Without tracks:
 
 ```{r multi-storm-no-tracks, fig.alt = "The same map of India's administrative units shaded by maximum sustained wind from the 2019 storms, without the tracks."}
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track = FALSE)
