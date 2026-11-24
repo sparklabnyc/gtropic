@@ -20,8 +20,17 @@ Removes all downloaded file content from the configured cache and clears its
 index. This operation does not change whether caching is enabled.
 }
 \examples{
-\donttest{
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
+gtropic_cache_enable()
 gtropic_cache_clear(confirm = FALSE)
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
 }
 
 }

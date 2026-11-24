@@ -30,10 +30,7 @@ resolved geographic and storm filters, hazard-specific temporal and spatial
 windows, and any diagnostics retained with the result.
 }
 \examples{
-\donttest{
-res <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-summary(res)
-}
+summary(gtropic_example())
 
 }
 \seealso{

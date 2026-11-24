@@ -73,14 +73,12 @@ the requested units.
 }
 }
 \examples{
-\donttest{
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
-    ggplot2::geom_point()
-  output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
-  unlink(output)
-}
-}
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+  ggplot2::geom_point()
+output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
+unlink(output)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}

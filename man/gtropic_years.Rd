@@ -31,11 +31,10 @@ genesis dates in the current calendar year are published, so coverage for
 that calendar year may be provisional.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 coverage <- gtropic_years()
 range(coverage$all)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other discovery functions:

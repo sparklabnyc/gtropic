@@ -84,12 +84,11 @@ new_gtropic_data <- function(tables,
 #'   named list of source availability and coverage metadata.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-#' manifest <- gtropic_manifest(res)
-#' filters <- gtropic_filters(res)
-#' diagnostics <- gtropic_diagnostics(res)
-#' }
+#' x <- gtropic_example()
+#' gtropic_manifest(x)
+#' gtropic_filters(x)
+#' gtropic_diagnostics(x)
+#' names(gtropic_availability(x))
 #'
 #' @family retrieval functions
 #' @export
@@ -134,10 +133,7 @@ gtropic_availability <- function(x) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-#' print(gtropic_filters(res))
-#' }
+#' print(gtropic_filters(gtropic_example()), n = 3)
 #'
 #' @family result methods
 #' @export
@@ -214,9 +210,7 @@ format_filter_preview <- function(x, n) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' }
+#' print(gtropic_example())
 #'
 #' @family result methods
 #' @export
@@ -272,10 +266,7 @@ print.gtropic_data <- function(x, ...) {
 #'   it and returns `x` invisibly.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' summary(res)
-#' }
+#' summary(gtropic_example())
 #'
 #' @family result methods
 #' @export

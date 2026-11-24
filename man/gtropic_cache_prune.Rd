@@ -32,8 +32,17 @@ The cache is also pruned automatically after retrievals; see
 \code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} and \link{gtropic_options}.
 }
 \examples{
-\donttest{
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
+gtropic_cache_enable()
 gtropic_cache_prune(max_size_gb = 5, older_than_days = 90)
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
 }
 
 }

@@ -28,11 +28,10 @@ precipitation, flood, population, and storm metadata in an exposure
 analysis.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 codebook <- gtropic_codebook()
 names(codebook)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other discovery functions:

@@ -46,15 +46,11 @@
 #' @return Invisibly, the output filename, combined with `path` when supplied.
 #'   The path is not normalized. Saver errors are propagated.
 #' @seealso [ggplot2::ggsave()]
-#' @examples
-#' \donttest{
-#' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
-#'     ggplot2::geom_point()
-#'   output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
-#'   unlink(output)
-#' }
-#' }
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+#'   ggplot2::geom_point()
+#' output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
+#' unlink(output)
 #' @family plotting functions
 #' @export
 gtropic_save <- function(plot, filename, ..., dpi = 300,

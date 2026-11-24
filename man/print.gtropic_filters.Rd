@@ -24,10 +24,7 @@ values were omitted. The complete values remain available through ordinary
 list access.
 }
 \examples{
-\donttest{
-res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-print(gtropic_filters(res))
-}
+print(gtropic_filters(gtropic_example()), n = 3)
 
 }
 \seealso{

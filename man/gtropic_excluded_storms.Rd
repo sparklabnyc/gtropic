@@ -54,11 +54,10 @@ first best-track observation. They do not select storms by landfall, closest
 approach, or date of exposure.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # Review exclusion records for storms that formed during calendar year 2005
 gtropic_excluded_storms(date_range = 2005)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other discovery functions:

@@ -64,14 +64,13 @@ to identify the intended \code{STORM_ID}, then query \code{\link[=gtropic_data]{
 \code{STORM_ID}, which is unique and preferred.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # Review storms that formed during calendar year 2005
 gtropic_storms(date_range = 2005)
 
 # Retrieve the published identifiers and dates for Hurricane Katrina
 gtropic_storms(STORM_NAME = "Katrina-2005")
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other discovery functions:

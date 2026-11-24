@@ -10,13 +10,11 @@
 #' @return An sf object, or NULL for `what = "none"`. Layers are cached by
 #'   resolution and type until the R session ends.
 #' @examples
-#' \donttest{
 #' gtropic_basemap(what = "none")
-#' if (requireNamespace("rnaturalearth", quietly = TRUE) &&
-#'   requireNamespace("rnaturalearthdata", quietly = TRUE)) {
-#'   gtropic_basemap()
-#' }
-#' }
+#'
+#' @examplesIf requireNamespace("sf", quietly = TRUE) && requireNamespace("rnaturalearth", quietly = TRUE) && requireNamespace("rnaturalearthdata", quietly = TRUE)
+#' countries <- gtropic_basemap()
+#' nrow(countries)
 #' @family plotting functions
 #' @export
 gtropic_basemap <- function(what = c("countries", "admin1", "none"),

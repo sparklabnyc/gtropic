@@ -4,10 +4,8 @@
 #' Map builders remove axis titles and move multi-panel legends to the bottom.
 #' @param base_size Base text size in points.
 #' @return A ggplot2 theme that can be added to a plot.
-#' @examples
-#' \donttest{
-#' theme_gtropic()
-#' }
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' theme_gtropic(base_size = 11)
 #' @family plotting functions
 #' @export
 theme_gtropic <- function(base_size = 12) {
@@ -42,11 +40,9 @@ theme_gtropic <- function(base_size = 12) {
 #' @param name Legend title; NULL uses the metric label and unit when available.
 #' @param na.value Color for missing values.
 #' @return A continuous or discrete ggplot2 fill scale.
-#' @examples
-#' \donttest{
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
 #' scale_fill_gtropic_c(metric = "VMAX_SUST_MS")
 #' scale_fill_gtropic_d(name = "Exposed")
-#' }
 #' @family plotting functions
 #' @export
 scale_fill_gtropic_c <- function(

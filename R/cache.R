@@ -74,12 +74,23 @@ gtropic_cache_dir <- function() {
 #' @return Invisibly, a character scalar containing the cache directory path.
 #'
 #' @examples
-#' \donttest{
-#' # Bypass the cache for the current session
+#' \dontshow{
+#' .old <- options(
+#'   gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+#'   gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+#' )
+#' }
+#' # Stop caching for the rest of this session, then start again
 #' gtropic_cache_disable()
+#' gtropic_cache_enable()
 #'
-#' # Keep that choice for future sessions
+#' \dontrun{
+#' # Not run: persist = TRUE writes the choice to your configuration directory
 #' gtropic_cache_disable(persist = TRUE)
+#' }
+#' \dontshow{
+#' unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+#' options(.old)
 #' }
 #'
 #' @family cache functions
@@ -128,8 +139,18 @@ gtropic_cache_disable <- function(persist = FALSE) {
 #'   size in bytes, or `0` when the cache is empty.
 #'
 #' @examples
+#' \dontshow{
+#' .old <- options(
+#'   gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+#'   gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+#' )
+#' }
 #' gtropic_cache_list()
 #' gtropic_cache_size()
+#' \dontshow{
+#' unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+#' options(.old)
+#' }
 #'
 #' @family cache functions
 #' @export
@@ -160,8 +181,17 @@ gtropic_cache_size <- function() {
 #'   `0` if the cache is empty or interactive confirmation is declined.
 #'
 #' @examples
-#' \donttest{
+#' \dontshow{
+#' .old <- options(
+#'   gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+#'   gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+#' )
+#' }
+#' gtropic_cache_enable()
 #' gtropic_cache_clear(confirm = FALSE)
+#' \dontshow{
+#' unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+#' options(.old)
 #' }
 #'
 #' @family cache functions
@@ -220,8 +250,17 @@ gtropic_cache_clear <- function(confirm = TRUE) {
 #'   empty tibble is returned when no entries are removed.
 #'
 #' @examples
-#' \donttest{
+#' \dontshow{
+#' .old <- options(
+#'   gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+#'   gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+#' )
+#' }
+#' gtropic_cache_enable()
 #' gtropic_cache_prune(max_size_gb = 5, older_than_days = 90)
+#' \dontshow{
+#' unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+#' options(.old)
 #' }
 #'
 #' @family cache functions

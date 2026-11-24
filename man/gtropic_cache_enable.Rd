@@ -44,12 +44,23 @@ by that retrieval are never removed. Set either option to \code{Inf} to switch
 its rule off; see \link{gtropic_options}.
 }
 \examples{
-\donttest{
-# Bypass the cache for the current session
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
+# Stop caching for the rest of this session, then start again
 gtropic_cache_disable()
+gtropic_cache_enable()
 
-# Keep that choice for future sessions
+\dontrun{
+# Not run: persist = TRUE writes the choice to your configuration directory
 gtropic_cache_disable(persist = TRUE)
+}
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
 }
 
 }

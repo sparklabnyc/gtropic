@@ -155,6 +155,15 @@
 #' An explicit `metric = "USA_STATUS"` retains the status-color display.
 #'
 #' @return A ggplot for static output or a leaflet widget for interactive output.
+#'
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)
+#' x <- gtropic_example()
+#'
+#' # Exposure map of maximum sustained wind
+#' gtropic_plot(x, metric = "VMAX_SUST_MS", basemap = "none")
+#'
+#' # Track map
+#' gtropic_plot(x, type = "track", basemap = "none")
 #' @family plotting functions
 #' @export
 gtropic_plot <- function(
@@ -246,6 +255,8 @@ gtropic_plot <- function(
 #' @param type Plot type, defaulting to `"exposure"`.
 #' @param ... Arguments passed to [gtropic_plot()].
 #' @return The plot object returned by [gtropic_plot()].
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)
+#' plot(gtropic_example(), metric = "VMAX_SUST_MS", basemap = "none")
 #' @family plotting functions
 #' @export
 plot.gtropic_data <- function(x, type = "exposure", ...) {

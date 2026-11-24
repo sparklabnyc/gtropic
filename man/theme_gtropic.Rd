@@ -17,9 +17,9 @@ A minimal theme with subdued grid lines, bold titles, and readable captions.
 Map builders remove axis titles and move multi-panel legends to the bottom.
 }
 \examples{
-\donttest{
-theme_gtropic()
-}
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+theme_gtropic(base_size = 11)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other plotting functions:

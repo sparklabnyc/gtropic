@@ -185,17 +185,24 @@
 #'   to read them.
 #'
 #' @examples
-#' \donttest{
+#' # A small synthetic result, with the same structure as a real one
+#' x <- gtropic_example()
+#' x
+#' names(x)
+#'
+#' @examplesIf interactive()
+#' # The queries below download data from Harvard Dataverse.
+#'
 #' # All available tables for storms with genesis dates in calendar year 2005
 #' # that were evaluated in Jamaica
-#' jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
+#' jamaica <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = 2005)
 #' jamaica
 #'
 #' # Find a storm by its convenience label, then query by its unique STORM_ID
 #' gtropic_storms(STORM_NAME = "Haiyan-2013")
 #' haiyan <- gtropic_data(
 #'   STORM_ID = "2013306N07162",
-#'   date_range = c(2013, 2013),
+#'   date_range = 2013,
 #'   tables = c("wind", "adm2")
 #' )
 #'
@@ -213,7 +220,6 @@
 #' # Retain source-file provenance for a subsequent retrieval
 #' source_manifest <- gtropic_manifest(philippines)
 #' philippines_retrieved_again <- gtropic_data(manifest = source_manifest)
-#' }
 #'
 #' @seealso [gtropic_storms()] and [gtropic_adm2()] to look up filter values,
 #'   [gtropic_plot()] to map the result, [gtropic_options] for settings.

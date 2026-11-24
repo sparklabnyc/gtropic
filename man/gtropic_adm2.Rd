@@ -52,14 +52,13 @@ exposure data. Filters that do not match a published value produce an error
 rather than an empty result.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # Review all available administrative units
 gtropic_adm2()
 
 # Find the identifiers used for units in the Philippines
 gtropic_adm2(WHO_ENTITY = "Philippines")
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other discovery functions:

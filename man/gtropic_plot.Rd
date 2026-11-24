@@ -227,6 +227,17 @@ An explicit \code{metric = "USA_STATUS"} retains the status-color display.
 }
 }
 
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+x <- gtropic_example()
+
+# Exposure map of maximum sustained wind
+gtropic_plot(x, metric = "VMAX_SUST_MS", basemap = "none")
+
+# Track map
+gtropic_plot(x, type = "track", basemap = "none")
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 Other plotting functions:
 \code{\link[=gtropic_basemap]{gtropic_basemap()}},

@@ -64,12 +64,11 @@ of every warning that may have been emitted during retrieval.
 coverage, and the requested time range used for availability diagnostics.
 }
 \examples{
-\donttest{
-res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-manifest <- gtropic_manifest(res)
-filters <- gtropic_filters(res)
-diagnostics <- gtropic_diagnostics(res)
-}
+x <- gtropic_example()
+gtropic_manifest(x)
+gtropic_filters(x)
+gtropic_diagnostics(x)
+names(gtropic_availability(x))
 
 }
 \seealso{

@@ -23,13 +23,12 @@ an administrative-level-1 layer requires the optional, non-CRAN
 \code{rnaturalearthhires} package. No layer is downloaded by this function.
 }
 \examples{
-\donttest{
 gtropic_basemap(what = "none")
-if (requireNamespace("rnaturalearth", quietly = TRUE) &&
-  requireNamespace("rnaturalearthdata", quietly = TRUE)) {
-  gtropic_basemap()
-}
-}
+
+\dontshow{if (requireNamespace("sf", quietly = TRUE) && requireNamespace("rnaturalearth", quietly = TRUE) && requireNamespace("rnaturalearthdata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+countries <- gtropic_basemap()
+nrow(countries)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other plotting functions:

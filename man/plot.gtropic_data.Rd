@@ -19,6 +19,11 @@ The plot object returned by \code{\link[=gtropic_plot]{gtropic_plot()}}.
 \description{
 Thin S3 interface to \code{\link[=gtropic_plot]{gtropic_plot()}}.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot(gtropic_example(), metric = "VMAX_SUST_MS", basemap = "none")
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 Other plotting functions:
 \code{\link[=gtropic_basemap]{gtropic_basemap()}},

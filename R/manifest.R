@@ -541,10 +541,7 @@ manifest_lookup <- function(manifest, directory_label, label) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' result <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' gtropic_manifest(result)
-#' }
+#' print(gtropic_manifest(gtropic_example()))
 #'
 #' @seealso [gtropic_manifest()]
 #' @family result methods

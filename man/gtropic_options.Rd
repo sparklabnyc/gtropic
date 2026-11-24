@@ -42,15 +42,12 @@ choice across R sessions; a persisted choice replaces the default of
 \code{gtropic.cache_enabled} when the package is loaded.
 }
 \examples{
-# Point the package at a different installation:
-\dontrun{
-options(
-  gtropic.server = "dataverse.harvard.edu",
-  gtropic.doi_historical = "doi:10.7910/DVN/EXAMPLE"
-)
-}
-
-# Inspect the current settings:
+# Inspect a setting
 getOption("gtropic.server")
+
+# Change one for a while, then restore it
+old <- options(gtropic.confirm_threshold_gb = 2)
+getOption("gtropic.confirm_threshold_gb")
+options(old)
 
 }

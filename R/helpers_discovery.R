@@ -24,14 +24,12 @@
 #'   administrative unit and includes its stable `ADM2_ID` and available name,
 #'   country or territory, and WHO regional classifications.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review all available administrative units
 #' gtropic_adm2()
 #'
 #' # Find the identifiers used for units in the Philippines
 #' gtropic_adm2(WHO_ENTITY = "Philippines")
-#' }
 #'
 #' @family discovery functions
 #' @export
@@ -105,14 +103,12 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #'   are available for the selected years, a warning is issued and an empty
 #'   tibble is returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review storms that formed during calendar year 2005
 #' gtropic_storms(date_range = 2005)
 #'
 #' # Retrieve the published identifiers and dates for Hurricane Katrina
 #' gtropic_storms(STORM_NAME = "Katrina-2005")
-#' }
 #'
 #' @family discovery functions
 #' @export
@@ -187,11 +183,9 @@ gtropic_storms <- function(date_range = NULL,
 #'   available for the selected years, a warning is issued and an empty tibble is
 #'   returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review exclusion records for storms that formed during calendar year 2005
 #' gtropic_excluded_storms(date_range = 2005)
-#' }
 #'
 #' @family discovery functions
 #' @export
@@ -311,11 +305,9 @@ fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
 #'   and `all`. `all` is the sorted union of the two collections; `current` is
 #'   empty when no separate current-year dataset is available.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' coverage <- gtropic_years()
 #' range(coverage$all)
-#' }
 #'
 #' @family discovery functions
 #' @export
@@ -342,11 +334,9 @@ gtropic_years <- function(version = ":latest") {
 #' @return A nested list preserving the structure of the published JSON
 #'   codebook.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' codebook <- gtropic_codebook()
 #' names(codebook)
-#' }
 #'
 #' @family discovery functions
 #' @export
