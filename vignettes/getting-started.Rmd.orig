@@ -231,6 +231,11 @@ If you are on a tighter computational budget and would like to reduce file trans
 and storage requirements, pass only the tables required for
 your analysis through the `tables` argument.
 
+> **Current precipitation limitation:** Some small or coastal ADM2 units may
+> have no non-missing precipitation values because no ERA5-Land grid cell was
+> assigned. Retrievals and automatic map captions identify affected units; see
+> `?gtropic_known_limitations` for details and the planned dataset correction.
+
 ## The links table
 
 `links` is returned whenever any storm-linked table is. It has one row per
