@@ -27,3 +27,10 @@ x
 names(x)
 x$wind
 }
+\seealso{
+Other retrieval functions:
+\code{\link[=gtropic_data]{gtropic_data()}},
+\code{\link[=gtropic_manifest]{gtropic_manifest()}},
+\code{\link[=gtropic_manifest_write]{gtropic_manifest_write()}}
+}
+\concept{retrieval functions}

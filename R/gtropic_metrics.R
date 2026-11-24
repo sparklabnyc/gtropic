@@ -17,6 +17,7 @@
 #' metrics <- gtropic_metrics()
 #' metrics$flood
 #'
+#' @family discovery functions
 #' @export
 gtropic_metrics <- function() {
   registry <- plot_metric_registry()

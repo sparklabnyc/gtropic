@@ -83,5 +83,14 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=gtropic_plot]{gtropic_plot()}}, \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}
+\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}
+
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
 }
+\concept{plotting functions}

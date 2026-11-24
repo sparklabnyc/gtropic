@@ -29,5 +29,12 @@ gtropic_manifest(result)
 
 }
 \seealso{
-\code{gtropic_manifest()}, \code{gtropic_data()}
+\code{\link[=gtropic_manifest]{gtropic_manifest()}}
+
+Other result methods:
+\code{\link[=format.gtropic_data]{format.gtropic_data()}},
+\code{\link[=print.gtropic_data]{print.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=summary.gtropic_data]{summary.gtropic_data()}}
 }
+\concept{result methods}

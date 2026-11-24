@@ -545,7 +545,8 @@ manifest_lookup <- function(manifest, directory_label, label) {
 #' gtropic_manifest(result)
 #' }
 #'
-#' @seealso `gtropic_manifest()`, `gtropic_data()`
+#' @seealso [gtropic_manifest()]
+#' @family result methods
 #' @export
 print.gtropic_manifest <- function(x, ...) {
   cli::cli_h1("gtropic version manifest")

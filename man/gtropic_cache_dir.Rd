@@ -25,5 +25,10 @@ gtropic_cache_dir()
 
 }
 \seealso{
-\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}}, \code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}}
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}},
+\code{\link[=gtropic_cache_list]{gtropic_cache_list()}},
+\code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
 }
+\concept{cache functions}

@@ -34,7 +34,7 @@
 #' @examples
 #' gtropic_cache_dir()
 #'
-#' @seealso [gtropic_cache_enable()], [gtropic_cache_clear()]
+#' @family cache functions
 #' @export
 gtropic_cache_dir <- function() {
   opt("cache_dir")
@@ -82,7 +82,7 @@ gtropic_cache_dir <- function() {
 #' gtropic_cache_disable(persist = TRUE)
 #' }
 #'
-#' @seealso [gtropic_cache_dir()], [gtropic_cache_prune()]
+#' @family cache functions
 #' @export
 gtropic_cache_enable <- function(dir = NULL, persist = FALSE) {
   check_flag(persist)
@@ -131,6 +131,7 @@ gtropic_cache_disable <- function(persist = FALSE) {
 #' gtropic_cache_list()
 #' gtropic_cache_size()
 #'
+#' @family cache functions
 #' @export
 gtropic_cache_list <- function() {
   cache_index_read(gtropic_cache_dir())
@@ -163,6 +164,7 @@ gtropic_cache_size <- function() {
 #' gtropic_cache_clear(confirm = FALSE)
 #' }
 #'
+#' @family cache functions
 #' @export
 gtropic_cache_clear <- function(confirm = TRUE) {
   check_flag(confirm)
@@ -222,6 +224,7 @@ gtropic_cache_clear <- function(confirm = TRUE) {
 #' gtropic_cache_prune(max_size_gb = 5, older_than_days = 90)
 #' }
 #'
+#' @family cache functions
 #' @export
 gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   dir <- gtropic_cache_dir()

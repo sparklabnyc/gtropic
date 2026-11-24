@@ -41,5 +41,9 @@ unlink(path)
 
 }
 \seealso{
-\code{\link[=gtropic_manifest]{gtropic_manifest()}}, \code{\link[=gtropic_data]{gtropic_data()}}
+Other retrieval functions:
+\code{\link[=gtropic_data]{gtropic_data()}},
+\code{\link[=gtropic_example]{gtropic_example()}},
+\code{\link[=gtropic_manifest]{gtropic_manifest()}}
 }
+\concept{retrieval functions}

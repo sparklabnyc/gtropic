@@ -27,3 +27,12 @@ metrics <- gtropic_metrics()
 metrics$flood
 
 }
+\seealso{
+Other discovery functions:
+\code{\link[=gtropic_adm2]{gtropic_adm2()}},
+\code{\link[=gtropic_codebook]{gtropic_codebook()}},
+\code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}},
+\code{\link[=gtropic_storms]{gtropic_storms()}},
+\code{\link[=gtropic_years]{gtropic_years()}}
+}
+\concept{discovery functions}

@@ -31,3 +31,13 @@ if (requireNamespace("rnaturalearth", quietly = TRUE) &&
 }
 }
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

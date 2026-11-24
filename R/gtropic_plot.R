@@ -44,22 +44,17 @@
 #'   `type = "count"` and which areas are classified for `binary = TRUE`; an explicit
 #'   threshold is required when no default exists. This argument is ignored when
 #'   `binary = FALSE` and `type = "exposure"` or `"track"`.
-#' @param binary Logical; if `TRUE`, show exposure/count maps as exposed or not
-#'   exposed using `threshold`, rather than as a continuous value scale. Defaults
-#'   to `FALSE`. Ignored when `type = "track"`.
-#' @param wind_categories Optional categorical exposure key or named list of
-#'   keys. A key is a data frame with `category`, numeric upper `threshold`,
-#'   constant `unit`, and `color` columns. It classifies aggregated
-#'   ADM2 values, retaining every key category in the static and interactive
-#'   legends even when unobserved. With multiple selected metrics, supply a
-#'   uniquely named list keyed by selected wind metric; a bare key is allowed
-#'   only for one selected metric. Keys must use the source metric's unit;
-#'   conventional spellings of meters per second, such as `"m/s"` and
-#'   `"meters per second"`, are treated as compatible. The
-#'   [gtropic_saffir_simpson()] key is allowed only for `VMAX_SUST_MS` with
-#'   `aggregate = "max"`, where it means a local sustained-wind equivalent,
-#'   not a storm status. Other wind metrics or aggregates require an explicitly
-#'   custom key. Applies only to non-binary exposure maps and wind metrics.
+#' @param binary Logical; default `FALSE`. `TRUE` shows exposure and count maps
+#'   as exposed or not exposed, using `threshold`, instead of a continuous
+#'   scale. Ignored for track maps.
+#' @param wind_categories Optional key that classifies aggregated wind values
+#'   into categories instead of a continuous scale: a data frame with
+#'   `category`, upper `threshold`, constant `unit` and `color` columns, or a
+#'   list of such keys named by wind metric. `NULL` (the default) uses the
+#'   continuous scale. Applies only to non-binary exposure maps of wind
+#'   metrics. [gtropic_saffir_simpson()] is allowed only for `VMAX_SUST_MS`
+#'   with `aggregate = "max"`; see `vignette("plotting", package = "gtropic")`
+#'   for the rules a custom key must follow.
 #' @param count_unit The unit counted when `type = "count"`: distinct qualifying
 #'   `"storms"` (the default) or `"days"`. It applies only when `type = "count"`
 #'   and is otherwise ignored.
@@ -83,26 +78,24 @@
 #' @param track_labels Logical; if `TRUE` (the default), static maps label each
 #'   storm with more than one valid observation at its first valid position when
 #'   multiple storms are shown. It is ignored for interactive maps.
-#' @param track_interval Interval in UTC hours at which track intensity points are
-#'   displayed. Can be `3` or `6` (the default). Paths always retain every observation.
-#'   `NULL` displays every point. This argument affects `type = "track"` maps
-#'   and enabled track overlays.
+#' @param track_interval Hours (UTC) between displayed track intensity points:
+#'   `6` (the default), `3`, or `NULL` for every point. Paths always use every
+#'   observation. Affects track maps and track overlays.
 #' @param track_legend_position Position of per-panel metric scale strips on static
 #'   exposure/count maps. `NULL` (the default) places horizontal strips below the
 #'   panels. Can be one of `"top"`, `"bottom"`, `"left"`, `"right"`, `"top left"`,
 #'   `"top right"`, `"bottom left"`, or `"bottom right"`.
 #'   This argument is ignored when `type = "track"` or `interactive = TRUE`.
-#' @param basemap The Installed Natural Earth layer to use for plotting.
-#'   Must be one of `"countries"` (the default), `"admin1"`, or `"none"`.
-#'   No layers are ever downloaded. `basemap = "admin1"` requires the
-#'   optional `rnaturalearthhires` package.
+#' @param basemap Natural Earth background layer: `"countries"` (the
+#'   default), `"admin1"` or `"none"`. Layers come from installed packages and
+#'   are never downloaded; `"admin1"` needs the optional `rnaturalearthhires`
+#'   package.
 #' @param bbox Map extent as an sf/sfc object, an sf bbox with a known CRS, or
 #'   four geographic bounds in [sf::st_bbox()] order:
 #'   `c(xmin, ymin, xmax, ymax)`. `NULL` (the default) derives the extent from
 #'   the plotted geometry and any displayed tracks.
-#' @param expand Nonnegative geographic-degree padding added to each side of the
-#'   map extent after `bbox` is resolved. Latitude limits are constrained to
-#'   -90--90 degrees. Defaults to 2.
+#' @param expand Padding (degrees, 0 or more) added to each side of the map
+#'   extent; default 2. Latitude limits stay within -90 to 90.
 #' @param crs A coordinate reference system understood by [sf::st_crs()]. `NULL`
 #'   (the default) selects EPSG:4326 for longitudinal spans under 40 degrees and
 #'   Equal Earth for wider extents. Static maps use this projection; interactive
@@ -134,6 +127,15 @@
 #'   [ggplot2::geom_sf()] for the ADM2 polygons. For interactive maps, named
 #'   arguments passed to [leaflet::addPolygons()]. Track plots accept none.
 #'
+#' @section Arguments by purpose:
+#' - **What to plot:** `data`, `type`, `metric`, `storm`, `adm2`, `aggregate`,
+#'   `threshold`, `binary`, `wind_categories`, `count_unit`, `facet_by`.
+#' - **Tracks:** `track`, `track_map_key`, `track_labels`, `track_interval`,
+#'   `track_legend_position`.
+#' - **Map frame:** `basemap`, `bbox`, `expand`, `crs`, `interactive`.
+#' - **Appearance:** `palette`, `direction`, `gridlines`, `make_valid`,
+#'   `title`, `subtitle`, `caption`, `quiet`, `...`.
+#'
 #' @details
 #' Maps use the actual date range of contributing observations after storm, ADM2,
 #' and linkage filters. Automatic subtitles begin with `"Aggregated across"` and
@@ -153,6 +155,7 @@
 #' An explicit `metric = "USA_STATUS"` retains the status-color display.
 #'
 #' @return A ggplot for static output or a leaflet widget for interactive output.
+#' @family plotting functions
 #' @export
 gtropic_plot <- function(
   data,
@@ -243,6 +246,7 @@ gtropic_plot <- function(
 #' @param type Plot type, defaulting to `"exposure"`.
 #' @param ... Arguments passed to [gtropic_plot()].
 #' @return The plot object returned by [gtropic_plot()].
+#' @family plotting functions
 #' @export
 plot.gtropic_data <- function(x, type = "exposure", ...) {
   gtropic_plot(x, type = type, ...)

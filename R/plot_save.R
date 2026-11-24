@@ -45,7 +45,7 @@
 #'
 #' @return Invisibly, the output filename, combined with `path` when supplied.
 #'   The path is not normalized. Saver errors are propagated.
-#' @seealso [gtropic_plot()], [ggplot2::ggsave()]
+#' @seealso [ggplot2::ggsave()]
 #' @examples
 #' \donttest{
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -55,6 +55,7 @@
 #'   unlink(output)
 #' }
 #' }
+#' @family plotting functions
 #' @export
 gtropic_save <- function(plot, filename, ..., dpi = 300,
                           width = NULL, height = NULL, units = "in") {

@@ -17,6 +17,7 @@
 #'   gtropic_basemap()
 #' }
 #' }
+#' @family plotting functions
 #' @export
 gtropic_basemap <- function(what = c("countries", "admin1", "none"),
                             scale = "medium") {

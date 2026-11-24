@@ -12,6 +12,7 @@
 #' @examples
 #' gtropic_saffir_simpson()
 #'
+#' @family plotting functions
 #' @export
 gtropic_saffir_simpson <- function() {
   tibble::tibble(

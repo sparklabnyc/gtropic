@@ -7,9 +7,11 @@
 gtropic_years(version = ":latest")
 }
 \arguments{
-\item{version}{Dataset version or versions to inspect. The default,
-\code{":latest"}, uses the most recent published versions. See \code{\link[=gtropic_data]{gtropic_data()}}
-for supported version formats.}
+\item{version}{Dataset version specification. Use \code{":latest"} (the default),
+a single version applied to both datasets, or a named character vector such
+as \code{c(historical = "2.0", current = "3.0")}. A pinned version reads the
+files of that version, and the manifest records their file ids and
+checksums.}
 }
 \value{
 A list of integer vectors with components \code{historical}, \code{current},
@@ -36,5 +38,11 @@ range(coverage$all)
 
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}
+Other discovery functions:
+\code{\link[=gtropic_adm2]{gtropic_adm2()}},
+\code{\link[=gtropic_codebook]{gtropic_codebook()}},
+\code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}},
+\code{\link[=gtropic_metrics]{gtropic_metrics()}},
+\code{\link[=gtropic_storms]{gtropic_storms()}}
 }
+\concept{discovery functions}

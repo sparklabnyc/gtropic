@@ -21,3 +21,13 @@ for \code{"Cat5"}, which has no upper bound.
 gtropic_saffir_simpson()
 
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

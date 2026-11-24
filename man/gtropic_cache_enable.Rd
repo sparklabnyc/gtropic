@@ -54,5 +54,10 @@ gtropic_cache_disable(persist = TRUE)
 
 }
 \seealso{
-\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}}, \code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}},
+\code{\link[=gtropic_cache_list]{gtropic_cache_list()}},
+\code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
 }
+\concept{cache functions}

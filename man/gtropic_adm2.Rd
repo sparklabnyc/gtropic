@@ -14,16 +14,25 @@ gtropic_adm2(
 )
 }
 \arguments{
-\item{ADM2_NAME, ADM2_GROUP, WHO_ENTITY, WHO_REGION}{Optional character vectors
-used to restrict the lookup table. Values are matched case-insensitively
-after normalizing whitespace. Multiple values within an argument are
-combined with OR; filters supplied through different arguments are
-combined with AND.}
+\item{ADM2_NAME}{Optional character vector of ADM2 names, matched
+case-insensitively.}
 
-\item{version}{Dataset version to use. The default, \code{":latest"}, uses the
-most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
+\item{ADM2_GROUP}{Optional character vector of published ADM2 groupings,
+typically country or territory codes, matched case-insensitively.}
 
-\item{cache}{Whether downloaded files may be cached. \code{NULL} uses
+\item{WHO_ENTITY}{Optional character vector of WHO entity names, matched
+case-insensitively.}
+
+\item{WHO_REGION}{Optional character vector of WHO region names or codes,
+matched case-insensitively.}
+
+\item{version}{Dataset version specification. Use \code{":latest"} (the default),
+a single version applied to both datasets, or a named character vector such
+as \code{c(historical = "2.0", current = "3.0")}. A pinned version reads the
+files of that version, and the manifest records their file ids and
+checksums.}
+
+\item{cache}{Whether downloaded source files may be cached. \code{NULL} uses
 \code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
 setting for this call.}
 }
@@ -53,5 +62,11 @@ gtropic_adm2(WHO_ENTITY = "Philippines")
 
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_storms]{gtropic_storms()}}
+Other discovery functions:
+\code{\link[=gtropic_codebook]{gtropic_codebook()}},
+\code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}},
+\code{\link[=gtropic_metrics]{gtropic_metrics()}},
+\code{\link[=gtropic_storms]{gtropic_storms()}},
+\code{\link[=gtropic_years]{gtropic_years()}}
 }
+\concept{discovery functions}

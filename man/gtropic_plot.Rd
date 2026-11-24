@@ -84,23 +84,18 @@ defined. Thresholds determine which observations are counted for
 threshold is required when no default exists. This argument is ignored when
 \code{binary = FALSE} and \code{type = "exposure"} or \code{"track"}.}
 
-\item{binary}{Logical; if \code{TRUE}, show exposure/count maps as exposed or not
-exposed using \code{threshold}, rather than as a continuous value scale. Defaults
-to \code{FALSE}. Ignored when \code{type = "track"}.}
+\item{binary}{Logical; default \code{FALSE}. \code{TRUE} shows exposure and count maps
+as exposed or not exposed, using \code{threshold}, instead of a continuous
+scale. Ignored for track maps.}
 
-\item{wind_categories}{Optional categorical exposure key or named list of
-keys. A key is a data frame with \code{category}, numeric upper \code{threshold},
-constant \code{unit}, and \code{color} columns. It classifies aggregated
-ADM2 values, retaining every key category in the static and interactive
-legends even when unobserved. With multiple selected metrics, supply a
-uniquely named list keyed by selected wind metric; a bare key is allowed
-only for one selected metric. Keys must use the source metric's unit;
-conventional spellings of meters per second, such as \code{"m/s"} and
-\code{"meters per second"}, are treated as compatible. The
-\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} key is allowed only for \code{VMAX_SUST_MS} with
-\code{aggregate = "max"}, where it means a local sustained-wind equivalent,
-not a storm status. Other wind metrics or aggregates require an explicitly
-custom key. Applies only to non-binary exposure maps and wind metrics.}
+\item{wind_categories}{Optional key that classifies aggregated wind values
+into categories instead of a continuous scale: a data frame with
+\code{category}, upper \code{threshold}, constant \code{unit} and \code{color} columns, or a
+list of such keys named by wind metric. \code{NULL} (the default) uses the
+continuous scale. Applies only to non-binary exposure maps of wind
+metrics. \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} is allowed only for \code{VMAX_SUST_MS}
+with \code{aggregate = "max"}; see \code{vignette("plotting", package = "gtropic")}
+for the rules a custom key must follow.}
 
 \item{count_unit}{The unit counted when \code{type = "count"}: distinct qualifying
 \code{"storms"} (the default) or \code{"days"}. It applies only when \code{type = "count"}
@@ -130,10 +125,9 @@ supplied key, including categories absent from the plotted observations.}
 storm with more than one valid observation at its first valid position when
 multiple storms are shown. It is ignored for interactive maps.}
 
-\item{track_interval}{Interval in UTC hours at which track intensity points are
-displayed. Can be \code{3} or \code{6} (the default). Paths always retain every observation.
-\code{NULL} displays every point. This argument affects \code{type = "track"} maps
-and enabled track overlays.}
+\item{track_interval}{Hours (UTC) between displayed track intensity points:
+\code{6} (the default), \code{3}, or \code{NULL} for every point. Paths always use every
+observation. Affects track maps and track overlays.}
 
 \item{track_legend_position}{Position of per-panel metric scale strips on static
 exposure/count maps. \code{NULL} (the default) places horizontal strips below the
@@ -141,19 +135,18 @@ panels. Can be one of \code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right
 \code{"top right"}, \code{"bottom left"}, or \code{"bottom right"}.
 This argument is ignored when \code{type = "track"} or \code{interactive = TRUE}.}
 
-\item{basemap}{The Installed Natural Earth layer to use for plotting.
-Must be one of \code{"countries"} (the default), \code{"admin1"}, or \code{"none"}.
-No layers are ever downloaded. \code{basemap = "admin1"} requires the
-optional \code{rnaturalearthhires} package.}
+\item{basemap}{Natural Earth background layer: \code{"countries"} (the
+default), \code{"admin1"} or \code{"none"}. Layers come from installed packages and
+are never downloaded; \code{"admin1"} needs the optional \code{rnaturalearthhires}
+package.}
 
 \item{bbox}{Map extent as an sf/sfc object, an sf bbox with a known CRS, or
 four geographic bounds in \code{\link[sf:st_bbox]{sf::st_bbox()}} order:
 \code{c(xmin, ymin, xmax, ymax)}. \code{NULL} (the default) derives the extent from
 the plotted geometry and any displayed tracks.}
 
-\item{expand}{Nonnegative geographic-degree padding added to each side of the
-map extent after \code{bbox} is resolved. Latitude limits are constrained to
--90--90 degrees. Defaults to 2.}
+\item{expand}{Padding (degrees, 0 or more) added to each side of the map
+extent; default 2. Latitude limits stay within -90 to 90.}
 
 \item{crs}{A coordinate reference system understood by \code{\link[sf:st_crs]{sf::st_crs()}}. \code{NULL}
 (the default) selects EPSG:4326 for longitudinal spans under 40 degrees and
@@ -221,3 +214,26 @@ size points use \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} 
 before classification.
 An explicit \code{metric = "USA_STATUS"} retains the status-color display.
 }
+\section{Arguments by purpose}{
+
+\itemize{
+\item \strong{What to plot:} \code{data}, \code{type}, \code{metric}, \code{storm}, \code{adm2}, \code{aggregate},
+\code{threshold}, \code{binary}, \code{wind_categories}, \code{count_unit}, \code{facet_by}.
+\item \strong{Tracks:} \code{track}, \code{track_map_key}, \code{track_labels}, \code{track_interval},
+\code{track_legend_position}.
+\item \strong{Map frame:} \code{basemap}, \code{bbox}, \code{expand}, \code{crs}, \code{interactive}.
+\item \strong{Appearance:} \code{palette}, \code{direction}, \code{gridlines}, \code{make_valid},
+\code{title}, \code{subtitle}, \code{caption}, \code{quiet}, \code{...}.
+}
+}
+
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

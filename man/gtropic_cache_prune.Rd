@@ -37,3 +37,11 @@ gtropic_cache_prune(max_size_gb = 5, older_than_days = 90)
 }
 
 }
+\seealso{
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}},
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}},
+\code{\link[=gtropic_cache_list]{gtropic_cache_list()}}
+}
+\concept{cache functions}

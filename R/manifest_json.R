@@ -27,7 +27,7 @@
 #' manifest
 #' unlink(path)
 #'
-#' @seealso [gtropic_manifest()], [gtropic_data()]
+#' @family retrieval functions
 #' @export
 gtropic_manifest_write <- function(x, path) {
   if (inherits(x, "gtropic_data")) x <- gtropic_manifest(x)

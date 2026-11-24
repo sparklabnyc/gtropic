@@ -8,6 +8,7 @@
 #' \donttest{
 #' theme_gtropic()
 #' }
+#' @family plotting functions
 #' @export
 theme_gtropic <- function(base_size = 12) {
   rlang::check_installed("ggplot2", reason = "to use the plotting theme")
@@ -46,6 +47,7 @@ theme_gtropic <- function(base_size = 12) {
 #' scale_fill_gtropic_c(metric = "VMAX_SUST_MS")
 #' scale_fill_gtropic_d(name = "Exposed")
 #' }
+#' @family plotting functions
 #' @export
 scale_fill_gtropic_c <- function(
   ..., metric = NULL, palette = NULL, direction = 1, name = NULL,

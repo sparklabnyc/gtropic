@@ -79,8 +79,7 @@ new_gtropic_data <- function(tables,
 #' diagnostics <- gtropic_diagnostics(res)
 #' }
 #'
-#' @seealso [gtropic_data()]; [gtropic_manifest_write()] to save a manifest as
-#'   JSON.
+#' @family retrieval functions
 #' @export
 gtropic_manifest <- function(x) {
   check_gtropic_data(x)
@@ -128,6 +127,7 @@ gtropic_availability <- function(x) {
 #' print(gtropic_filters(res))
 #' }
 #'
+#' @family result methods
 #' @export
 print.gtropic_filters <- function(x, n = 10L, ...) {
   if (!is.numeric(n) || length(n) != 1L || is.na(n) || !is.finite(n) ||
@@ -206,6 +206,7 @@ format_filter_preview <- function(x, n) {
 #' gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
 #' }
 #'
+#' @family result methods
 #' @export
 print.gtropic_data <- function(x, ...) {
   mf <- attr(x, "manifest")
@@ -264,6 +265,7 @@ print.gtropic_data <- function(x, ...) {
 #' summary(res)
 #' }
 #'
+#' @family result methods
 #' @export
 summary.gtropic_data <- function(object, ...) {
   tables <- vapply(names(object), function(nm) {
@@ -352,6 +354,7 @@ print.summary.gtropic_data <- function(x, ...) {
 #' format(gtropic_manifest(gtropic_example()))
 #'
 #' @name format.gtropic_data
+#' @family result methods
 #' @export
 format.gtropic_data <- function(x, ...) {
   cli::cli_fmt(print(x, ...))

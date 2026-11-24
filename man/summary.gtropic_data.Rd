@@ -36,3 +36,11 @@ summary(res)
 }
 
 }
+\seealso{
+Other result methods:
+\code{\link[=format.gtropic_data]{format.gtropic_data()}},
+\code{\link[=print.gtropic_data]{print.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=print.gtropic_manifest]{print.gtropic_manifest()}}
+}
+\concept{result methods}

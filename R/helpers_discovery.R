@@ -18,16 +18,7 @@
 #' exposure data. Filters that do not match a published value produce an error
 #' rather than an empty result.
 #'
-#' @param ADM2_NAME,ADM2_GROUP,WHO_ENTITY,WHO_REGION Optional character vectors
-#'   used to restrict the lookup table. Values are matched case-insensitively
-#'   after normalizing whitespace. Multiple values within an argument are
-#'   combined with OR; filters supplied through different arguments are
-#'   combined with AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble containing the published ADM2 lookup. Each row represents an
 #'   administrative unit and includes its stable `ADM2_ID` and available name,
@@ -42,7 +33,7 @@
 #' gtropic_adm2(WHO_ENTITY = "Philippines")
 #' }
 #'
-#' @seealso [gtropic_data()], [gtropic_storms()]
+#' @family discovery functions
 #' @export
 gtropic_adm2 <- function(ADM2_NAME = NULL,
                          ADM2_GROUP = NULL,
@@ -107,11 +98,7 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #'   Southern Hemisphere storms can form in the preceding calendar year,
 #'   partitions for both `YYYY - 1` and `YYYY` are considered. This candidate
 #'   set is combined with a `date_range` filter using AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble containing the published metadata records for storms that
 #'   satisfy the requested genesis period and name filters. If no metadata files
@@ -127,7 +114,7 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' gtropic_storms(STORM_NAME = "Katrina-2005")
 #' }
 #'
-#' @seealso [gtropic_data()], [gtropic_adm2()], [gtropic_excluded_storms()]
+#' @family discovery functions
 #' @export
 gtropic_storms <- function(date_range = NULL,
                             STORM_NAME = NULL,
@@ -192,11 +179,7 @@ gtropic_storms <- function(date_range = NULL,
 #'   excluded-storm record. The suffix is the storm season; partitions for
 #'   genesis years `YYYY - 1` and `YYYY` are considered and combined with a
 #'   `date_range` filter using AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble with `STORM_ID`, `STORM_NAME`, and
 #'   `STORM_GENESIS_DATE_UTC` for published excluded storms satisfying the
@@ -210,7 +193,7 @@ gtropic_storms <- function(date_range = NULL,
 #' gtropic_excluded_storms(date_range = 2005)
 #' }
 #'
-#' @seealso [gtropic_storms()], [gtropic_data()]
+#' @family discovery functions
 #' @export
 gtropic_excluded_storms <- function(date_range = NULL,
                                      STORM_NAME = NULL,
@@ -322,9 +305,7 @@ fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
 #' genesis dates in the current calendar year are published, so coverage for
 #' that calendar year may be provisional.
 #'
-#' @param version Dataset version or versions to inspect. The default,
-#'   `":latest"`, uses the most recent published versions. See [gtropic_data()]
-#'   for supported version formats.
+#' @inheritParams gtropic_data
 #'
 #' @return A list of integer vectors with components `historical`, `current`,
 #'   and `all`. `all` is the sorted union of the two collections; `current` is
@@ -336,7 +317,7 @@ fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
 #' range(coverage$all)
 #' }
 #'
-#' @seealso [gtropic_data()]
+#' @family discovery functions
 #' @export
 gtropic_years <- function(version = ":latest") {
   discovery <- discover_datasets(resolve_versions(version), quiet = TRUE)
@@ -356,11 +337,7 @@ gtropic_years <- function(version = ":latest") {
 #' precipitation, flood, population, and storm metadata in an exposure
 #' analysis.
 #'
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded source files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A nested list preserving the structure of the published JSON
 #'   codebook.
@@ -371,7 +348,7 @@ gtropic_years <- function(version = ":latest") {
 #' names(codebook)
 #' }
 #'
-#' @seealso [gtropic_data()]
+#' @family discovery functions
 #' @export
 gtropic_codebook <- function(version = ":latest", cache = NULL) {
   ctx <- helper_context(version, cache = cache)

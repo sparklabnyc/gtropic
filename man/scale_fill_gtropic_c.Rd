@@ -49,3 +49,13 @@ scale_fill_gtropic_c(metric = "VMAX_SUST_MS")
 scale_fill_gtropic_d(name = "Exposed")
 }
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

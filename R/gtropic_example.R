@@ -18,6 +18,7 @@
 #' x
 #' names(x)
 #' x$wind
+#' @family retrieval functions
 #' @export
 gtropic_example <- function() {
   x <- readRDS(system.file(

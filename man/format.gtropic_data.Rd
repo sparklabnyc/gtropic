@@ -32,3 +32,11 @@ vector, for example to include in a log or a report.
 format(gtropic_manifest(gtropic_example()))
 
 }
+\seealso{
+Other result methods:
+\code{\link[=print.gtropic_data]{print.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=print.gtropic_manifest]{print.gtropic_manifest()}},
+\code{\link[=summary.gtropic_data]{summary.gtropic_data()}}
+}
+\concept{result methods}

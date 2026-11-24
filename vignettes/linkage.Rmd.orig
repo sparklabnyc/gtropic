@@ -126,6 +126,13 @@ act as outer bounds. The supplied radii arguments `wind/precip/flood_radius_km` 
 In this way, asking for only ADM2s within the "United States", but with a large `wind_radius_km`,
 will not return `ADM2_ID`s within to "Mexico" even if the a storm's wind field happens to reach Mexico from the U.S.
 
+Two more rules decide what the other tables hold. A finite radius leaves out
+pairs without a published `STORM_DIST_KM`, while `Inf` or `NULL` keeps them.
+And when a requested hazard table has a finite radius, the returned `adm2`,
+`pop` and `geometry` rows, and the storms in `tracks`, are limited to the
+units and storms in its qualifying links (the union, for several such
+hazards); with no finite radius they keep the whole selected scope.
+
 ## How to avoid double-counting exposure data
 
 Depending on how you define your precipitation data's temporal window,
