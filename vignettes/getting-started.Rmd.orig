@@ -17,6 +17,12 @@ knitr::opts_chunk$set(
   fig.cap = NA,
   out.width = "100%"
 )
+# Figures (Plan 04 PERF-12): ragg for cleaner text, an opaque white
+# background so the PNG needs no alpha channel, and lossless optipng
+# recompression. vignettes/precompute.R refuses to run without optipng.
+knitr::opts_chunk$set(dev = "ragg_png", dev.args = list(background = "white"))
+knitr::knit_hooks$set(optipng = knitr::hook_optipng)
+knitr::opts_chunk$set(optipng = "-o5 -strip all")
 ```
 
 This vignette walks through installing the `gtropic` package, retrieving your first

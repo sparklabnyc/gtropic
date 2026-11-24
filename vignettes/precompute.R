@@ -25,6 +25,20 @@ if (!requireNamespace("knitr", quietly = TRUE)) {
   stop("knitr is required to precompute the vignettes.")
 }
 
+# Figures are drawn with ragg and recompressed losslessly by optipng (see the
+# setup chunk of each .Rmd.orig). Without optipng, knitr only warns, and
+# unoptimised figures would be committed, so refuse to start instead.
+if (!requireNamespace("ragg", quietly = TRUE)) {
+  stop("ragg is required to precompute the vignettes: install.packages(\"ragg\").")
+}
+if (!nzchar(Sys.which("optipng"))) {
+  stop(
+    "optipng is required to precompute the vignettes: it recompresses the ",
+    "figures losslessly. Install it (for example `brew install optipng` or ",
+    "`apt install optipng`) and make sure it is on the PATH."
+  )
+}
+
 # Ensure knitted output is clean for version control while retaining UTF-8 text
 # and the terminating newline expected of text files.
 normalize_rmd_whitespace <- function(path) {
