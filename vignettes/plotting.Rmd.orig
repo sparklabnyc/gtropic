@@ -14,7 +14,6 @@ knitr::opts_chunk$set(
   fig.width = 10,
   fig.height = 7,
   dpi = 110,
-  fig.cap = NA,
   fig.path = "figs/",
   out.width = "100%"
 )
@@ -54,38 +53,38 @@ sustained wind (`VMAX_SUST_MS`), total precipitation (`PRECIP_MM`) and
 largest flooded share (`PROP_FLOODED_AREA`). The caption records the radii and
 windows of the plotted data.
 
-```{r katrina-plot}
+```{r katrina-exposure, fig.alt = "Three map panels of the eastern United States, Cuba and the Bahamas showing, for each administrative unit near Hurricane Katrina (2005)'s track, maximum sustained wind, cumulative precipitation and maximum flooded area, with the track drawn on each panel and coloured by Saffir-Simpson category."}
 gtropic_plot(katrina)
 ```
 
 `gtropic_metrics()` lists every metric that can be mapped and how it is
 aggregated per unit by default:
 
-```{r}
+```{r katrina-metrics}
 gtropic_metrics()
 ```
 
 `aggregate` overrides the default, for example total against largest daily
 precipitation:
 
-```{r}
+```{r katrina-precip-total, fig.alt = "Map of the eastern United States, Cuba and the Bahamas shading each administrative unit near Hurricane Katrina (2005)'s track by its total precipitation over the storm's window, with the track overlaid."}
 gtropic_plot(katrina, metric = "PRECIP_MM", aggregate = "sum")
 ```
 
-```{r}
+```{r katrina-precip-max, fig.alt = "Map of the same area shading each administrative unit by its largest single-day precipitation during Hurricane Katrina (2005)'s window, with the track overlaid."}
 gtropic_plot(katrina, metric = "PRECIP_MM", aggregate = "max")
 ```
 
 `metric` chooses which exposures to show, one panel each:
 
-```{r}
+```{r katrina-wind-metrics, fig.alt = "Three map panels comparing best-track maximum sustained wind, best-track maximum gust and wind-radii maximum sustained wind for each administrative unit near Hurricane Katrina (2005)'s track."}
 gtropic_plot(
   katrina,
   metric = c("VMAX_SUST_MS", "VMAX_GUST_MS", "WIND_RADII_VMAX_SUST_MS")
 )
 ```
 
-```{r}
+```{r katrina-wind-durations, fig.alt = "Three map panels comparing, for each administrative unit near Hurricane Katrina (2005)'s track, how many minutes it experienced sustained winds, gusts and wind-radii sustained winds."}
 gtropic_plot(
   katrina,
   metric = c("SUST_DUR_MINUTES", "GUST_DUR_MINUTES", "WIND_RADII_SUST_DUR_MINUTES")
@@ -96,7 +95,7 @@ gtropic_plot(
 position, so each panel keeps its own scale. `?gtropic_plot` lists the other
 settings, such as `basemap`:
 
-```{r multi-metric-map}
+```{r multi-metric-map, fig.alt = "Two map panels with first-level administrative boundaries, showing maximum sustained wind on an inferno scale and total precipitation on a mako scale for each administrative unit near Hurricane Katrina (2005)'s track."}
 gtropic_plot(
   katrina,
   metric = c("VMAX_SUST_MS", "PRECIP_MM"),
@@ -114,7 +113,7 @@ Saffir-Simpson categories of `gtropic_saffir_simpson()`, in metres per second;
 `track_map_key` takes another key, and `track_interval` shows points every
 three or six hours while the path keeps every observation:
 
-```{r}
+```{r katrina-track, fig.alt = "Map of Hurricane Katrina (2005)'s track from the Bahamas across Florida and the Gulf of Mexico into the eastern United States, with points every three hours coloured by Saffir-Simpson category."}
 gtropic_plot(katrina, type = "track", basemap = "admin1", track_interval = 3)
 ```
 
@@ -123,12 +122,16 @@ gtropic_plot(katrina, type = "track", basemap = "admin1", track_interval = 3)
 `wind_categories` sorts units into classes by the wind they received, using a
 key like the one `gtropic_saffir_simpson()` returns:
 
-```{r}
+```{r saffir-simpson-key}
 gtropic_saffir_simpson()
 ```
 
-```{r}
-gtropic_plot(katrina, wind_categories = gtropic_saffir_simpson())
+```{r katrina-categories, fig.alt = "Map of the eastern United States, Cuba and the Bahamas classifying each administrative unit near Hurricane Katrina (2005)'s track into Saffir-Simpson wind categories, from tropical depression to category 5, with the track overlaid."}
+gtropic_plot(
+  katrina,
+  metric = "VMAX_SUST_MS",
+  wind_categories = gtropic_saffir_simpson()
+)
 ```
 
 The Saffir-Simpson key is allowed only for `VMAX_SUST_MS` with
@@ -140,7 +143,7 @@ belongs to that category), and `unit` is one value matching the metric's unit
 (`"m/s"` and `"meters per second"` both work). With several metrics, pass a
 list of keys named by metric. For example, two classes:
 
-```{r}
+```{r katrina-two-class, fig.alt = "Map classifying each administrative unit near Hurricane Katrina (2005)'s track as below hurricane force or hurricane force, using a custom two-class wind key."}
 two_class_wind <- data.frame(
   category = c("Below hurricane", "Hurricane-force"),
   threshold = c(32, Inf),
@@ -169,31 +172,31 @@ gtropic_plot(katrina, interactive = TRUE, basemap = "none")
 
 The storms of 2019 that came within 500 km of a unit in India:
 
-```{r}
+```{r india-query}
 india_19 <- gtropic_data(WHO_ENTITY = "India", date_range = 2019)
 
 india_19$storm_metadata
 ```
 
-```{r}
+```{r india-tracks, fig.alt = "Map of the Arabian Sea, the Bay of Bengal and surrounding land showing the tracks of the storms that formed in 2019 and came within 500 km of India, with points coloured by Saffir-Simpson category."}
 gtropic_plot(india_19, type = "track")
 ```
 
 The largest sustained wind each unit received from any of them:
 
-```{r}
+```{r multi-storm-exposure, fig.alt = "Map of India's coastal administrative units shaded by the maximum sustained wind each received from any 2019 storm, with the storm tracks over the Arabian Sea and the Bay of Bengal drawn on top."}
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track_labels = FALSE)
 ```
 
 Without the tracks:
 
-```{r}
+```{r multi-storm-no-tracks, fig.alt = "The same map of India's administrative units shaded by maximum sustained wind from the 2019 storms, without the tracks."}
 gtropic_plot(india_19, metric = "VMAX_SUST_MS", track = FALSE)
 ```
 
 `bbox` zooms in on a region:
 
-```{r}
+```{r multi-storm-zoom, fig.alt = "Map zoomed to the north-east coast of India, around Odisha and West Bengal, shading each administrative unit by the maximum sustained wind it received from the 2019 storms."}
 gtropic_plot(
   india_19,
   metric = "VMAX_SUST_MS",
@@ -208,17 +211,17 @@ gtropic_plot(
 Count maps count, per unit, the storms or local days on which a metric met its
 threshold. The caption records the definitions used.
 
-```{r count-map}
+```{r count-map, fig.alt = "Map of India's administrative units, each shaded by the number of local days on which a 2019 storm brought it maximum sustained wind above the default threshold."}
 gtropic_plot(india_19, type = "count", count_unit = "days", track = FALSE)
 ```
 
-```{r}
+```{r count-map-storms, fig.alt = "Map of India's administrative units, each shaded by the number of 2019 storms that brought it maximum sustained wind above the default threshold."}
 gtropic_plot(india_19, type = "count", count_unit = "storms", track = FALSE)
 ```
 
 `threshold` changes the definitions:
 
-```{r}
+```{r count-map-thresholds, fig.alt = "Two map panels of India's administrative units counting the days on which any sustained wind was recorded and the days with at least 10 mm of precipitation during the 2019 storm windows."}
 gtropic_plot(
   india_19,
   type = "count",
