@@ -10,10 +10,14 @@
 # query: the cold run starts from an empty cache, the warm run reuses it. The
 # user's real cache is never touched.
 #
+# The query is evaluated exactly once per case. (`bench::mark(memory = TRUE)`
+# would evaluate it twice, once to profile memory and once to time it, so a
+# "cold" time would be measured on the warm second run.)
+#
 # Output: one row per case with elapsed seconds, R heap allocation
-# (`bench::mark()` `mem_alloc`), maximum RSS, bytes downloaded and the number of
-# Dataverse API requests (one per dataset listed, version looked up or file
-# downloaded; retries are not counted). Paste the table into the
+# (`bench::bench_memory()` `mem_alloc`), maximum RSS, bytes downloaded and the
+# number of Dataverse API requests (one per dataset listed, version looked up
+# or file downloaded; retries are not counted). Paste the table into the
 # Benchmarks section of PROGRESS.md. Do not commit output.
 #
 # These queries hit the live Harvard Dataverse server and download tens of MB.
@@ -70,10 +74,11 @@ run_case <- function(name, cache_dir) {
       .package = "gtropic"
     )
   }
-  b <- bench::mark(run(), iterations = 1, check = FALSE, memory = TRUE)
+  # One evaluation, timed and memory-profiled together.
+  mem <- bench::bench_memory(elapsed <- bench::bench_time(run()))
   cat(sprintf(
     "RESULT\t%.1f\t%s\t%.0f\t%d\n",
-    as.numeric(b$median), format(b$mem_alloc), stats$bytes, stats$calls
+    as.numeric(elapsed[["real"]]), format(mem$mem_alloc), stats$bytes, stats$calls
   ))
 }
 
