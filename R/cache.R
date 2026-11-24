@@ -55,6 +55,15 @@ gtropic_cache_dir <- function() {
 #' `.Rprofile`. Enabling creates the cache directory if needed; disabling does
 #' not delete cached files. Use [gtropic_cache_clear()] to delete them.
 #'
+#' The first time in a session that a file is cached, a message says where.
+#' The cache is managed automatically: after each retrieval that adds to it,
+#' files downloaded more than `getOption("gtropic.cache_max_age_days")` (180)
+#' days ago, files superseded by a newer dataset version retrieved with
+#' `version = ":latest"`, and then the least recently downloaded files beyond
+#' `getOption("gtropic.cache_max_gb")` (10) gigabytes are removed. Files used
+#' by that retrieval are never removed. Set either option to `Inf` to switch
+#' its rule off; see [gtropic_options].
+#'
 #' @param dir Optional path for the cache. If `NULL`, the current value returned
 #'   by [gtropic_cache_dir()] is used. A custom location may be useful when
 #'   exposure files must be stored on a larger disk.
@@ -196,6 +205,9 @@ gtropic_cache_clear <- function(confirm = TRUE) {
 #' If identical file content is referenced by multiple dataset versions, the
 #' physical file is retained until no remaining cache entry references it.
 #'
+#' The cache is also pruned automatically after retrievals; see
+#' [gtropic_cache_enable()] and [gtropic_options].
+#'
 #' @param max_size_gb Optional maximum indexed cache size in gigabytes. The
 #'   oldest entries are removed until the indexed size is at or below this
 #'   value.
@@ -242,15 +254,7 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
     return(invisible(idx[0, , drop = FALSE]))
   }
 
-  removed <- idx[drop, , drop = FALSE]
-  kept <- idx[!drop, , drop = FALSE]
-
-  # A blob may be referenced by more than one index entry (the same bytes at two
-  # dataset versions). Only delete blobs no surviving entry still points at.
-  orphans <- setdiff(unique(removed$checksum), unique(kept$checksum))
-  unlink(cache_blob_path(dir, orphans))
-
-  cache_index_write(dir, kept)
+  removed <- cache_remove_entries(dir, idx, drop)
   inform_unless_quiet(
     c(v = "Pruned {nrow(removed)} entr{?y/ies}, freeing
            {format_bytes(sum(removed$size_bytes, na.rm = TRUE))}."),
@@ -522,6 +526,8 @@ cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
 #' @param key Named list as for `cache_get()`.
 #' @param raw Raw vector to store.
 #' @param checksum Published checksum.
+#' @param downloaded_at Download time to record.
+#' @param quiet Suppress the first-use notice.
 #'
 #' @return Original download time recorded for the cache entry, in whole
 #'   seconds (as stored in the index, so a later cache hit reports the same
@@ -529,11 +535,12 @@ cache_get_record <- function(cache, key, expected_checksum = NA_character_) {
 #' @keywords internal
 #' @noRd
 cache_put <- function(cache, key, raw, checksum = NA_character_,
-                      downloaded_at = Sys.time()) {
+                      downloaded_at = Sys.time(), quiet = FALSE) {
   if (!isTRUE(cache$enabled)) {
     return(as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC"))
   }
   downloaded_at <- cache_time(downloaded_at)
+  cache_first_use_notice(cache$dir, quiet = quiet)
 
   if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_raw(raw)
 
@@ -664,4 +671,182 @@ cache_discovery_read <- function(dir, server, collection, versions,
     ), call = call)
   }
   snapshot
+}
+
+# --- automatic management (CRAN-11) ----------------------------------------
+
+#' Say once per session where downloads are cached
+#'
+#' @param dir Cache directory.
+#' @param quiet Suppress the notice (it is then shown on a later write).
+#' @return Invisibly, whether the notice was shown.
+#' @keywords internal
+#' @noRd
+cache_first_use_notice <- function(dir, quiet = FALSE) {
+  if (isTRUE(quiet) || isTRUE(.gtropic_session$cache_notice_shown)) {
+    return(invisible(FALSE))
+  }
+  .gtropic_session$cache_notice_shown <- TRUE
+  cli::cli_inform(c(
+    i = "Caching downloads in {.path {dir}} (see {.code ?gtropic_cache_enable}
+         to change or disable)."
+  ))
+  invisible(TRUE)
+}
+
+#' Remove index entries and the blobs no remaining entry uses
+#'
+#' A blob may be referenced by more than one index entry (the same bytes at two
+#' dataset versions), so only blobs that no surviving entry points at are
+#' deleted.
+#'
+#' @param dir Cache directory.
+#' @param idx The cache index.
+#' @param drop Logical vector over `idx`: entries to remove.
+#' @return The removed entries.
+#' @keywords internal
+#' @noRd
+cache_remove_entries <- function(dir, idx, drop) {
+  removed <- idx[drop, , drop = FALSE]
+  kept <- idx[!drop, , drop = FALSE]
+  orphans <- setdiff(unique(removed$checksum), unique(kept$checksum))
+  unlink(cache_blob_path(dir, orphans), recursive = FALSE, force = FALSE)
+  cache_index_write(dir, kept)
+  removed
+}
+
+#' One string per cache key, for matching index entries
+#' @keywords internal
+#' @noRd
+cache_key_string <- function(server, doi, directory_label, label,
+                             version = NULL) {
+  parts <- list(server, doi, directory_label, label)
+  if (!is.null(version)) parts <- c(parts, list(version))
+  do.call(paste, c(parts, sep = "\r"))
+}
+
+#' Is dataset version `a` older than version `b`?
+#'
+#' Dataverse versions are `major.minor`. Values that do not parse are never
+#' treated as older.
+#' @keywords internal
+#' @noRd
+version_older <- function(a, b) {
+  vapply(seq_along(a), function(i) {
+    va <- numeric_version(a[i], strict = FALSE)
+    vb <- numeric_version(b[i], strict = FALSE)
+    isTRUE(!is.na(va) && !is.na(vb) && va < vb)
+  }, logical(1))
+}
+
+#' Manage the cache automatically after a retrieval
+#'
+#' CRAN asks that cached files be kept small and actively managed, including
+#' removing outdated material. After a retrieval that wrote to the cache:
+#'
+#' 1. entries downloaded more than `gtropic.cache_max_age_days` ago are
+#'    removed;
+#' 2. entries for a file that `latest` holds at a newer dataset version are
+#'    removed (they were superseded by a `":latest"` retrieval);
+#' 3. the least recently downloaded entries are removed until the indexed size
+#'    is at most `gtropic.cache_max_gb`.
+#'
+#' Entries in `keep` (the files the retrieval used) are never removed. `Inf`
+#' disables rules 1 and 3.
+#'
+#' @param dir Cache directory.
+#' @param keep Key strings (`cache_key_string()` with version) of protected
+#'   entries.
+#' @param latest A data frame of the files retrieved at `":latest"`, with
+#'   `server`, `doi`, `directory_label`, `label` and `version`.
+#' @param quiet Suppress the summary message.
+#' @param now Current time.
+#'
+#' @return The removed entries, invisibly.
+#' @keywords internal
+#' @noRd
+cache_manage <- function(dir, keep = character(0), latest = NULL,
+                         quiet = FALSE, now = Sys.time()) {
+  idx <- cache_index_read(dir)
+  if (nrow(idx) == 0L) {
+    return(invisible(idx))
+  }
+  protected <- cache_key_string(
+    idx$server, idx$doi, idx$directory_label, idx$label, idx$version
+  ) %in% keep
+  drop <- rep(FALSE, nrow(idx))
+
+  max_age_days <- opt("cache_max_age_days")
+  if (is.finite(max_age_days)) {
+    drop <- drop | (!is.na(idx$fetched_at) &
+      idx$fetched_at < now - max_age_days * 86400)
+  }
+
+  if (!is.null(latest) && nrow(latest) > 0L) {
+    newest <- latest$version[match(
+      cache_key_string(idx$server, idx$doi, idx$directory_label, idx$label),
+      cache_key_string(
+        latest$server, latest$doi, latest$directory_label, latest$label
+      )
+    )]
+    drop <- drop | (!is.na(newest) & version_older(idx$version, newest))
+  }
+  drop <- drop & !protected
+
+  max_gb <- opt("cache_max_gb")
+  if (is.finite(max_gb)) {
+    # Least recently downloaded first out; protected entries always stay and
+    # count towards the budget first.
+    survivors <- which(!drop)
+    ord <- survivors[order(
+      !protected[survivors], -as.numeric(idx$fetched_at[survivors])
+    )]
+    size <- idx$size_bytes[ord]
+    running <- cumsum(ifelse(is.na(size), 0, size))
+    drop[ord[running > max_gb * 1024^3 & !protected[ord]]] <- TRUE
+  }
+
+  if (!any(drop)) {
+    return(invisible(idx[0, , drop = FALSE]))
+  }
+  removed <- cache_remove_entries(dir, idx, drop)
+  inform_unless_quiet(
+    c(i = "Removed {nrow(removed)} old or outdated cached file{?s}
+           ({format_bytes(sum(removed$size_bytes, na.rm = TRUE))}) to keep the
+           cache within its limits (see {.code ?gtropic_options})."),
+    quiet = quiet
+  )
+  invisible(removed)
+}
+
+#' Automatic cache management for a fetch context
+#'
+#' Runs `cache_manage()` when the retrieval behind `ctx` wrote to the cache,
+#' protecting every file it used.
+#'
+#' @param ctx A fetch context.
+#' @return The removed entries, invisibly, or `NULL` when nothing ran.
+#' @keywords internal
+#' @noRd
+cache_manage_ctx <- function(ctx) {
+  if (!isTRUE(ctx$cache$enabled) || !isTRUE(ctx$cache_state$written)) {
+    return(invisible(NULL))
+  }
+  mf <- ctx$manifest_out$value
+  files <- mf$files
+  keep <- cache_key_string(
+    mf$server, files$dataset_doi, files$directory_label, files$label,
+    files$dataset_version
+  )
+  at_latest <- files[files$dataset_doi %in% ctx$latest_dois, , drop = FALSE]
+  latest <- tibble::tibble(
+    server = rep(mf$server, nrow(at_latest)),
+    doi = at_latest$dataset_doi,
+    directory_label = at_latest$directory_label,
+    label = at_latest$label,
+    version = at_latest$dataset_version
+  )
+  cache_manage(ctx$cache$dir, keep = keep, latest = latest,
+    quiet = ctx$notice_quiet
+  )
 }

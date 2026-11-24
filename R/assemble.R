@@ -103,7 +103,11 @@ fetch_file <- function(dataset, directory_label, label, ctx,
       quiet = ctx$quiet
     )
     verify_checksum(raw, checksum, label = path, checksum_type = checksum_type)
-    downloaded_at <- cache_put(ctx$cache, key, raw, checksum = checksum)
+    downloaded_at <- cache_put(ctx$cache, key, raw,
+      checksum = checksum,
+      quiet = ctx$notice_quiet
+    )
+    if (isTRUE(ctx$cache$enabled)) ctx$cache_state$written <- TRUE
     # Caching may be disabled. The timestamp still records this download.
     if (is.null(downloaded_at) || is.na(downloaded_at)) downloaded_at <- Sys.time()
   }
@@ -184,24 +188,37 @@ fetch_yearly <- function(table, years, ctx, col_select = NULL,
 #' @param discovery Output of `discover_datasets()`.
 #' @param cache Resolved cache list.
 #' @param manifest_in User-supplied manifest, or `NULL`.
-#' @param quiet Suppress informational output.
+#' @param quiet Suppress progress messages.
+#' @param offline Use only cached files.
+#' @param latest_dois DOIs retrieved at `":latest"`; their older cached
+#'   versions count as outdated (see `cache_manage()`).
+#' @param notice_quiet Suppress the cache's first-use notice and automatic
+#'   management messages. Defaults to `quiet`; the discovery helpers, which
+#'   are always quiet about progress, pass `getOption("gtropic.quiet")`.
 #'
-#' @return A list; `manifest_out` is an environment so accumulation across
-#'   nested calls does not depend on returning it everywhere.
+#' @return A list; `manifest_out` and `cache_state` are environments so
+#'   accumulation across nested calls does not depend on returning them
+#'   everywhere.
 #' @keywords internal
 #' @noRd
 fetch_context <- function(discovery, cache, manifest_in = NULL, quiet = FALSE,
-                          offline = FALSE) {
+                          offline = FALSE, latest_dois = character(0),
+                          notice_quiet = quiet) {
   out <- new.env(parent = emptyenv())
   out$value <- manifest_new(discovery)
+  cache_state <- new.env(parent = emptyenv())
+  cache_state$written <- FALSE
 
   list(
     discovery = discovery,
     cache = cache,
     manifest_in = manifest_in,
     manifest_out = out,
+    cache_state = cache_state,
     quiet = quiet,
-    offline = offline
+    notice_quiet = notice_quiet,
+    offline = offline,
+    latest_dois = latest_dois
   )
 }
 
@@ -242,8 +259,16 @@ assemble_gtropic_data <- function(args, call = NULL) {
   }
 
   ctx <- fetch_context(discovery, cache, args$manifest, quiet,
-    offline = args$offline
+    offline = args$offline,
+    latest_dois = if (is.null(args$manifest)) {
+      latest_dois(discovery, versions)
+    } else {
+      character(0)
+    }
   )
+  # Automatic cache management (CRAN-11) runs once this retrieval has read
+  # everything it needs, and never removes the files it used.
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(
     args$date_range, args$date_list,

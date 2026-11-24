@@ -55,6 +55,15 @@
 
 ## New features
 
+* The cache now manages itself (CRAN policy on user cache files). The first
+  file cached in a session prints where the cache is. After each retrieval
+  that adds to the cache, files downloaded more than
+  `getOption("gtropic.cache_max_age_days")` (new option, default 180) days ago
+  and files superseded by a newer version retrieved with `version = ":latest"`
+  are removed, then the least recently downloaded files until the cache is at
+  most `getOption("gtropic.cache_max_gb")` (new option, default 10) GB. Files
+  used by that retrieval are never removed; `Inf` switches a limit off.
+
 * New option `gtropic.quiet` (default `FALSE`): `options(gtropic.quiet = TRUE)`
   silences progress and informational messages from every call in a session.
   It is the default of `quiet` in `gtropic_data()` and `gtropic_plot()`, and

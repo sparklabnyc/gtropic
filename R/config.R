@@ -75,6 +75,18 @@ gtropic_default_options <- function() {
       "Where cached files live.",
       shown = 'tools::R_user_dir("gtropic", "cache")'
     ),
+    cache_max_age_days = option_spec(
+      180, "positive",
+      "Cached files downloaded more than this many days ago are removed
+       automatically after a retrieval that adds to the cache. `Inf` keeps
+       them."
+    ),
+    cache_max_gb = option_spec(
+      10, "positive",
+      "Size cap, in gigabytes, for the cache: after a retrieval that adds to
+       it, the least recently downloaded files are removed until it fits.
+       `Inf` disables the cap."
+    ),
     confirm_threshold_gb = option_spec(
       1, "positive",
       "Download size, in gigabytes, above which you are asked to confirm."

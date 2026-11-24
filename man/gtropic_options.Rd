@@ -21,6 +21,8 @@ it caches and confirms downloads, without needing a package update.
    \code{gtropic.collection} \tab \code{"gtropic"} \tab Dataverse collection (alias) searched during discovery. \cr
    \code{gtropic.cache_enabled} \tab \code{TRUE} \tab Whether downloaded files are kept on disk. \cr
    \code{gtropic.cache_dir} \tab \code{tools::R_user_dir("gtropic", "cache")} \tab Where cached files live. \cr
+   \code{gtropic.cache_max_age_days} \tab \code{180} \tab Cached files downloaded more than this many days ago are removed automatically after a retrieval that adds to the cache. \code{Inf} keeps them. \cr
+   \code{gtropic.cache_max_gb} \tab \code{10} \tab Size cap, in gigabytes, for the cache: after a retrieval that adds to it, the least recently downloaded files are removed until it fits. \code{Inf} disables the cap. \cr
    \code{gtropic.confirm_threshold_gb} \tab \code{1} \tab Download size, in gigabytes, above which you are asked to confirm. \cr
    \code{gtropic.timeout} \tab \code{600} \tab Per-request timeout in seconds. \cr
    \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request before giving up. \cr

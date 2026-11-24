@@ -233,6 +233,16 @@ usa_05_replay_offline <- gtropic_data(manifest = mf, offline = TRUE)
 
 ### Managing the cache
 
+The cache manages itself. The first time a session caches a file, a message
+says where. After each retrieval that adds files, gtropic removes cached files
+downloaded more than 180 days ago, files superseded by a newer dataset version
+fetched with `version = ":latest"`, and then the least recently downloaded
+files until the cache is at most 10 GB. Files the retrieval just used are never
+removed. Change the limits with `options(gtropic.cache_max_age_days = )` and
+`options(gtropic.cache_max_gb = )`; `Inf` switches a limit off.
+
+You can also prune or clear the cache yourself:
+
 ```{r, eval = FALSE}
 gtropic_cache_list()    # one row per cached file
 gtropic_cache_size()    # total bytes on disk

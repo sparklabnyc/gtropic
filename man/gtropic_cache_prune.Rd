@@ -27,6 +27,9 @@ arguments, nothing is removed.
 
 If identical file content is referenced by multiple dataset versions, the
 physical file is retained until no remaining cache entry references it.
+
+The cache is also pruned automatically after retrievals; see
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} and \link{gtropic_options}.
 }
 \examples{
 \donttest{

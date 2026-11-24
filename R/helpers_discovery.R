@@ -51,6 +51,7 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
                          version = ":latest",
                          cache = NULL) {
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   adm2 <- tibble::as_tibble(dplyr::collect(fetch_file(
     "historical", "metadata", "adm2.parquet", ctx
@@ -135,6 +136,7 @@ gtropic_storms <- function(date_range = NULL,
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
 
@@ -239,6 +241,7 @@ gtropic_excluded_storms <- function(date_range = NULL,
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
   years <- if (!identical(date_spec$type, "none")) {
@@ -373,6 +376,7 @@ gtropic_years <- function(version = ":latest") {
 #' @export
 gtropic_codebook <- function(version = ":latest", cache = NULL) {
   ctx <- helper_context(version, cache = cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
   fetch_file("historical", "metadata", "codebook.json", ctx, kind = "json")
 }
 
@@ -390,5 +394,9 @@ gtropic_codebook <- function(version = ":latest", cache = NULL) {
 helper_context <- function(version = ":latest", cache = NULL) {
   versions <- resolve_versions(version)
   discovery <- discover_datasets(versions, quiet = TRUE)
-  fetch_context(discovery, cache_resolve(cache, quiet = TRUE), quiet = TRUE)
+  fetch_context(discovery, cache_resolve(cache, quiet = TRUE),
+    quiet = TRUE,
+    latest_dois = latest_dois(discovery, versions),
+    notice_quiet = opt("quiet")
+  )
 }

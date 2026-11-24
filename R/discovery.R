@@ -361,3 +361,17 @@ discovery_slot <- function(discovery, which) {
   }
   slot
 }
+
+#' DOIs of the datasets requested at `":latest"`
+#'
+#' @param discovery Output of `discover_datasets()`.
+#' @param versions Output of `resolve_versions()`.
+#' @return Character vector of DOIs.
+#' @keywords internal
+#' @noRd
+latest_dois <- function(discovery, versions) {
+  c(
+    if (identical(versions$historical, ":latest")) discovery$historical$doi,
+    if (identical(versions$current, ":latest")) discovery$current$doi
+  ) %||% character(0)
+}
