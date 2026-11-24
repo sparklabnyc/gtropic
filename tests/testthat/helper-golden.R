@@ -53,7 +53,7 @@ local_golden_collection <- function(env = parent.frame()) {
   log$listings <- listings
   role_of <- function(doi) names(golden_doi)[match(doi, golden_doi)]
 
-  testthat::local_mocked_bindings(
+  local_dv_transport(
     dv_list_datasets = function(...) {
       tibble::tibble(doi = unname(golden_doi))
     },

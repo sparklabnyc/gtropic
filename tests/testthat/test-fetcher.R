@@ -270,7 +270,7 @@ test_that("metadata remains historical when current listing contains a copy", {
     content_type = c("application/octet-stream", "application/json")
   )
 
-  local_mocked_bindings(
+  local_dv_transport(
     dv_list_datasets = function(...) {
       tibble::tibble(doi = c("doi:10.0000/HIST", "doi:10.0000/CURR"))
     },
@@ -353,7 +353,7 @@ discovery_listing <- function(file_ids, years = 2001:2002) {
 test_that("a pinned version lists the files of that version", {
   latest <- discovery_listing(901:903)
   pinned <- discovery_listing(101:103)
-  local_mocked_bindings(
+  local_dv_transport(
     dv_list_datasets = function(...) tibble::tibble(doi = "doi:10.0000/HIST"),
     dv_list_files = function(doi, version = ":latest", ...) {
       if (identical(version, "1.0")) pinned else latest
@@ -378,7 +378,7 @@ test_that("a pinned version lists the files of that version", {
 test_that("a pinned version can cover different years than :latest", {
   latest <- discovery_listing(901:904, years = 2001:2003)
   pinned <- discovery_listing(101:102, years = 2001)
-  local_mocked_bindings(
+  local_dv_transport(
     dv_list_datasets = function(...) tibble::tibble(doi = "doi:10.0000/HIST"),
     dv_list_files = function(doi, version = ":latest", ...) {
       if (identical(version, "1.0")) pinned else latest
@@ -397,7 +397,7 @@ test_that("a pinned version can cover different years than :latest", {
 
 test_that(":latest discovery lists each dataset once", {
   calls <- character(0)
-  local_mocked_bindings(
+  local_dv_transport(
     dv_list_datasets = function(...) {
       tibble::tibble(doi = c("doi:10.0000/HIST", "doi:10.0000/CURR"))
     },
@@ -442,5 +442,134 @@ test_that("the listed size bounds a download and nothing is cached", {
   expect_identical(nrow(cache_index_read(dir)), 0L)
   expect_length(
     list.files(file.path(dir, "blobs"), all.files = TRUE, no.. = TRUE), 0L
+  )
+})
+
+# --- discovery reuse and parallel metadata requests (PERF-07) ----------------
+
+local_counted_discovery <- function(env = parent.frame()) {
+  counter <- new.env(parent = emptyenv())
+  counter$n <- 0L
+  local_dv_transport(
+    dv_list_datasets = function(...) {
+      counter$n <- counter$n + 1L
+      tibble::tibble(doi = "doi:10.0000/HIST")
+    },
+    dv_list_files = function(doi, ...) discovery_listing(1:3),
+    dv_version_label = function(doi, ...) "1.0",
+    .env = env
+  )
+  withr::local_options(
+    gtropic.server = "ttl.invalid", gtropic.collection = "ttl",
+    .local_envir = env
+  )
+  withr::defer(
+    rm(list = ls(.gtropic_session, pattern = "^discovery[|]ttl"), envir = .gtropic_session),
+    envir = env
+  )
+  counter
+}
+
+test_that(":latest discovery is reused within gtropic.discovery_ttl", {
+  calls <- local_counted_discovery()
+  withr::local_options(gtropic.discovery_ttl = 600)
+
+  first <- discover_datasets(quiet = TRUE)
+  second <- discover_datasets(quiet = TRUE)
+  expect_identical(calls$n, 1L)
+  expect_identical(second, first)
+
+  discover_datasets(quiet = TRUE, refresh = TRUE)
+  expect_identical(calls$n, 2L)
+})
+
+test_that("discovery older than the reuse window is repeated", {
+  calls <- local_counted_discovery()
+  withr::local_options(gtropic.discovery_ttl = 600)
+
+  discover_datasets(quiet = TRUE)
+  key <- ls(.gtropic_session, pattern = "^discovery[|]ttl")
+  expect_length(key, 1L)
+  .gtropic_session[[key]]$at <- Sys.time() - 601
+  discover_datasets(quiet = TRUE)
+
+  expect_identical(calls$n, 2L)
+})
+
+test_that("gtropic.discovery_ttl = 0 rediscovers on every call", {
+  calls <- local_counted_discovery()
+  withr::local_options(gtropic.discovery_ttl = 0)
+
+  discover_datasets(quiet = TRUE)
+  discover_datasets(quiet = TRUE)
+
+  expect_identical(calls$n, 2L)
+})
+
+test_that("a pinned-version discovery is kept for the session", {
+  calls <- local_counted_discovery()
+  withr::local_options(gtropic.discovery_ttl = 0)
+  pinned <- list(historical = "1.0", current = ":none")
+
+  discover_datasets(pinned, quiet = TRUE)
+  discover_datasets(pinned, quiet = TRUE)
+
+  expect_identical(calls$n, 1L)
+})
+
+test_that("a discovery that fell back to the configured DOIs is not reused", {
+  withr::local_options(
+    gtropic.discovery_ttl = 600,
+    gtropic.server = "ttl.invalid", gtropic.collection = "ttl"
+  )
+  withr::defer(rm(
+    list = ls(.gtropic_session, pattern = "^discovery[|]ttl"),
+    envir = .gtropic_session
+  ))
+  attempts <- 0L
+  local_dv_transport(
+    dv_list_datasets = function(...) {
+      attempts <<- attempts + 1L
+      stop("collection listing failed")
+    },
+    dv_list_files = function(doi, ...) discovery_listing(1:3),
+    dv_version_label = function(doi, ...) "1.0"
+  )
+
+  expect_warning(discover_datasets(quiet = TRUE), "fell back")
+  expect_warning(discover_datasets(quiet = TRUE), "fell back")
+  expect_identical(attempts, 2L)
+})
+
+test_that("gtropic.discovery_ttl must be zero or more", {
+  withr::local_options(gtropic.discovery_ttl = -1)
+  expect_error(opt("discovery_ttl"), "at least zero")
+  withr::local_options(gtropic.discovery_ttl = Inf)
+  expect_identical(opt("discovery_ttl"), Inf)
+})
+
+test_that("several listings are requested at most two at a time, in order", {
+  web <- local_dataverse_app(dataverse_test_app())
+  dois <- paste0("doi:10.0000/D", 1:5)
+
+  listings <- dv_list_files_each(dois, server = "example.invalid", quiet = TRUE)
+
+  expect_identical(
+    vapply(listings, function(l) l$label, character(1)),
+    paste0("D", 1:5, ".parquet")
+  )
+  # (Over plain HTTP, as here, curl waits for each pair's first response
+  # before opening a second connection; over HTTPS the pair overlaps.)
+  expect_lte(app_hits(web, "max_active"), 2L)
+})
+
+test_that("a failed parallel request names the dataset it was for", {
+  local_dataverse_app(dataverse_test_app())
+  dois <- c("doi:10.0000/D1", "doi:10.0000/MISSING")
+
+  expect_error(
+    dv_list_files_each(dois, server = "example.invalid", quiet = TRUE),
+    "file listing for doi:10.0000/MISSING",
+    class = "gtropic_error_network"
   )
 })

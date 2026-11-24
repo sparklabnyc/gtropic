@@ -15,9 +15,13 @@
 #' warn rather than pick silently, because a wrong assignment sends every
 #' subsequent request to the wrong DOI.
 #'
-#' Explicit versions are memoised for the session. `":latest"` is deliberately
-#' rediscovered on every call so a long-lived R session does not silently miss a
-#' newly published Dataverse version.
+#' Explicit versions are memoised for the session. A `":latest"` discovery is
+#' reused for `getOption("gtropic.discovery_ttl")` seconds (default 600), so
+#' `gtropic_storms()` followed by `gtropic_data()` asks the server once, while
+#' a long-lived R session still sees a newly published Dataverse version within
+#' that time. `0` rediscovers on every call. A result that came from the
+#' configured-DOI fallback is not reused, so the next call tries discovery
+#' again.
 #'
 #' @param versions List with `historical` and `current` version strings.
 #' @param server Dataverse host.
@@ -55,14 +59,23 @@ discover_datasets <- function(versions = list(
     return(snapshot$discovery)
   }
 
-  key <- paste(server, collection, versions$historical, versions$current,
+  key <- paste("discovery", server, collection, versions$historical,
+    versions$current,
     sep = "|"
   )
   latest_requested <- any(unlist(versions, use.names = FALSE) == ":latest")
-  if (!refresh && !latest_requested && !is.null(.gtropic_session[[key]])) {
-    return(.gtropic_session[[key]])
+  if (!refresh) {
+    saved <- .gtropic_session[[key]]
+    ttl <- if (latest_requested) opt("discovery_ttl") else Inf
+    age <- if (is.null(saved)) Inf else {
+      as.numeric(difftime(Sys.time(), saved$at, units = "secs"))
+    }
+    if (age < ttl) {
+      return(saved$result)
+    }
   }
 
+  fell_back <- FALSE
   result <- tryCatch(
     discover_datasets_impl(versions, server, collection, quiet),
     error = function(e) {
@@ -71,6 +84,7 @@ discover_datasets <- function(versions = list(
       # fails too (typically: no connection at all), its error is the one
       # report; a warning about the first attempt would only repeat it.
       fallback <- discovery_from_options(versions, server, quiet)
+      fell_back <<- TRUE
       cli::cli_warn(
         c("Automatic dataset discovery failed; fell back to the configured
            DOI options.",
@@ -83,7 +97,9 @@ discover_datasets <- function(versions = list(
     }
   )
 
-  if (!latest_requested) .gtropic_session[[key]] <- result
+  if (!(latest_requested && fell_back)) {
+    .gtropic_session[[key]] <- list(result = result, at = Sys.time())
+  }
   if (!is.null(cache_dir)) cache_discovery_write(cache_dir, result, collection)
   result
 }
@@ -151,18 +167,19 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
   # One listing per dataset at :latest. Identification is about which dataset
   # is which, not about which snapshot of it we will end up reading; a pinned
   # version is listed separately once the roles are known (see below).
-  profiles <- lapply(dois$doi, function(d) {
-    listing <- dv_list_files(d,
-      version = ":latest", server = server,
-      quiet = quiet
-    )
+  # The listings are requested two at a time (PERF-07).
+  listings <- dv_list_files_each(dois$doi,
+    version = ":latest", server = server,
+    quiet = quiet
+  )
+  profiles <- Map(function(d, listing) {
     list(
       doi = d,
       listing = listing,
       years = listing_years(listing),
       has_metadata = any(startsWith(listing$directory_label, "metadata"))
     )
-  })
+  }, dois$doi, listings, USE.NAMES = FALSE)
 
   by_years <- vapply(profiles, function(p) min(c(p$years, Inf)), numeric(1))
   n_years <- vapply(profiles, function(p) length(p$years), integer(1))
@@ -281,7 +298,13 @@ discovery_from_options <- function(versions, server, quiet) {
 #' @keywords internal
 #' @noRd
 build_discovery <- function(hist, current, versions, server, quiet) {
-  hist_version <- dv_version_label(hist$doi, versions$historical, server, quiet)
+  # Both version labels in one parallel request (PERF-07).
+  labels <- dv_version_labels(
+    c(hist$doi, current$doi),
+    c(versions$historical, if (!is.null(current)) versions$current),
+    server, quiet
+  )
+  hist_version <- labels[[1L]]
 
   out <- list(
     server = server,
@@ -297,7 +320,7 @@ build_discovery <- function(hist, current, versions, server, quiet) {
   if (!is.null(current)) {
     out$current <- list(
       doi = current$doi,
-      version = dv_version_label(current$doi, versions$current, server, quiet),
+      version = labels[[2L]],
       listing = current$listing,
       years = current$years
     )

@@ -27,6 +27,7 @@ it caches and confirms downloads, without needing a package update.
    \code{gtropic.timeout} \tab \code{600} \tab Seconds to wait for the server. A metadata request that takes longer is abandoned (and retried, see \code{gtropic.max_tries}), and so is a download that receives no data for this long; a download that keeps receiving data may take longer. \code{Inf} waits indefinitely. \cr
    \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request. Only transient failures are retried: a lost or refused connection, a timeout, and HTTP 408, 429 and 5xx responses. \cr
    \code{gtropic.quiet} \tab \code{FALSE} \tab Session-wide default for \code{quiet}: \code{TRUE} suppresses progress and informational messages from every call. \cr
+   \code{gtropic.discovery_ttl} \tab \code{600} \tab Seconds for which a session reuses what it learned about the collection's \code{":latest"} datasets before asking the server again. A new weekly release is therefore seen within this time. \code{0} asks on every call; a pinned \code{version} is looked up once per session. \cr
 }
 
 

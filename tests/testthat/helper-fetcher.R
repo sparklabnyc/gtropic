@@ -185,6 +185,33 @@ dataverse_test_app <- function() {
     res$locals$n <- n + 1L
     if (n < 4L) res$delay(0.4)
   })
+  # File listings: one file per dataset, labelled after the DOI's suffix,
+  # answered after 0.1 s. `GET /hits/max_active` reports the most that were
+  # in flight at once. DOI suffix MISSING answers 404.
+  app$locals$active <- 0L
+  app$locals$max_active <- 0L
+  # (A regular expression: the path has literal `:persistentId` and
+  # `:latest` segments, which webfakes' `:name` parameters do not match.)
+  app$get(webfakes::new_regexp("^/api/datasets/[^/]+/versions/[^/]+/files$"), function(req, res) {
+    doi <- req$query$persistentId
+    if (grepl("MISSING$", doi)) {
+      return(dv_json(res, 404L, '{"status":"ERROR","message":"Dataset not found"}'))
+    }
+    if (is.null(res$locals$waited)) {
+      res$locals$waited <- TRUE
+      active <- req$app$locals$active + 1L
+      req$app$locals$active <- active
+      req$app$locals$max_active <- max(req$app$locals$max_active, active)
+      req$app$locals$hits$max_active <- req$app$locals$max_active
+      return(res$delay(0.1))
+    }
+    req$app$locals$active <- req$app$locals$active - 1L
+    label <- paste0(sub(".*/", "", doi), ".parquet")
+    dv_json(res, 200L, sprintf(
+      '{"status":"OK","data":[{"label":"%s","directoryLabel":"d","dataFile":{"id":1,"filesize":1}}]}',
+      label
+    ))
+  })
   app$get("/api/dataverses/missing/contents", function(req, res) {
     count(req, "missing")
     dv_json(res, 404L, '{"status":"ERROR","message":"Collection not found"}')
@@ -208,4 +235,35 @@ streaming_response <- function(req, bytes, headers = list()) {
     headers = headers,
     body = httr2::StreamingBody$new(rawConnection(bytes))
   )
+}
+
+#' Mock the Dataverse transport, with per-dataset metadata functions
+#'
+#' Takes the same arguments as `testthat::local_mocked_bindings()`. Discovery
+#' requests listings and version labels for several datasets at once
+#' (`dv_list_files_each()`, `dv_version_labels()`), so a mock of
+#' `dv_list_files(doi, version, ...)` or `dv_version_label(doi, version, ...)`
+#' also stands in for its vectorised form.
+#' @noRd
+local_dv_transport <- function(..., .env = parent.frame()) {
+  mocks <- list(...)
+  list_files <- mocks$dv_list_files
+  if (!is.null(list_files)) {
+    mocks$dv_list_files_each <- function(dois, version = ":latest", ...) {
+      version <- rep_len(version, length(dois))
+      Map(function(d, v) list_files(d, version = v, ...), dois, version,
+        USE.NAMES = FALSE
+      )
+    }
+  }
+  version_label <- mocks$dv_version_label
+  if (!is.null(version_label)) {
+    mocks$dv_version_labels <- function(dois, versions = ":latest", ...) {
+      versions <- rep_len(versions, length(dois))
+      vapply(seq_along(dois), function(i) {
+        version_label(dois[[i]], version = versions[[i]], ...)
+      }, character(1))
+    }
+  }
+  do.call(testthat::local_mocked_bindings, c(mocks, list(.env = .env)))
 }

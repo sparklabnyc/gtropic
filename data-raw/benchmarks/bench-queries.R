@@ -12,8 +12,8 @@
 #
 # Output: one row per case with elapsed seconds, R heap allocation
 # (`bench::mark()` `mem_alloc`), maximum RSS, bytes downloaded and the number of
-# Dataverse API calls (one per call of the internal list/version/download
-# functions; retries inside a call are not counted). Paste the table into the
+# Dataverse API requests (one per dataset listed, version looked up or file
+# downloaded; retries are not counted). Paste the table into the
 # Benchmarks section of PROGRESS.md. Do not commit output.
 #
 # These queries hit the live Harvard Dataverse server and download tens of MB.
@@ -47,10 +47,12 @@ run_case <- function(name, cache_dir) {
   stats$calls <- 0L
   stats$bytes <- 0
   ns <- asNamespace("gtropic")
-  counted <- function(f, download = FALSE) {
+  # `per` counts one request per element of the first argument, for the
+  # functions that request several datasets at once.
+  counted <- function(f, download = FALSE, per = FALSE) {
     force(f)
     function(...) {
-      stats$calls <- stats$calls + 1L
+      stats$calls <- stats$calls + if (per) length(..1) else 1L
       out <- f(...)
       # dv_get_file() returns the path of the downloaded file.
       if (download) stats$bytes <- stats$bytes + file.size(out)
@@ -62,8 +64,8 @@ run_case <- function(name, cache_dir) {
     testthat::with_mocked_bindings(
       do.call(gtropic::gtropic_data, c(q$args, list(quiet = TRUE, confirm = FALSE))),
       dv_list_datasets = counted(ns$dv_list_datasets),
-      dv_list_files = counted(ns$dv_list_files),
-      dv_version_label = counted(ns$dv_version_label),
+      dv_list_files_each = counted(ns$dv_list_files_each, per = TRUE),
+      dv_version_labels = counted(ns$dv_version_labels, per = TRUE),
       dv_get_file = counted(ns$dv_get_file, download = TRUE),
       .package = "gtropic"
     )

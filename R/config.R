@@ -108,6 +108,13 @@ gtropic_default_options <- function() {
       FALSE, "flag",
       "Session-wide default for `quiet`: `TRUE` suppresses progress and
        informational messages from every call."
+    ),
+    discovery_ttl = option_spec(
+      600, "nonneg",
+      "Seconds for which a session reuses what it learned about the
+       collection's `\":latest\"` datasets before asking the server again. A
+       new weekly release is therefore seen within this time. `0` asks on
+       every call; a pinned `version` is looked up once per session."
     )
   )
 }
@@ -117,8 +124,9 @@ gtropic_default_options <- function() {
 #' @param default Default value.
 #' @param type How a value is checked when read: `"server"` (a host name, see
 #'   `validate_server()`), `"string"` (a character scalar), `"flag"` (`TRUE` or
-#'   `FALSE`), `"positive"` (a number greater than zero, `Inf` allowed) or
-#'   `"count"` (a whole number of at least one).
+#'   `FALSE`), `"positive"` (a number greater than zero, `Inf` allowed),
+#'   `"nonneg"` (zero or more, `Inf` allowed) or `"count"` (a whole number of
+#'   at least one).
 #' @param doc One sentence for the documentation table.
 #' @param shown How the default is shown in the documentation, when it is not
 #'   the value itself.
@@ -175,6 +183,7 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
     string = is.character(x) && scalar,
     flag = is.logical(x) && scalar,
     positive = is.numeric(x) && scalar && x > 0,
+    nonneg = is.numeric(x) && scalar && x >= 0,
     count = is.numeric(x) && scalar && is.finite(x) && x >= 1 &&
       x == round(x)
   )
@@ -183,6 +192,7 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
       string = "a single string",
       flag = "TRUE or FALSE",
       positive = "a single number greater than zero",
+      nonneg = "a single number of at least zero",
       count = "a single whole number of at least 1"
     )
     cli::cli_abort(
@@ -199,7 +209,8 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
   }
   switch(type,
     count = as.integer(x),
-    positive = as.numeric(x),
+    positive = ,
+    nonneg = as.numeric(x),
     x
   )
 }

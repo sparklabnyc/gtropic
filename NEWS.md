@@ -113,6 +113,14 @@
   planned file sizes are looked up with one join, and the manifest is
   assembled once per query rather than rebuilt for every file.
 
+* A session reuses what it learned about the collection's `":latest"`
+  datasets for `getOption("gtropic.discovery_ttl")` seconds (new option,
+  default 600), so calling `gtropic_storms()` and then `gtropic_data()` asks
+  the server once instead of twice. A new weekly release is seen within that
+  time; `options(gtropic.discovery_ttl = 0)` asks on every call, as before. A
+  discovery that fell back to the configured DOIs is not reused. The
+  per-dataset metadata requests are sent at most two at a time.
+
 * When precipitation or flood is requested without the `zero_pairs` table,
   only the four `zero_pairs` columns that linkage needs are read. A `polygon`
   filter tests each distinct population centroid against the polygon once,

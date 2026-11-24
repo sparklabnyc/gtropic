@@ -11,6 +11,9 @@ withr::local_options(
   gtropic.cache_dir = file.path(sandbox, "cache", "R", "gtropic"),
   gtropic.cache_enabled = TRUE,
   gtropic.max_tries = 1L,
+  # Every test discovers afresh against its own mocks, as if each were a new
+  # session; tests of the reuse window set it themselves.
+  gtropic.discovery_ttl = 0,
   arrow.use_threads = FALSE,
   .local_envir = testthat::teardown_env()
 )

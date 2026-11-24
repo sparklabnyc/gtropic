@@ -243,17 +243,68 @@ dv_error_body <- function(resp) {
 #' @noRd
 dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
   dv_perform(
-    {
-      resp <- httr2::req_perform(req)
-      body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
-      if (!identical(body$status, "OK")) {
-        status <- body$status %||% "none"
-        cli::cli_abort("Dataverse reported status {.val {status}}.")
-      }
-      body$data
-    },
+    dv_json_data(httr2::req_perform(req)),
     what = what, server = server, quiet = quiet, call = call
   )
+}
+
+#' Perform several metadata requests, two at a time
+#'
+#' Discovery asks the same server for one small JSON document per dataset;
+#' sending them two at a time roughly halves the wait (PERF-07). A single request goes through `dv_get_json()`, so it keeps
+#' gtropic's retry notice; `httr2` retries a parallel batch's transient
+#' failures without signalling them. A failure is reported as
+#' `dv_get_json()` reports it, naming the request that failed (the first, in
+#' request order, if several did).
+#'
+#' @param reqs List of requests from `dv_request()`.
+#' @param what Character vector: one description per request.
+#' @inheritParams dv_get_json
+#'
+#' @return A list: the parsed `data` element of each response, in request
+#'   order.
+#' @keywords internal
+#' @noRd
+dv_get_json_each <- function(reqs, what, server, quiet,
+                             call = rlang::caller_env()) {
+  if (length(reqs) == 1L) {
+    return(list(dv_get_json(reqs[[1L]], what[[1L]], server, quiet, call = call)))
+  }
+  # In pairs: httr2 (1.3.0) can have more than `max_active` requests in
+  # flight at once, and the server should never see more than two.
+  batches <- split(reqs, ceiling(seq_along(reqs) / 2))
+  resps <- dv_perform(
+    unlist(lapply(batches, function(batch) {
+      httr2::req_perform_parallel(batch,
+        on_error = "continue", progress = FALSE, max_active = 2L
+      )
+    }), recursive = FALSE, use.names = FALSE),
+    what = "metadata requests", server = server, quiet = quiet, call = call
+  )
+  lapply(seq_along(resps), function(i) {
+    dv_perform(
+      {
+        resp <- resps[[i]]
+        if (inherits(resp, "error")) stop(resp)
+        dv_json_data(resp)
+      },
+      what = what[[i]], server = server, quiet = quiet, call = call
+    )
+  })
+}
+
+#' The `data` element of a Dataverse JSON response
+#'
+#' @param resp An `httr2` response.
+#' @keywords internal
+#' @noRd
+dv_json_data <- function(resp) {
+  body <- httr2::resp_body_json(resp, simplifyVector = FALSE)
+  if (!identical(body$status, "OK")) {
+    status <- body$status %||% "none"
+    cli::cli_abort("Dataverse reported status {.val {status}}.")
+  }
+  body$data
 }
 
 #' List the files in a Dataverse dataset version
@@ -271,17 +322,35 @@ dv_list_files <- function(doi,
                           version = ":latest",
                           server = opt_server(),
                           quiet = FALSE) {
-  req <- dv_request(
-    server, "datasets", ":persistentId", "versions",
-    dv_path_segment(version), "files"
-  )
-  req <- httr2::req_url_query(req, persistentId = doi)
-  raw_files <- dv_get_json(req,
-    what = glue::glue("file listing for {doi}"),
+  dv_list_files_each(doi, version, server, quiet)[[1L]]
+}
+
+#' List the files of several datasets, two requests at a time
+#'
+#' @param dois Dataset DOIs.
+#' @param version Version string(s), recycled along `dois`.
+#' @inheritParams dv_list_files
+#'
+#' @return A list of listings as returned by `dv_list_files()`, one per DOI.
+#' @keywords internal
+#' @noRd
+dv_list_files_each <- function(dois,
+                               version = ":latest",
+                               server = opt_server(),
+                               quiet = FALSE) {
+  version <- rep_len(version, length(dois))
+  reqs <- Map(function(doi, v) {
+    req <- dv_request(
+      server, "datasets", ":persistentId", "versions",
+      dv_path_segment(v), "files"
+    )
+    httr2::req_url_query(req, persistentId = doi)
+  }, dois, version, USE.NAMES = FALSE)
+  records <- dv_get_json_each(reqs,
+    what = glue::glue("file listing for {dois}"),
     server = server, quiet = quiet
   )
-
-  dv_listing_from_records(raw_files)
+  lapply(records, dv_listing_from_records)
 }
 
 #' Build a file listing from Dataverse file records
@@ -691,22 +760,40 @@ dv_version_label <- function(doi,
                              version = ":latest",
                              server = opt_server(),
                              quiet = FALSE) {
-  req <- dv_request(
-    server, "datasets", ":persistentId", "versions", dv_path_segment(version)
-  )
-  # Only the version numbers are needed; the file list is fetched separately.
-  req <- httr2::req_url_query(req, persistentId = doi, excludeFiles = "true")
-  ds <- dv_get_json(req,
-    what = glue::glue("metadata for {doi}"),
+  dv_version_labels(doi, version, server, quiet)
+}
+
+#' Retrieve the version labels of several datasets, two requests at a time
+#'
+#' @param dois Dataset DOIs.
+#' @param versions Requested versions, one per DOI.
+#' @inheritParams dv_version_label
+#'
+#' @return A character vector, one label per DOI.
+#' @keywords internal
+#' @noRd
+dv_version_labels <- function(dois,
+                              versions = ":latest",
+                              server = opt_server(),
+                              quiet = FALSE) {
+  versions <- rep_len(as.character(versions), length(dois))
+  reqs <- Map(function(doi, version) {
+    req <- dv_request(
+      server, "datasets", ":persistentId", "versions", dv_path_segment(version)
+    )
+    # Only the version numbers are needed; the file list is fetched separately.
+    httr2::req_url_query(req, persistentId = doi, excludeFiles = "true")
+  }, dois, versions, USE.NAMES = FALSE)
+  data <- dv_get_json_each(reqs,
+    what = glue::glue("metadata for {dois}"),
     server = server, quiet = quiet
   )
-  major <- ds$versionNumber %||% ds$majorVersion
-  minor <- ds$versionMinorNumber %||% ds$minorVersion
-
-  if (is.null(major)) {
-    return(as.character(version))
-  }
-  paste0(major, ".", minor %||% 0L)
+  vapply(seq_along(data), function(i) {
+    ds <- data[[i]]
+    major <- ds$versionNumber %||% ds$majorVersion
+    minor <- ds$versionMinorNumber %||% ds$minorVersion
+    if (is.null(major)) versions[[i]] else paste0(major, ".", minor %||% 0L)
+  }, character(1))
 }
 
 #' API key for a Dataverse host, if the user has one

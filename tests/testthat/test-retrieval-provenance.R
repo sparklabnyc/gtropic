@@ -458,7 +458,7 @@ test_that("a pinned version downloads and records that version's files", {
     algo = "sha256", file = TRUE
   ))
   pinned$checksum_type <- "SHA-256"
-  local_mocked_bindings(
+  local_dv_transport(
     dv_list_files = function(doi, version = ":latest", ...) {
       role <- names(golden_doi)[match(doi, golden_doi)]
       if (role == "historical" && identical(version, "2.0")) {
