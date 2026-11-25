@@ -375,25 +375,25 @@ print.summary.gtropic_data <- function(x, ...) {
 #' @family result methods
 #' @export
 format.gtropic_data <- function(x, ...) {
-  cli::cli_fmt(print(x, ...))
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
 }
 
 #' @rdname format.gtropic_data
 #' @export
 format.summary.gtropic_data <- function(x, ...) {
-  cli::cli_fmt(print(x, ...))
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
 }
 
 #' @rdname format.gtropic_data
 #' @export
 format.gtropic_manifest <- function(x, ...) {
-  cli::cli_fmt(print(x, ...))
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
 }
 
 #' @rdname format.gtropic_data
 #' @export
 format.gtropic_filters <- function(x, ...) {
-  cli::cli_fmt(print(x, ...))
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
 }
 
 #' Print one bullet per source dataset

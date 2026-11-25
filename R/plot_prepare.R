@@ -326,14 +326,14 @@ plot_resolve_wind_categories <- function(
         any(!names(wind_categories) %in% metrics$metric)
     ) {
       cli::cli_abort(
-        "{.arg wind_categories} must be a category-key data frame or a uniquely named list keyed by selected metrics."
+        "{.arg wind_categories} must be a category-key data frame or a uniquely named list keyed by selected metrics." # nolint: line_length_linter.
       )
     }
     keys <- wind_categories
   }
 
   out <- lapply(names(keys), function(metric) {
-    key <- plot_validate_wind_category_key(
+    key <- plot_validate_category_key(
       keys[[metric]],
       paste0("wind_categories$", metric)
     )
@@ -351,7 +351,7 @@ plot_resolve_wind_categories <- function(
           !identical(as.character(spec$aggregate), "max"))
     ) {
       cli::cli_abort(c(
-        "The built-in Saffir-Simpson key is valid only for {.field VMAX_SUST_MS} with {.code aggregate = 'max'}.",
+        "The built-in Saffir-Simpson key is valid only for {.field VMAX_SUST_MS} with {.code aggregate = 'max'}.", # nolint: line_length_linter.
         i = "Provide an explicitly custom wind-category key for other metrics or aggregates."
       ))
     }
@@ -378,7 +378,7 @@ plot_resolve_wind_categories <- function(
 #' @keywords internal
 #' @noRd
 plot_categorize_wind_exposure <- function(value, key) {
-  key <- plot_validate_wind_category_key(key, "wind_categories")
+  key <- plot_validate_category_key(key, "wind_categories")
   if (!is.numeric(value)) {
     cli::cli_abort("Categorical exposure values must be numeric.")
   }
@@ -630,7 +630,6 @@ prepare_plot_data <- function(
       spec <- metrics[i, ]
       # The two join/aggregate functions are supplied by milestone 2.
       rows <- plot_join_metric(
-        # nolint: object_usage_linter.
         data,
         spec,
         flood_match = flood_match

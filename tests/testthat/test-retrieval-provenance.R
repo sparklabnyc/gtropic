@@ -98,9 +98,9 @@ test_that("manifest roles retain routing for one or both source datasets", {
 
 test_that("manifest replay rejects only explicitly supplied data-shaping arguments", {
   call <- quote(gtropic_data(manifest = mf, cache = FALSE, quiet = TRUE))
-  expect_silent(manifest_assert_replay_arguments(call))
+  expect_silent(manifest_check_replay_args(call))
   expect_error(
-    manifest_assert_replay_arguments(quote(gtropic_data(
+    manifest_check_replay_args(quote(gtropic_data(
       manifest = mf,
       tables = "wind"
     ))),

@@ -3,7 +3,7 @@
 #' @keywords internal
 #' @noRd
 plot_validate_track_map_key <- function(track_map_key) {
-  key <- plot_validate_wind_category_key(track_map_key, "track_map_key")
+  key <- plot_validate_category_key(track_map_key, "track_map_key")
   if (!key$unit[1L] %in% c("m/s", "knots", "mph", "km/h")) {
     cli::cli_abort(
       "{.arg track_map_key}$unit must be one constant: m/s, knots, mph, or km/h."

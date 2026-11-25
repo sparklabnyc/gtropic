@@ -235,7 +235,7 @@ gtropic_plot <- function(
   }
   track_map_key <- plot_validate_track_map_key(track_map_key)
   track_interval <- plot_validate_track_interval(track_interval)
-  track_legend_position <- plot_validate_track_legend_position(
+  track_legend_position <- plot_validate_legend_position(
     track_legend_position
   )
   plot_validate_static_dots(type, interactive, ...)

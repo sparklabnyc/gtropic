@@ -5,9 +5,11 @@
 # supports local paths and S3/GCS URIs only; there is no generic HTTP
 # filesystem. The working pattern is therefore:
 #
+# nolint start: commented_code_linter.
 #   path <- dv_get_file(id, dest = <file>)       # streamed to disk
 #   tbl <- read_parquet_file(path, cols, keep)   # projected, filtered Table
 #   out <- tibble::as_tibble(tbl)                # only the rows we need
+# nolint end
 #
 # Only the requested columns are decoded, and rows are filtered on the Arrow
 # side, one row group at a time, before anything is converted to R. A query
@@ -464,7 +466,7 @@ check_installed_geo <- function(
   cli::cli_abort(
     c(
       "{what} requires the {.pkg {missing}} package{?s}.",
-      i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.',
+      i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.', # nolint: line_length_linter.
       i = "Omit {.val geometry} from {.arg tables} if you do not need geospatial
            tooling."
     ),

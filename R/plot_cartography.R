@@ -12,7 +12,7 @@
 #' @examples
 #' gtropic_basemap(what = "none")
 #'
-#' @examplesIf requireNamespace("sf", quietly = TRUE) && requireNamespace("rnaturalearth", quietly = TRUE) && requireNamespace("rnaturalearthdata", quietly = TRUE)
+#' @examplesIf rlang::is_installed(c("sf", "rnaturalearth", "rnaturalearthdata"))
 #' countries <- gtropic_basemap()
 #' nrow(countries)
 #' @family plotting functions

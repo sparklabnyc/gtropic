@@ -274,9 +274,10 @@ dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
 #' Perform several metadata requests, two at a time
 #'
 #' Discovery asks the same server for one small JSON document per dataset;
-#' sending them two at a time roughly halves the wait (PERF-07). A single request goes through `dv_get_json()`, so it keeps
-#' gtropic's retry notice; `httr2` retries a parallel batch's transient
-#' failures without signalling them. A failure is reported as
+#' sending them two at a time roughly halves the wait (PERF-07). A single
+#' request goes through `dv_get_json()`, so it keeps gtropic's retry notice;
+#' `httr2` retries a parallel batch's transient failures without signalling
+#' them. A failure is reported as
 #' `dv_get_json()` reports it, naming the request that failed (the first, in
 #' request order, if several did).
 #'

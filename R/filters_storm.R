@@ -215,8 +215,8 @@ warn_ambiguous_storm_names <- function(
   if (isTRUE(excluded)) {
     gtropic_warn(
       c(
-        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
-        i = "The returned unique {.field STORM_ID}s distinguish these excluded records; excluded storms cannot be retrieved with {.code gtropic_data()}."
+        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.", # nolint: line_length_linter.
+        i = "The returned unique {.field STORM_ID}s distinguish these excluded records; excluded storms cannot be retrieved with {.code gtropic_data()}." # nolint: line_length_linter.
       ),
       class = "gtropic_warning_ambiguous_excluded_storm_name",
       call = call
@@ -224,9 +224,9 @@ warn_ambiguous_storm_names <- function(
   } else {
     gtropic_warn(
       c(
-        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.",
+        "{.arg STORM_NAME} is a convenience lookup and matched multiple {.field STORM_ID}s for {.val {ambiguous_names}}.", # nolint: line_length_linter.
         i = "{.field STORM_ID} is unique and preferred.",
-        i = "Use {.code gtropic_storms(STORM_NAME = ...)} to identify the intended {.field STORM_ID}, then query with {.arg STORM_ID}."
+        i = "Use {.code gtropic_storms(STORM_NAME = ...)} to identify the intended {.field STORM_ID}, then query with {.arg STORM_ID}." # nolint: line_length_linter.
       ),
       class = "gtropic_warning_ambiguous_storm_name",
       call = call
@@ -328,12 +328,12 @@ abort_unavailable_storms <- function(
       "{length(values)} value{?s} in {.arg {arg}} did not match an available storm.",
       if (length(excluded_matches) > 0L) {
         c(
-          "x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data."
+          "x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data." # nolint: line_length_linter.
         )
       },
       if (length(absent_matches) > 0L) {
         c(
-          "x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists."
+          "x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists." # nolint: line_length_linter.
         )
       },
       i = "Use {.code gtropic_excluded_storms()} to review excluded storm records."

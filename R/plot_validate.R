@@ -185,7 +185,7 @@ plot_check_strings <- function(x, name, allow_empty_strings = FALSE) {
 #' Validate optional placement of per-panel metric scale strips
 #' @keywords internal
 #' @noRd
-plot_validate_track_legend_position <- function(position) {
+plot_validate_legend_position <- function(position) {
   if (is.null(position)) {
     return(NULL)
   }

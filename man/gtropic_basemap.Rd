@@ -25,7 +25,7 @@ an administrative-level-1 layer requires the optional, non-CRAN
 \examples{
 gtropic_basemap(what = "none")
 
-\dontshow{if (requireNamespace("sf", quietly = TRUE) && requireNamespace("rnaturalearth", quietly = TRUE) && requireNamespace("rnaturalearthdata", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\dontshow{if (rlang::is_installed(c("sf", "rnaturalearth", "rnaturalearthdata"))) withAutoprint(\{ # examplesIf}
 countries <- gtropic_basemap()
 nrow(countries)
 \dontshow{\}) # examplesIf}

@@ -275,7 +275,7 @@ gtropic_data <- function(
 
   if (!is.null(manifest)) {
     manifest <- manifest_validate(manifest)
-    manifest_assert_replay_arguments(call)
+    manifest_check_replay_args(call)
     manifest_warn_server(manifest)
   }
 
@@ -361,7 +361,7 @@ gtropic_data <- function(
 #' Reject conflicting data-shaping arguments on manifest replay
 #' @keywords internal
 #' @noRd
-manifest_assert_replay_arguments <- function(
+manifest_check_replay_args <- function(
   call,
   call_env = rlang::caller_env()
 ) {

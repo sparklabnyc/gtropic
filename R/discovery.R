@@ -55,8 +55,8 @@ discover_datasets <- function(
     snapshot <- cache_discovery_read(cache_dir, server, collection, versions)
     age <- difftime(Sys.time(), snapshot$saved_at, units = "days")
     cli::cli_warn(c(
-      "Using an offline G-TROPIC discovery snapshot saved {format(snapshot$saved_at, usetz = TRUE)}.",
-      i = "The snapshot is {format(round(as.numeric(age), 1), nsmall = 1)} day{?s} old; no Dataverse update check was made."
+      "Using an offline G-TROPIC discovery snapshot saved {format(snapshot$saved_at, usetz = TRUE)}.", # nolint: line_length_linter.
+      i = "The snapshot is {format(round(as.numeric(age), 1), nsmall = 1)} day{?s} old; no Dataverse update check was made." # nolint: line_length_linter.
     ))
     return(snapshot$discovery)
   }

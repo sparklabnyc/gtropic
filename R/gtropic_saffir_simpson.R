@@ -38,7 +38,7 @@ gtropic_saffir_simpson <- function() {
 #' thresholds are not converted during ADM2 exposure plotting.
 #' @keywords internal
 #' @noRd
-plot_validate_wind_category_key <- function(key, argument = "wind_categories") {
+plot_validate_category_key <- function(key, argument = "wind_categories") {
   if (!is.data.frame(key)) {
     cli::cli_abort("{.arg {argument}} must be a data frame.")
   }
