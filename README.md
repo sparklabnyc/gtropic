@@ -6,8 +6,21 @@
 
 <!-- badges: start -->
 
-[![License: GPL
-v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![R-CMD-check](https://github.com/sparklabnyc/gtropic/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sparklabnyc/gtropic/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/sparklabnyc/gtropic/graph/badge.svg)](https://app.codecov.io/gh/sparklabnyc/gtropic)
+[![pkgdown](https://github.com/sparklabnyc/gtropic/actions/workflows/pkgdown.yaml/badge.svg)](https://sparklabnyc.github.io/gtropic/)
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![Project Status:
+Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![r-universe](https://sparklabnyc.r-universe.dev/badges/gtropic)](https://sparklabnyc.r-universe.dev/gtropic)
+[![OpenSSF
+Scorecard](https://api.scorecard.dev/projects/github.com/sparklabnyc/gtropic/badge)](https://scorecard.dev/viewer/?uri=github.com/sparklabnyc/gtropic)
+[![License: GPL (\>=
+3)](https://img.shields.io/badge/license-GPL%20(%3E%3D%203)-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
+[![Data
+DOI](https://img.shields.io/badge/data%20DOI-10.7910%2FDVN%2FEAVWC3-blue.svg)](https://doi.org/10.7910/DVN/EAVWC3)
 <!-- badges: end -->
 
 `gtropic` retrieves, filters and maps tropical cyclone exposure data
