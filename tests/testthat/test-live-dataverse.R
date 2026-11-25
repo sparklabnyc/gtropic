@@ -103,3 +103,60 @@ test_that("live: manifest replay retrieves byte-identical input", {
     checksum_raw(downloaded[[1L]], recorded$checksum)
   )
 })
+
+test_that("live: every directory and metadata file the planner reads is published", {
+  skip_if_no_live_tests()
+
+  listing <- dv_list_files(opt("doi_historical"), quiet = TRUE)
+  for (spec in TABLE_SPEC) {
+    in_dir <- listing$directory_label == spec$dir
+    if (isTRUE(spec$yearly)) {
+      expect_true(
+        any(in_dir & grepl("^[0-9]{4}\\.parquet$", listing$label)),
+        label = paste("year-files in", spec$dir)
+      )
+    } else {
+      expect_identical(
+        sum(in_dir & listing$label == spec$label),
+        1L,
+        label = paste0(spec$dir, "/", spec$label)
+      )
+    }
+  }
+})
+
+test_that("live: storm metadata has the columns the storm filters use", {
+  skip_if_no_live_tests()
+
+  discovery <- discover_datasets(refresh = TRUE, quiet = TRUE)
+  ctx <- fetch_context(
+    discovery,
+    list(enabled = FALSE, dir = NULL),
+    quiet = TRUE
+  )
+  x <- tibble::as_tibble(dplyr::collect(
+    fetch_file("historical", "02_wind/storm_metadata", "1980.parquet", ctx)
+  ))
+
+  expect_gt(nrow(x), 0L)
+  expect_type(x$STORM_ID, "character")
+  expect_type(x$STORM_NAME, "character")
+  expect_false(anyNA(x$STORM_ID))
+  expect_false(anyDuplicated(x$STORM_ID) > 0L)
+  # Published as ISO text or as Arrow dates, depending on the year.
+  genesis <- x$STORM_GENESIS_DATE_UTC
+  expect_true(inherits(genesis, "Date") || is.character(genesis))
+  expect_false(anyNA(as.Date(genesis)))
+  expect_true(all(format(as.Date(genesis), "%Y") == "1980"))
+})
+
+test_that("live: gtropic_storms() finds Hurricane Katrina", {
+  skip_if_no_live_tests()
+  withr::local_options(gtropic.quiet = TRUE)
+
+  katrina <- gtropic_storms(STORM_NAME = "Katrina-2005")
+  expect_identical(nrow(katrina), 1L)
+  expect_true(nzchar(katrina$STORM_ID))
+  expect_s3_class(katrina$STORM_GENESIS_DATE_UTC, "Date")
+  expect_identical(format(katrina$STORM_GENESIS_DATE_UTC, "%Y"), "2005")
+})
