@@ -1,0 +1,90 @@
+# Pre-commit hooks (Plan 01 INFRA-08). Install once per clone with
+#   pip install pre-commit && pre-commit install
+# The same hooks run on every pull request (.github/workflows/pre-commit.yaml).
+# They check and fix; the expensive gates (R CMD check, tests, coverage) stay
+# in CI. Update the pins with `pre-commit autoupdate`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=200"]
+      - id: check-yaml
+      - id: check-merge-conflict
+      # Generated files are left as their generators write them: man/*.Rd,
+      # snapshots, README.md (knitr), the favicon set and the recorded
+      # httptest2 responses.
+      - id: end-of-file-fixer
+        exclude: '\.Rd$|_snaps/|^README\.md$|^pkgdown/favicon/|^tests/testthat/dv/'
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+        exclude: '\.Rd$|_snaps/|^README\.md$|^pkgdown/favicon/|^tests/testthat/dv/'
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/posit-dev/air-pre-commit
+    rev: 0.13.0
+    hooks:
+      - id: air-format
+  - repo: https://github.com/lorenzwalthert/precommit
+    rev: v0.4.3.9034
+    hooks:
+      - id: parsable-R
+      - id: no-browser-statement
+      - id: no-debug-statement
+      # data-raw/ holds build-ignored developer scripts that use development
+      # tools (bench, magick, pkgload, ...) on purpose.
+      - id: deps-in-desc
+        exclude: '^data-raw/'
+      - id: use-tidy-description
+      - id: readme-rmd-rendered
+      - id: roxygenize
+        additional_dependencies:
+          - arrow
+          - cli
+          - digest
+          - dplyr
+          - glue
+          - httr2
+          - jsonlite
+          - lubridate
+          - rlang
+          - tibble
+      - id: lintr
+        args: ["--warn_only"]
+        verbose: true
+      # Setting `exclude` replaces the hook's own list, so that list (first
+      # block, precommit v0.4.3.9034) is repeated here, followed by this
+      # repository's additions. The word list (inst/WORDLIST) comes with
+      # CRAN-13; until then the pre-commit workflow skips this hook.
+      - id: spell-check
+        exclude: >
+          (?x)^(
+          .*\.[rR]|.*\.feather|.*\.jpeg|.*\.pdf|.*\.png|.*\.py|.*\.RData|
+          .*\.rds|.*\.Rds|.*\.Rproj|.*\.sh|(.*/|)\.gitignore|
+          (.*/|)\.pre-commit-.*|(.*/|)\.Rbuildignore|(.*/|)\.Renviron|
+          (.*/|)\.Rprofile|(.*/|)\.travis\.yml|(.*/|)appveyor\.yml|
+          (.*/|)NAMESPACE|(.*/|)renv/settings\.dcf|(.*/|)renv\.lock|
+          (.*/|)WORDLIST|\.github/workflows/.*|data/.*|
+          .*\.(svg|ico|parquet|webmanifest|json|toml|cff|ya?ml)|renv/.*|
+          \.github/.*|tests/testthat/(dv|_snaps|golden)/.*|
+          \.lintr|\.git-blame-ignore-revs
+          )$
+  - repo: local
+    hooks:
+      - id: portable-filenames
+        name: No spaces or non-portable characters in file names
+        entry: Tracked file names must match [A-Za-z0-9._/-]
+        language: fail
+        files: '[^A-Za-z0-9._/\-]'
+      - id: no-rplots
+        name: No Rplots.pdf
+        entry: Rplots.pdf must not be committed
+        language: fail
+        files: '(^|/)Rplots\.pdf$'

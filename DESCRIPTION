@@ -59,7 +59,7 @@ Suggests:
     testthat (>= 3.0.0),
     webfakes,
     withr
-VignetteBuilder: 
+VignetteBuilder:
     knitr
 Config/Needs/website: ggplot2, sf, rnaturalearth, rnaturalearthdata, leaflet, ggnewscale, ragg, rmarkdown
 Config/roxygen2/version: 8.1.1
