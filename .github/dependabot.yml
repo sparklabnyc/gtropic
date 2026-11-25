@@ -6,6 +6,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Wait a week before proposing a new release, so a compromised or broken
+    # release has time to be noticed and pulled first.
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns:
