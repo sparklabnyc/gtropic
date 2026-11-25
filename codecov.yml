@@ -1,0 +1,15 @@
+# Codecov settings (Plan 01 INFRA-04). Uploads come from
+# .github/workflows/test-coverage.yaml.
+comment: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: false
+    patch:
+      default:
+        target: 80%
+        informational: false
