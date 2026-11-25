@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest a new feature or a change to how gtropic works.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What you are trying to do, and what makes it hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like gtropic to do?
+      description: Describe the feature, ideally with a short example of how you would call it.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+      description: Workarounds you use today, or other ways to get the same result.
