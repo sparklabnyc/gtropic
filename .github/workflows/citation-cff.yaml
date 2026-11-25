@@ -1,0 +1,58 @@
+# Fails when CITATION.cff no longer matches DESCRIPTION and inst/CITATION
+# (Plan 01 INFRA-14). It only checks: regenerate the file locally with
+#   Rscript -e 'cffr::cff_write(gh_keywords = FALSE, dependencies = FALSE)'
+# and commit it. (cffr's own update workflow pushes commits itself, which needs
+# a write token and would bypass the review that main requires.)
+# Hardened per Plan 05 SEC-11.
+on:
+  push:
+    branches: [main]
+    paths:
+      - DESCRIPTION
+      - inst/CITATION
+      - CITATION.cff
+      - .github/workflows/citation-cff.yaml
+  pull_request:
+    paths:
+      - DESCRIPTION
+      - inst/CITATION
+      - CITATION.cff
+      - .github/workflows/citation-cff.yaml
+
+name: citation-cff.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  citation-cff:
+    name: CITATION.cff up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          packages: any::cffr
+
+      - name: Regenerate CITATION.cff
+        run: cffr::cff_write(gh_keywords = FALSE, dependencies = FALSE, validate = FALSE)
+        shell: Rscript {0}
+
+      - name: Check that it did not change
+        shell: bash
+        run: |
+          if ! git diff --exit-code -- CITATION.cff; then
+            echo "::error file=CITATION.cff::CITATION.cff is out of date. Run cffr::cff_write(gh_keywords = FALSE, dependencies = FALSE) and commit the result."
+            exit 1
+          fi

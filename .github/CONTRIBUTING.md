@@ -63,6 +63,10 @@ change to the data a query returns, needs an agreed issue first.
     below the first header). Follow the style described in
     <https://style.tidyverse.org/news.html>.
 
+*   If you change `DESCRIPTION` or `inst/CITATION`, regenerate `CITATION.cff`
+    with `cffr::cff_write(gh_keywords = FALSE, dependencies = FALSE)`; a
+    workflow checks that it is up to date.
+
 ### Code style
 
 *   New code should follow the tidyverse [style guide](https://style.tidyverse.org).

@@ -55,6 +55,10 @@
 
 ## New features
 
+* `citation("gtropic")` cites the package and the G-TROPIC historical
+  dataset (with its DOI), and asks that data from the current-year dataset be
+  cited with the DOI and version `gtropic_manifest()` reports.
+
 * `gtropic_manifest_write()` and `gtropic_manifest_read()` save a manifest as
   a JSON file and read it back. JSON is the safe way to share a manifest:
   reading it cannot run code, unlike `readRDS()` on an `.rds` file from

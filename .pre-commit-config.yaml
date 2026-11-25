@@ -12,13 +12,13 @@ repos:
       - id: check-yaml
       - id: check-merge-conflict
       # Generated files are left as their generators write them: man/*.Rd,
-      # snapshots, README.md (knitr), the favicon set and the recorded
-      # httptest2 responses.
+      # snapshots, README.md (knitr), CITATION.cff (cffr), the favicon set and
+      # the recorded httptest2 responses.
       - id: end-of-file-fixer
-        exclude: '\.Rd$|_snaps/|^README\.md$|^pkgdown/favicon/|^tests/testthat/dv/'
+        exclude: '\.Rd$|_snaps/|^README\.md$|^CITATION\.cff$|^pkgdown/favicon/|^tests/testthat/dv/'
       - id: trailing-whitespace
         args: ["--markdown-linebreak-ext=md"]
-        exclude: '\.Rd$|_snaps/|^README\.md$|^pkgdown/favicon/|^tests/testthat/dv/'
+        exclude: '\.Rd$|_snaps/|^README\.md$|^CITATION\.cff$|^pkgdown/favicon/|^tests/testthat/dv/'
       - id: mixed-line-ending
         args: ["--fix=lf"]
       - id: detect-private-key
