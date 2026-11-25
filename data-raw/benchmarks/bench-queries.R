@@ -26,19 +26,24 @@
 queries <- list(
   katrina = list(
     label = "Katrina 2005, wind",
-    args = list(STORM_NAME = "Katrina-2005", tables = c("wind", "storm_metadata"))
+    args = list(
+      STORM_NAME = "Katrina-2005",
+      tables = c("wind", "storm_metadata")
+    )
   ),
   philippines = list(
     label = "Philippines 2015 + precip",
     args = list(
-      WHO_ENTITY = "Philippines", date_range = 2015,
+      WHO_ENTITY = "Philippines",
+      date_range = 2015,
       tables = c("wind", "precip", "storm_metadata")
     )
   ),
   who_region = list(
     label = "WHO region, 5 years",
     args = list(
-      WHO_REGION = "Americas", date_range = c("2015-01-01", "2019-12-31"),
+      WHO_REGION = "Americas",
+      date_range = c("2015-01-01", "2019-12-31"),
       tables = c("wind", "adm2", "storm_metadata")
     )
   )
@@ -59,14 +64,19 @@ run_case <- function(name, cache_dir) {
       stats$calls <- stats$calls + if (per) length(..1) else 1L
       out <- f(...)
       # dv_get_file() returns the path of the downloaded file.
-      if (download) stats$bytes <- stats$bytes + file.size(out)
+      if (download) {
+        stats$bytes <- stats$bytes + file.size(out)
+      }
       out
     }
   }
   q <- queries[[name]]
   run <- function() {
     testthat::with_mocked_bindings(
-      do.call(gtropic::gtropic_data, c(q$args, list(quiet = TRUE, confirm = FALSE))),
+      do.call(
+        gtropic::gtropic_data,
+        c(q$args, list(quiet = TRUE, confirm = FALSE))
+      ),
       dv_list_datasets = counted(ns$dv_list_datasets),
       dv_list_files_each = counted(ns$dv_list_files_each, per = TRUE),
       dv_version_labels = counted(ns$dv_version_labels, per = TRUE),
@@ -78,7 +88,10 @@ run_case <- function(name, cache_dir) {
   mem <- bench::bench_memory(elapsed <- bench::bench_time(run()))
   cat(sprintf(
     "RESULT\t%.1f\t%s\t%.0f\t%d\n",
-    as.numeric(elapsed[["real"]]), format(mem$mem_alloc), stats$bytes, stats$calls
+    as.numeric(elapsed[["real"]]),
+    format(mem$mem_alloc),
+    stats$bytes,
+    stats$calls
   ))
 }
 
@@ -94,8 +107,11 @@ rows <- list()
 for (name in names(queries)) {
   cache_dir <- tempfile(paste0("gtropic-bench-", name, "-"))
   for (state in c("cold", "warm")) {
-    out <- system2("/usr/bin/time", c(time_flag, "Rscript", script, name, cache_dir),
-      stdout = TRUE, stderr = TRUE
+    out <- system2(
+      "/usr/bin/time",
+      c(time_flag, "Rscript", script, name, cache_dir),
+      stdout = TRUE,
+      stderr = TRUE
     )
     result <- grep("^RESULT\t", out, value = TRUE)
     if (length(result) != 1L) {
@@ -103,14 +119,21 @@ for (name in names(queries)) {
       stop("Benchmark case ", name, " (", state, ") failed.")
     }
     result <- strsplit(sub("^RESULT\t", "", result), "\t")[[1]]
-    rss_line <- grep("maximum resident set size|Maximum resident set size", out, value = TRUE)
+    rss_line <- grep(
+      "maximum resident set size|Maximum resident set size",
+      out,
+      value = TRUE
+    )
     rss <- as.numeric(gsub("[^0-9]", "", rss_line))
     # macOS reports bytes, GNU time reports kilobytes.
     rss_mb <- if (time_flag == "-l") rss / 1024^2 else rss / 1024
     rows[[length(rows) + 1L]] <- data.frame(
-      query = queries[[name]]$label, cache = state,
-      elapsed_s = as.numeric(result[[1]]), mem_alloc = result[[2]],
-      max_rss_mb = round(rss_mb), bytes_downloaded = as.numeric(result[[3]]),
+      query = queries[[name]]$label,
+      cache = state,
+      elapsed_s = as.numeric(result[[1]]),
+      mem_alloc = result[[2]],
+      max_rss_mb = round(rss_mb),
+      bytes_downloaded = as.numeric(result[[3]]),
       api_calls = as.integer(result[[4]])
     )
   }

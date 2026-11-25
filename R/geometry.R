@@ -23,4 +23,3 @@ repair_invalid_geometry <- function(geometry, make_valid = TRUE) {
   }
   geometry
 }
-

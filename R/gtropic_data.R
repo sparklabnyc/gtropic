@@ -225,40 +225,49 @@
 #'   [gtropic_plot()] to map the result, [gtropic_options] for settings.
 #' @family retrieval functions
 #' @export
-gtropic_data <- function(ADM2_ID = NULL,
-                         ADM2_NAME = NULL,
-                         ADM2_GROUP = NULL,
-                         WHO_ENTITY = NULL,
-                         WHO_REGION = NULL,
-                         polygon = NULL,
-                         reproject = TRUE,
-                         date_range = NULL,
-                         date_list = NULL,
-                         date_format = NULL,
-                         STORM_ID = NULL,
-                         STORM_NAME = NULL,
-                         USA_ATCF_ID = NULL,
-                         wind_radius_km = 500,
-                         tables = c(
-                           "wind", "precip", "flood", "pop", "adm2",
-                           "codebook", "zero_pairs", "tracks", "geometry",
-                           "storm_metadata"
-                         ),
-                         precip_days_before = 2,
-                         precip_days_after = 1,
-                         precip_radius_km = 500,
-                         flood_days_before = 2,
-                         flood_days_after = 1,
-                         flood_radius_km = 500,
-                         flood_match = c("start", "overlap"),
-                         geometry_resolution = c("simplified", "full"),
-                         make_valid = TRUE,
-                         version = ":latest",
-                         manifest = NULL,
-                         cache = NULL,
-                         confirm = TRUE,
-                         quiet = getOption("gtropic.quiet", FALSE),
-                         offline = FALSE) {
+gtropic_data <- function(
+  ADM2_ID = NULL,
+  ADM2_NAME = NULL,
+  ADM2_GROUP = NULL,
+  WHO_ENTITY = NULL,
+  WHO_REGION = NULL,
+  polygon = NULL,
+  reproject = TRUE,
+  date_range = NULL,
+  date_list = NULL,
+  date_format = NULL,
+  STORM_ID = NULL,
+  STORM_NAME = NULL,
+  USA_ATCF_ID = NULL,
+  wind_radius_km = 500,
+  tables = c(
+    "wind",
+    "precip",
+    "flood",
+    "pop",
+    "adm2",
+    "codebook",
+    "zero_pairs",
+    "tracks",
+    "geometry",
+    "storm_metadata"
+  ),
+  precip_days_before = 2,
+  precip_days_after = 1,
+  precip_radius_km = 500,
+  flood_days_before = 2,
+  flood_days_after = 1,
+  flood_radius_km = 500,
+  flood_match = c("start", "overlap"),
+  geometry_resolution = c("simplified", "full"),
+  make_valid = TRUE,
+  version = ":latest",
+  manifest = NULL,
+  cache = NULL,
+  confirm = TRUE,
+  quiet = getOption("gtropic.quiet", FALSE),
+  offline = FALSE
+) {
   call <- match.call()
   if (missing(tables) && is.null(manifest)) {
     tables <- default_tables(quiet = quiet)
@@ -352,23 +361,48 @@ gtropic_data <- function(ADM2_ID = NULL,
 #' Reject conflicting data-shaping arguments on manifest replay
 #' @keywords internal
 #' @noRd
-manifest_assert_replay_arguments <- function(call, call_env = rlang::caller_env()) {
+manifest_assert_replay_arguments <- function(
+  call,
+  call_env = rlang::caller_env()
+) {
   supplied <- setdiff(names(call), "")
   shaping <- c(
-    "ADM2_ID", "ADM2_NAME", "ADM2_GROUP", "WHO_ENTITY", "WHO_REGION",
-    "polygon", "reproject", "date_range", "date_list", "date_format",
-    "STORM_ID", "STORM_NAME", "USA_ATCF_ID", "wind_radius_km", "tables",
-    "precip_days_before", "precip_days_after", "precip_radius_km",
-    "flood_days_before", "flood_days_after", "flood_radius_km", "flood_match",
-    "geometry_resolution", "make_valid", "version"
+    "ADM2_ID",
+    "ADM2_NAME",
+    "ADM2_GROUP",
+    "WHO_ENTITY",
+    "WHO_REGION",
+    "polygon",
+    "reproject",
+    "date_range",
+    "date_list",
+    "date_format",
+    "STORM_ID",
+    "STORM_NAME",
+    "USA_ATCF_ID",
+    "wind_radius_km",
+    "tables",
+    "precip_days_before",
+    "precip_days_after",
+    "precip_radius_km",
+    "flood_days_before",
+    "flood_days_after",
+    "flood_radius_km",
+    "flood_match",
+    "geometry_resolution",
+    "make_valid",
+    "version"
   )
   conflicts <- intersect(supplied, shaping)
   if (length(conflicts) > 0L) {
-    cli::cli_abort(c(
-      "A manifest already defines the resolved query.",
-      x = "Do not also supply data-shaping argument{?s}: {.arg {conflicts}}.",
-      i = "You may change {.arg cache}, {.arg confirm}, {.arg quiet}, or {.arg offline}."
-    ), call = call_env)
+    cli::cli_abort(
+      c(
+        "A manifest already defines the resolved query.",
+        x = "Do not also supply data-shaping argument{?s}: {.arg {conflicts}}.",
+        i = "You may change {.arg cache}, {.arg confirm}, {.arg quiet}, or {.arg offline}."
+      ),
+      call = call_env
+    )
   }
   invisible(TRUE)
 }
@@ -376,9 +410,12 @@ manifest_assert_replay_arguments <- function(call, call_env = rlang::caller_env(
 #' Create the canonical, replayable portion of a query
 #' @keywords internal
 #' @noRd
-manifest_query_from_args <- function(args, resolved_adm2_ids = NULL,
-                                     resolved_storm_ids = NULL,
-                                     storm_metadata_years = NULL) {
+manifest_query_from_args <- function(
+  args,
+  resolved_adm2_ids = NULL,
+  resolved_storm_ids = NULL,
+  storm_metadata_years = NULL
+) {
   out <- args[manifest_query_fields()]
   if (!is.null(resolved_adm2_ids)) {
     out$resolved_adm2_ids <- sort(unique(as.character(resolved_adm2_ids)))
@@ -410,10 +447,10 @@ manifest_query_from_args <- function(args, resolved_adm2_ids = NULL,
 #' @keywords internal
 #' @noRd
 check_nonneg_int <- function(x, arg, call = rlang::caller_env()) {
-  if (!is.numeric(x) || length(x) != 1L || is.na(x) || x < 0 ||
-    x != round(x)) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) || x < 0 || x != round(x)) {
     cli::cli_abort(
-      c("{.arg {arg}} must be a single non-negative whole number of days.",
+      c(
+        "{.arg {arg}} must be a single non-negative whole number of days.",
         x = "Got {.val {x}}."
       ),
       call = call
@@ -434,17 +471,22 @@ check_nonneg_int <- function(x, arg, call = rlang::caller_env()) {
 #' @return A positive finite numeric scalar or `Inf`.
 #' @keywords internal
 #' @noRd
-check_radius_km <- function(x, arg = rlang::caller_arg(x),
-                            call = rlang::caller_env()) {
+check_radius_km <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
   if (is.null(x)) {
     return(Inf)
   }
 
-  valid <- is.numeric(x) && length(x) == 1L &&
+  valid <- is.numeric(x) &&
+    length(x) == 1L &&
     (is.infinite(x) && x > 0 || is.finite(x) && x > 0)
   if (!valid) {
     cli::cli_abort(
-      c("{.arg {arg}} must be a single positive finite number, {Inf}, or {.code NULL}.",
+      c(
+        "{.arg {arg}} must be a single positive finite number, {Inf}, or {.code NULL}.",
         x = "Got {.val {x}}."
       ),
       call = call

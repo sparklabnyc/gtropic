@@ -55,8 +55,18 @@ test_that("recorded downloads verify, cache and read", {
   httptest2::with_mock_api({
     discovery <- discover_datasets(refresh = TRUE, quiet = TRUE)
     ctx <- fetch_context(discovery, fetcher_cache(dir), quiet = TRUE)
-    hist <- fetch_file("historical", "02_wind/excluded_storms", "2007.parquet", ctx)
-    curr <- fetch_file("current", "02_wind/excluded_storms", "2026.parquet", ctx)
+    hist <- fetch_file(
+      "historical",
+      "02_wind/excluded_storms",
+      "2007.parquet",
+      ctx
+    )
+    curr <- fetch_file(
+      "current",
+      "02_wind/excluded_storms",
+      "2026.parquet",
+      ctx
+    )
     cache_manage_ctx(ctx)
   })
 
@@ -65,7 +75,10 @@ test_that("recorded downloads verify, cache and read", {
   expect_true(all(c("STORM_ID", "STORM_NAME") %in% names(curr)))
 
   files <- ctx_manifest(ctx)$files
-  expect_identical(files$dataset_doi, c(discovery$historical$doi, discovery$current$doi))
+  expect_identical(
+    files$dataset_doi,
+    c(discovery$historical$doi, discovery$current$doi)
+  )
   listed <- rbind(discovery$historical$listing, discovery$current$listing)
   expected <- listed[match(files$file_id, listed$file_id), ]
   expect_identical(files$checksum, expected$checksum)
@@ -76,7 +89,12 @@ test_that("recorded downloads verify, cache and read", {
   expect_identical(nrow(idx), 2L)
   httptest2::without_internet({
     ctx <- fetch_context(discovery, fetcher_cache(dir), quiet = TRUE)
-    again <- fetch_file("historical", "02_wind/excluded_storms", "2007.parquet", ctx)
+    again <- fetch_file(
+      "historical",
+      "02_wind/excluded_storms",
+      "2007.parquet",
+      ctx
+    )
   })
   expect_identical(again$num_rows, hist$num_rows)
 })
@@ -88,7 +106,9 @@ test_that("recordings are small, portable and carry no credentials", {
   # Plan 04 PERF-15: committed HTTP fixtures stay under 200 KB in all.
   expect_lt(sum(file.size(file.path(dir, rel))), 200 * 1024)
   # Paths in the built tarball must not exceed 100 bytes.
-  expect_true(all(nchar(file.path("gtropic", "tests", "testthat", "dv", rel)) <= 100))
+  expect_true(all(
+    nchar(file.path("gtropic", "tests", "testthat", "dv", rel)) <= 100
+  ))
   text <- unlist(lapply(file.path(dir, rel), readLines, warn = FALSE))
   expect_false(any(grepl(
     "X-Dataverse-key|X-Amz-|AKIA|JSESSIONID|AWSALB|Set-Cookie",

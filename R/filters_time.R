@@ -24,13 +24,16 @@
 #'   `dates`, `inferred_order` and `ambiguous`.
 #' @keywords internal
 #' @noRd
-parse_date_input <- function(date_range = NULL,
-                             date_list = NULL,
-                             date_format = NULL,
-                             call = rlang::caller_env()) {
+parse_date_input <- function(
+  date_range = NULL,
+  date_list = NULL,
+  date_format = NULL,
+  call = rlang::caller_env()
+) {
   if (!is.null(date_range) && !is.null(date_list)) {
     cli::cli_abort(
-      c("{.arg date_range} and {.arg date_list} cannot both be supplied.",
+      c(
+        "{.arg date_range} and {.arg date_list} cannot both be supplied.",
         i = "{.arg date_range} selects storms forming between two dates;
              {.arg date_list} selects storms forming on specific dates."
       ),
@@ -40,15 +43,20 @@ parse_date_input <- function(date_range = NULL,
 
   if (is.null(date_range) && is.null(date_list)) {
     return(list(
-      type = "none", start = NULL, end = NULL, dates = NULL,
-      inferred_order = NULL, ambiguous = FALSE
+      type = "none",
+      start = NULL,
+      end = NULL,
+      dates = NULL,
+      inferred_order = NULL,
+      ambiguous = FALSE
     ))
   }
 
   if (!is.null(date_range)) {
     if (!length(date_range) %in% 1:2) {
       cli::cli_abort(
-        c("{.arg date_range} must have one or two elements.",
+        c(
+          "{.arg date_range} must have one or two elements.",
           x = "Got {length(date_range)}.",
           i = 'For example {.code date_range = 2005},
                {.code date_range = c("2005-08-01", "2005-09-30")} or
@@ -58,19 +66,30 @@ parse_date_input <- function(date_range = NULL,
       )
     }
     # A single value is both endpoints: 2005 means all of 2005.
-    if (length(date_range) == 1L) date_range <- c(date_range, date_range)
+    if (length(date_range) == 1L) {
+      date_range <- c(date_range, date_range)
+    }
 
     order <- resolve_date_order(date_range, date_format, call = call)
-    start <- expand_date_element(date_range[[1]], "start", order$order,
-      arg = "date_range", call = call
+    start <- expand_date_element(
+      date_range[[1]],
+      "start",
+      order$order,
+      arg = "date_range",
+      call = call
     )
-    end <- expand_date_element(date_range[[2]], "end", order$order,
-      arg = "date_range", call = call
+    end <- expand_date_element(
+      date_range[[2]],
+      "end",
+      order$order,
+      arg = "date_range",
+      call = call
     )
 
     if (start > end) {
       cli::cli_abort(
-        c("{.arg date_range} is reversed.",
+        c(
+          "{.arg date_range} is reversed.",
           x = "Start {.val {format(start)}} is after end {.val {format(end)}}.",
           i = "Supply the earlier date first."
         ),
@@ -79,8 +98,12 @@ parse_date_input <- function(date_range = NULL,
     }
 
     return(list(
-      type = "range", start = start, end = end, dates = NULL,
-      inferred_order = order$order, ambiguous = order$ambiguous
+      type = "range",
+      start = start,
+      end = end,
+      dates = NULL,
+      inferred_order = order$order,
+      ambiguous = order$ambiguous
     ))
   }
 
@@ -88,16 +111,27 @@ parse_date_input <- function(date_range = NULL,
   # Each element of date_list is a specific genesis date, so partial forms are
   # expanded at their start: "2005-08" would mean 2005-08-01, which is almost
   # certainly not what the user meant. Reject partial forms here instead.
-  dates <- vapply(date_list, function(el) {
-    as.character(expand_date_element(el, "start", order$order,
-      arg = "date_list", allow_partial = FALSE,
-      call = call
-    ))
-  }, character(1))
+  dates <- vapply(
+    date_list,
+    function(el) {
+      as.character(expand_date_element(
+        el,
+        "start",
+        order$order,
+        arg = "date_list",
+        allow_partial = FALSE,
+        call = call
+      ))
+    },
+    character(1)
+  )
 
   list(
-    type = "list", start = min(as.Date(dates)), end = max(as.Date(dates)),
-    dates = as.Date(unname(dates)), inferred_order = order$order,
+    type = "list",
+    start = min(as.Date(dates)),
+    end = max(as.Date(dates)),
+    dates = as.Date(unname(dates)),
+    inferred_order = order$order,
     ambiguous = order$ambiguous
   )
 }
@@ -111,8 +145,11 @@ parse_date_input <- function(date_range = NULL,
 #' @return A list with `order` and `ambiguous`.
 #' @keywords internal
 #' @noRd
-resolve_date_order <- function(x, date_format = NULL,
-                               call = rlang::caller_env()) {
+resolve_date_order <- function(
+  x,
+  date_format = NULL,
+  call = rlang::caller_env()
+) {
   if (!is.null(date_format)) {
     # Explicit instruction bypasses inference completely, by design: a user who
     # has told us the order should never be second-guessed or warned at.
@@ -121,38 +158,46 @@ resolve_date_order <- function(x, date_format = NULL,
 
   # Only strings that are neither already-unambiguous ISO nor bare year/month
   # forms need an order decided for them.
-  candidates <- unlist(lapply(x, function(el) {
-    if (inherits(el, c("Date", "POSIXt"))) {
-      return(NULL)
-    }
-    s <- as.character(el)
-    if (grepl("^\\d{4}$", s)) {
-      return(NULL)
-    }
-    if (grepl("^\\d{4}-\\d{1,2}$", s)) {
-      return(NULL)
-    }
-    if (grepl("^\\d{4}-\\d{1,2}-\\d{1,2}$", s)) {
-      return(NULL)
-    }
-    s
-  }), use.names = FALSE)
+  candidates <- unlist(
+    lapply(x, function(el) {
+      if (inherits(el, c("Date", "POSIXt"))) {
+        return(NULL)
+      }
+      s <- as.character(el)
+      if (grepl("^\\d{4}$", s)) {
+        return(NULL)
+      }
+      if (grepl("^\\d{4}-\\d{1,2}$", s)) {
+        return(NULL)
+      }
+      if (grepl("^\\d{4}-\\d{1,2}-\\d{1,2}$", s)) {
+        return(NULL)
+      }
+      s
+    }),
+    use.names = FALSE
+  )
 
   if (length(candidates) == 0L) {
     return(list(order = "ymd", ambiguous = FALSE))
   }
 
   orders <- c("ymd", "mdy", "dmy")
-  feasible <- orders[vapply(orders, function(o) {
-    parsed <- suppressWarnings(
-      lubridate::parse_date_time(candidates, orders = o, quiet = TRUE)
-    )
-    !anyNA(parsed)
-  }, logical(1))]
+  feasible <- orders[vapply(
+    orders,
+    function(o) {
+      parsed <- suppressWarnings(
+        lubridate::parse_date_time(candidates, orders = o, quiet = TRUE)
+      )
+      !anyNA(parsed)
+    },
+    logical(1)
+  )]
 
   if (length(feasible) == 0L) {
     cli::cli_abort(
-      c("Could not interpret the supplied date value(s).",
+      c(
+        "Could not interpret the supplied date value(s).",
         x = "Offending values: {.val {candidates}}.",
         i = 'Supply {.arg date_format}, e.g. {.code date_format = "dmy"}, or use
              ISO dates such as {.val 2005-08-29}.'
@@ -201,9 +246,14 @@ resolve_date_order <- function(x, date_format = NULL,
 #' @return A `Date` of length 1.
 #' @keywords internal
 #' @noRd
-expand_date_element <- function(x, side = c("start", "end"), order = "ymd",
-                                arg = "date_range", allow_partial = TRUE,
-                                call = rlang::caller_env()) {
+expand_date_element <- function(
+  x,
+  side = c("start", "end"),
+  order = "ymd",
+  arg = "date_range",
+  allow_partial = TRUE,
+  call = rlang::caller_env()
+) {
   side <- match.arg(side)
 
   if (inherits(x, "POSIXt")) {
@@ -217,25 +267,33 @@ expand_date_element <- function(x, side = c("start", "end"), order = "ymd",
 
   # Bare year.
   if (grepl("^\\d{4}$", s)) {
-    if (!allow_partial) abort_partial(s, arg, call)
+    if (!allow_partial) {
+      abort_partial(s, arg, call)
+    }
     y <- as.integer(s)
-    return(if (side == "start") {
-      as.Date(sprintf("%04d-01-01", y))
-    } else {
-      as.Date(sprintf("%04d-12-31", y))
-    })
+    return(
+      if (side == "start") {
+        as.Date(sprintf("%04d-01-01", y))
+      } else {
+        as.Date(sprintf("%04d-12-31", y))
+      }
+    )
   }
 
   # Year-month.
   if (grepl("^\\d{4}-\\d{1,2}$", s)) {
-    if (!allow_partial) abort_partial(s, arg, call)
+    if (!allow_partial) {
+      abort_partial(s, arg, call)
+    }
     first <- as.Date(paste0(s, "-01"))
-    return(if (side == "start") {
-      first
-    } else {
-      # Last day of the month, without hardcoding month lengths or leap years.
-      lubridate::ceiling_date(first, unit = "month") - 1
-    })
+    return(
+      if (side == "start") {
+        first
+      } else {
+        # Last day of the month, without hardcoding month lengths or leap years.
+        lubridate::ceiling_date(first, unit = "month") - 1
+      }
+    )
   }
 
   # Full date. ISO strings are parsed as ISO no matter what order was inferred
@@ -249,7 +307,8 @@ expand_date_element <- function(x, side = c("start", "end"), order = "ymd",
   )
   if (is.na(parsed)) {
     cli::cli_abort(
-      c("Could not parse {.val {s}} in {.arg {arg}} as a date.",
+      c(
+        "Could not parse {.val {s}} in {.arg {arg}} as a date.",
         i = "Supply {.arg date_format} or use an ISO date such as
              {.val 2005-08-29}."
       ),
@@ -264,7 +323,8 @@ expand_date_element <- function(x, side = c("start", "end"), order = "ymd",
 #' @noRd
 abort_partial <- function(s, arg, call) {
   cli::cli_abort(
-    c("{.val {s}} in {.arg {arg}} is not a complete date.",
+    c(
+      "{.val {s}} in {.arg {arg}} is not a complete date.",
       i = "{.arg {arg}} matches storm genesis dates exactly, so each value must
            name a single day.",
       i = "Use {.arg date_range} to select a span of time."

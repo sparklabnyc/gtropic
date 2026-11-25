@@ -9,17 +9,27 @@ test_that("count builders delegate the full choropleth contract", {
   })
   data <- tibble::tibble(ADM2_ID = "a", value = 2)
   cartography <- list(basemap = NULL)
-  p <- build_count_plot(data, cartography,
-    title = "Storm counts", subtitle = "Selected ADM2s", caption = "Definition",
+  p <- build_count_plot(
+    data,
+    cartography,
+    title = "Storm counts",
+    subtitle = "Selected ADM2s",
+    caption = "Definition",
     linewidth = 0.2
   )
   expect_s3_class(p, "ggplot")
-  expect_identical(captured, list(
-    data = data, cartography = cartography,
-    title = "Storm counts", subtitle = "Selected ADM2s", caption = "Definition",
-    gridlines = TRUE,
-    linewidth = 0.2
-  ))
+  expect_identical(
+    captured,
+    list(
+      data = data,
+      cartography = cartography,
+      title = "Storm counts",
+      subtitle = "Selected ADM2s",
+      caption = "Definition",
+      gridlines = TRUE,
+      linewidth = 0.2
+    )
+  )
 })
 
 test_that("precipitation counts use raw days and distinguish zero from NA", {
@@ -39,7 +49,12 @@ test_that("precipitation counts use raw days and distinguish zero from NA", {
   expect_equal(storms$value[match(ids, storms$ADM2_ID)], c(2, 0, NA_real_))
   expect_equal(days$value[match(ids, days$ADM2_ID)], c(1, 0, NA_real_))
   faceted <- plot_aggregate_metric(
-    rows, spec, "count", "days", "STORM_ID", FALSE
+    rows,
+    spec,
+    "count",
+    "days",
+    "STORM_ID",
+    FALSE
   )
   expect_equal(faceted$value[faceted$ADM2_ID == "wet"], c(1, 1))
 })
@@ -47,9 +62,11 @@ test_that("precipitation counts use raw days and distinguish zero from NA", {
 test_that("wind counts distinguish storms from closest-approach dates", {
   spec <- resolve_plot_metrics(plot_fixture(), "count", "VMAX_SUST_MS")
   rows <- tibble::tibble(
-    ADM2_ID = "coast", STORM_ID = c("A", "A", "B", "C"),
+    ADM2_ID = "coast",
+    STORM_ID = c("A", "A", "B", "C"),
     LOCAL_DATE_STORM_CLOSEST = as.Date("2020-08-01") + c(0, 0, 0, 1),
-    value = c(17.5, 17.5, 30, 17.4), metric = "VMAX_SUST_MS",
+    value = c(17.5, 17.5, 30, 17.4),
+    metric = "VMAX_SUST_MS",
     .plot_row_id = c(1L, 1L, 2L, 3L)
   )
   storms <- plot_aggregate_metric(rows, spec, "count", "storms", NULL, FALSE)
@@ -61,15 +78,21 @@ test_that("wind counts distinguish storms from closest-approach dates", {
 test_that("prepared counts carry count labels and threshold definitions", {
   x <- plot_fixture()
   for (unit in c("storms", "days")) {
-    data <- prepare_plot_data(x, "count", "PRECIP_MM",
-      count_unit = unit, track = FALSE
+    data <- prepare_plot_data(
+      x,
+      "count",
+      "PRECIP_MM",
+      count_unit = unit,
+      track = FALSE
     )
     info <- attr(data, "plot_info")
     expect_equal(info$metrics$legend, paste("Number of", unit))
     expect_equal(info$metrics$value_unit, unit)
     expect_match(
       info$caption,
-      paste0("Precip parameters: radius=400 km, window=-2/+1 days, aggregate=n"),
+      paste0(
+        "Precip parameters: radius=400 km, window=-2/+1 days, aggregate=n"
+      ),
       fixed = TRUE
     )
     expect_equal(data$value[data$ADM2_ID == "PLOT.1"], 0)
@@ -77,8 +100,11 @@ test_that("prepared counts carry count labels and threshold definitions", {
     expected <- if (unit == "storms") 3 else 6
     expect_equal(data$value[data$ADM2_ID == "PLOT.3"], expected)
     cartography <- plot_cartography(data, basemap = "none")
-    p <- build_count_plot(data, cartography,
-      title = "Exposure counts", subtitle = unit
+    p <- build_count_plot(
+      data,
+      cartography,
+      title = "Exposure counts",
+      subtitle = unit
     )
     expect_s3_class(p, "ggplot")
     expect_s3_class(p$layers[[1]]$geom, "GeomSf")
@@ -89,7 +115,10 @@ test_that("prepared counts carry count labels and threshold definitions", {
     expect_equal(scale$name, paste("Number of", unit))
     expect_equal(p$labels$title, "Exposure counts")
     expect_equal(p$labels$subtitle, unit)
-    expect_identical(p$labels$caption, plot_caption(info, crs = cartography$crs))
+    expect_identical(
+      p$labels$caption,
+      plot_caption(info, crs = cartography$crs)
+    )
     expect_no_error(ggplot2::ggplot_build(p))
   }
 })
@@ -109,10 +138,17 @@ test_that("precipitation count labels omit the local-day source suffix", {
 })
 
 test_that("count maps share count limits across storm facets", {
-  data <- prepare_plot_data(plot_fixture(), "count", "PRECIP_MM",
-    count_unit = "days", facet_by = "STORM_ID", track = FALSE
+  data <- prepare_plot_data(
+    plot_fixture(),
+    "count",
+    "PRECIP_MM",
+    count_unit = "days",
+    facet_by = "STORM_ID",
+    track = FALSE
   )
-  p <- build_count_plot(data, plot_cartography(data, basemap = "none"),
+  p <- build_count_plot(
+    data,
+    plot_cartography(data, basemap = "none"),
     caption = "A custom exposure definition"
   )
   expect_s3_class(p$facet, "FacetWrap")

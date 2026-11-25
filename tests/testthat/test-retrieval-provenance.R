@@ -4,7 +4,13 @@ test_that("cache hits retain original download times in file provenance", {
   bytes <- charToRaw("timestamped source")
   downloaded <- as.POSIXct("2026-01-02 03:04:05", tz = "UTC")
 
-  cache_put_bytes(cache, key, bytes, checksum_raw(bytes), downloaded_at = downloaded)
+  cache_put_bytes(
+    cache,
+    key,
+    bytes,
+    checksum_raw(bytes),
+    downloaded_at = downloaded
+  )
   cached <- cache_get(cache, key, checksum_raw(bytes))
 
   expect_equal(cached$downloaded_at, downloaded)
@@ -12,23 +18,33 @@ test_that("cache hits retain original download times in file provenance", {
   discovery <- fetcher_discovery(fetcher_listing()$listing)
   manifest <- manifest_new(discovery)
   manifest <- manifest_add(
-    manifest, key$doi, key$version,
+    manifest,
+    key$doi,
+    key$version,
     tibble::tibble(
-      directory_label = key$directory_label, label = key$label,
-       file_id = 1L, checksum = checksum_raw(bytes), checksum_type = "SHA-256",
-       size_bytes = length(bytes)
+      directory_label = key$directory_label,
+      label = key$label,
+      file_id = 1L,
+      checksum = checksum_raw(bytes),
+      checksum_type = "SHA-256",
+      size_bytes = length(bytes)
     ),
-    cached$downloaded_at, source_role = "historical"
+    cached$downloaded_at,
+    source_role = "historical"
   )
   manifest <- manifest_finalize(manifest)
 
   expect_identical(manifest$schema_version, 1L)
   expect_equal(manifest$files$downloaded_at, downloaded)
   expect_equal(manifest$retrieved_at, downloaded)
-  expect_equal(manifest$datasets, tibble::tibble(
-    source_role = "Historical",
-    dataset_doi = key$doi, dataset_version = key$version
-  ))
+  expect_equal(
+    manifest$datasets,
+    tibble::tibble(
+      source_role = "Historical",
+      dataset_doi = key$doi,
+      dataset_version = key$version
+    )
+  )
 })
 
 test_that("manifest roles retain routing for one or both source datasets", {
@@ -36,18 +52,28 @@ test_that("manifest roles retain routing for one or both source datasets", {
   row <- function(year) {
     tibble::tibble(
       directory_label = "02_wind/storm_metadata",
-      label = paste0(year, ".parquet"), file_id = as.integer(year),
-      checksum = paste0("checksum-", year), checksum_type = "SHA-256",
+      label = paste0(year, ".parquet"),
+      file_id = as.integer(year),
+      checksum = paste0("checksum-", year),
+      checksum_type = "SHA-256",
       size_bytes = 1
     )
   }
   manifest <- manifest_add(
-    manifest, "doi:10.0000/CURRENT", "2.0", row(2026),
-    as.POSIXct("2026-01-01", tz = "UTC"), source_role = "current"
+    manifest,
+    "doi:10.0000/CURRENT",
+    "2.0",
+    row(2026),
+    as.POSIXct("2026-01-01", tz = "UTC"),
+    source_role = "current"
   )
   manifest <- manifest_add(
-    manifest, "doi:10.0000/HISTORICAL", "3.0", row(2005),
-    as.POSIXct("2026-01-01", tz = "UTC"), source_role = "historical"
+    manifest,
+    "doi:10.0000/HISTORICAL",
+    "3.0",
+    row(2005),
+    as.POSIXct("2026-01-01", tz = "UTC"),
+    source_role = "historical"
   )
   manifest <- manifest_finalize(manifest)
   discovery <- discovery_from_manifest(manifest)
@@ -58,8 +84,12 @@ test_that("manifest roles retain routing for one or both source datasets", {
   expect_equal(discovery$year_index$dataset, c("current", "historical"))
 
   current_only <- manifest_finalize(manifest_add(
-    manifest_new(list(server = "example.org")), "doi:10.0000/CURRENT", "2.0",
-    row(2026), as.POSIXct("2026-01-01", tz = "UTC"), source_role = "current"
+    manifest_new(list(server = "example.org")),
+    "doi:10.0000/CURRENT",
+    "2.0",
+    row(2026),
+    as.POSIXct("2026-01-01", tz = "UTC"),
+    source_role = "current"
   ))
   current_discovery <- discovery_from_manifest(current_only)
   expect_null(current_discovery$historical)
@@ -70,7 +100,10 @@ test_that("manifest replay rejects only explicitly supplied data-shaping argumen
   call <- quote(gtropic_data(manifest = mf, cache = FALSE, quiet = TRUE))
   expect_silent(manifest_assert_replay_arguments(call))
   expect_error(
-    manifest_assert_replay_arguments(quote(gtropic_data(manifest = mf, tables = "wind"))),
+    manifest_assert_replay_arguments(quote(gtropic_data(
+      manifest = mf,
+      tables = "wind"
+    ))),
     "data-shaping"
   )
 })
@@ -78,22 +111,41 @@ test_that("manifest replay rejects only explicitly supplied data-shaping argumen
 test_that("gtropic_data replays the stored canonical query", {
   withr::local_options(gtropic.server = "example.org")
   query <- list(
-    geo_filters = list(WHO_ENTITY = "Example"), storm_filters = list(),
-    storm_name_years = NULL, wind_radius_km = 500, polygon = NULL,
-    reproject = TRUE, date_range = c("2001-01-01", "2001-12-31"),
-    date_list = NULL, date_format = NULL, tables = c("wind", "storm_metadata"),
-    precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
-    flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", make_valid = FALSE,
-    resolved_adm2_ids = "ADM2.1", resolved_storm_ids = "S.1",
+    geo_filters = list(WHO_ENTITY = "Example"),
+    storm_filters = list(),
+    storm_name_years = NULL,
+    wind_radius_km = 500,
+    polygon = NULL,
+    reproject = TRUE,
+    date_range = c("2001-01-01", "2001-12-31"),
+    date_list = NULL,
+    date_format = NULL,
+    tables = c("wind", "storm_metadata"),
+    precip_days_before = 2,
+    precip_days_after = 1,
+    precip_radius_km = 500,
+    flood_days_before = 2,
+    flood_days_after = 1,
+    flood_radius_km = 500,
+    flood_match = "start",
+    geometry_resolution = "simplified",
+    make_valid = FALSE,
+    resolved_adm2_ids = "ADM2.1",
+    resolved_storm_ids = "S.1",
     storm_metadata_years = 2001L
   )
   manifest <- manifest_new(list(server = "example.org"))
   manifest <- manifest_add(
-    manifest, "doi:10.0000/HIST", "1.0",
+    manifest,
+    "doi:10.0000/HIST",
+    "1.0",
     tibble::tibble(
-      directory_label = "metadata", label = "adm2.parquet", file_id = 1L,
-      checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
+      directory_label = "metadata",
+      label = "adm2.parquet",
+      file_id = 1L,
+      checksum = strrep("a", 32L),
+      checksum_type = "MD5",
+      size_bytes = 1
     ),
     downloaded_at = as.POSIXct("2026-01-01", tz = "UTC"),
     source_role = "historical"
@@ -109,8 +161,14 @@ test_that("gtropic_data replays the stored canonical query", {
   expect_identical(replay$tables, query$tables)
   expect_false(replay$make_valid)
   expect_true(replay$quiet)
-  expect_error(gtropic_data(manifest = manifest, tables = "flood"), "data-shaping")
-  expect_error(gtropic_data(manifest = manifest, make_valid = TRUE), "data-shaping")
+  expect_error(
+    gtropic_data(manifest = manifest, tables = "flood"),
+    "data-shaping"
+  )
+  expect_error(
+    gtropic_data(manifest = manifest, make_valid = TRUE),
+    "data-shaping"
+  )
 
   legacy_query <- query
   legacy_query$make_valid <- NULL
@@ -123,19 +181,33 @@ test_that("canonical manifest queries retain resolved IDs and metadata years", {
   args <- list(
     geo_filters = list(WHO_ENTITY = "Example"),
     storm_filters = list(STORM_NAME = "Example-2026"),
-    storm_name_years = 2026L, wind_radius_km = 500, polygon = NULL,
-    reproject = TRUE, date_range = c("2026-01-01", "2026-12-31"),
-    date_list = NULL, date_format = NULL, tables = c("wind", "storm_metadata"),
-    precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
-    flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
-    resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
+    storm_name_years = 2026L,
+    wind_radius_km = 500,
+    polygon = NULL,
+    reproject = TRUE,
+    date_range = c("2026-01-01", "2026-12-31"),
+    date_list = NULL,
+    date_format = NULL,
+    tables = c("wind", "storm_metadata"),
+    precip_days_before = 2,
+    precip_days_after = 1,
+    precip_radius_km = 500,
+    flood_days_before = 2,
+    flood_days_after = 1,
+    flood_radius_km = 500,
+    flood_match = "start",
+    geometry_resolution = "simplified",
+    make_valid = TRUE,
+    resolved_adm2_ids = NULL,
+    resolved_storm_ids = NULL,
     storm_metadata_years = NULL
   )
 
   query <- manifest_query_from_args(
-    args, resolved_adm2_ids = c("ADM2.2", "ADM2.1"),
-    resolved_storm_ids = "S.2026", storm_metadata_years = 2026L
+    args,
+    resolved_adm2_ids = c("ADM2.2", "ADM2.1"),
+    resolved_storm_ids = "S.2026",
+    storm_metadata_years = 2026L
   )
 
   expect_identical(query$geo_filters, list())
@@ -149,12 +221,19 @@ test_that("canonical manifest queries retain resolved IDs and metadata years", {
 
   manifest <- manifest_new(list(server = "example.org"))
   manifest <- manifest_add(
-    manifest, "doi:10.0000/CURRENT", "2.0",
+    manifest,
+    "doi:10.0000/CURRENT",
+    "2.0",
     tibble::tibble(
-      directory_label = "02_wind/storm_metadata", label = "2026.parquet",
-       file_id = 1L, checksum = strrep("a", 64L), checksum_type = "SHA-256",
-       size_bytes = 1
-    ), as.POSIXct("2026-01-01", tz = "UTC"), source_role = "current"
+      directory_label = "02_wind/storm_metadata",
+      label = "2026.parquet",
+      file_id = 1L,
+      checksum = strrep("a", 64L),
+      checksum_type = "SHA-256",
+      size_bytes = 1
+    ),
+    as.POSIXct("2026-01-01", tz = "UTC"),
+    source_role = "current"
   )
   manifest <- manifest_finalize(manifest, resolved_query = query)
   expect_silent(manifest_validate(manifest))
@@ -175,24 +254,46 @@ test_that("canonical manifest queries retain resolved IDs and metadata years", {
 test_that("unrestricted current-only wind retrieval avoids historical metadata", {
   seen <- character(0)
   current <- list(
-    doi = "doi:10.0000/CURRENT", version = "2.0", listing = dv_empty_listing()
+    doi = "doi:10.0000/CURRENT",
+    version = "2.0",
+    listing = dv_empty_listing()
   )
   discovery <- list(
-    server = "example.org", historical = NULL, current = current,
+    server = "example.org",
+    historical = NULL,
+    current = current,
     year_index = tibble::tibble(year = 2026L, dataset = "current")
   )
   args <- list(
-    quiet = TRUE, version = ":latest", cache = FALSE, manifest = NULL,
-    offline = FALSE, date_range = c("2026-01-01", "2026-12-31"),
-    date_list = NULL, date_format = NULL, storm_name_years = NULL,
-    geo_filters = list(), polygon = NULL, reproject = TRUE,
+    quiet = TRUE,
+    version = ":latest",
+    cache = FALSE,
+    manifest = NULL,
+    offline = FALSE,
+    date_range = c("2026-01-01", "2026-12-31"),
+    date_list = NULL,
+    date_format = NULL,
+    storm_name_years = NULL,
+    geo_filters = list(),
+    polygon = NULL,
+    reproject = TRUE,
     storm_filters = list(STORM_ID = "S.2026"),
-    tables = c("wind", "storm_metadata"), wind_radius_km = 500,
-    precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
-    flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
-    confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
-    storm_metadata_years = NULL, resolved_query = NULL
+    tables = c("wind", "storm_metadata"),
+    wind_radius_km = 500,
+    precip_days_before = 2,
+    precip_days_after = 1,
+    precip_radius_km = 500,
+    flood_days_before = 2,
+    flood_days_after = 1,
+    flood_radius_km = 500,
+    flood_match = "start",
+    geometry_resolution = "simplified",
+    make_valid = TRUE,
+    confirm = FALSE,
+    resolved_adm2_ids = NULL,
+    resolved_storm_ids = NULL,
+    storm_metadata_years = NULL,
+    resolved_query = NULL
   )
   local_mocked_bindings(
     cache_resolve = function(...) list(enabled = FALSE, dir = NULL),
@@ -202,21 +303,32 @@ test_that("unrestricted current-only wind retrieval avoids historical metadata",
       seen <<- c(seen, paste(dataset, directory_label, label, sep = "/"))
       expect_identical(dataset, "current")
       ctx$manifest_out$value <- manifest_add(
-        ctx$manifest_out$value, current$doi, current$version,
+        ctx$manifest_out$value,
+        current$doi,
+        current$version,
         tibble::tibble(
-          directory_label = directory_label, label = label, file_id = 1L,
-          checksum = "fixture", checksum_type = "SHA-256", size_bytes = 1
-        ), as.POSIXct("2026-01-01", tz = "UTC"), source_role = dataset
+          directory_label = directory_label,
+          label = label,
+          file_id = 1L,
+          checksum = "fixture",
+          checksum_type = "SHA-256",
+          size_bytes = 1
+        ),
+        as.POSIXct("2026-01-01", tz = "UTC"),
+        source_role = dataset
       )
       if (identical(directory_label, "02_wind/storm_metadata")) {
         return(tibble::tibble(
-          STORM_ID = "S.2026", STORM_NAME = "Example-2026",
+          STORM_ID = "S.2026",
+          STORM_NAME = "Example-2026",
           STORM_GENESIS_DATE_UTC = "2026-06-01"
         ))
       }
       if (identical(directory_label, "02_wind/exposures")) {
         return(tibble::tibble(
-          STORM_ID = "S.2026", ADM2_ID = "ADM2.1", STORM_DIST_KM = 25,
+          STORM_ID = "S.2026",
+          ADM2_ID = "ADM2.1",
+          STORM_DIST_KM = 25,
           LOCAL_DATETIME_STORM_CLOSEST = "2026-06-02T00:00:00+00:00"
         ))
       }
@@ -229,10 +341,14 @@ test_that("unrestricted current-only wind retrieval avoids historical metadata",
 
   expect_false(any(grepl("historical|metadata/adm2", seen)))
   expect_true(all(startsWith(seen, "current/")))
-  expect_equal(manifest$datasets, tibble::tibble(
-    source_role = "Current-year",
-    dataset_doi = current$doi, dataset_version = current$version
-  ))
+  expect_equal(
+    manifest$datasets,
+    tibble::tibble(
+      source_role = "Current-year",
+      dataset_doi = current$doi,
+      dataset_version = current$version
+    )
+  )
   expect_identical(manifest$resolved_query$resolved_adm2_ids, "ADM2.1")
   expect_identical(manifest$resolved_query$resolved_storm_ids, "S.2026")
   expect_identical(manifest$resolved_query$storm_metadata_years, 2026L)
@@ -249,8 +365,18 @@ test_that(":latest discovery bypasses the session memo", {
   )
 
   versions <- list(historical = ":latest", current = ":latest")
-  discover_datasets(versions, server = "example.org", collection = "x", quiet = TRUE)
-  discover_datasets(versions, server = "example.org", collection = "x", quiet = TRUE)
+  discover_datasets(
+    versions,
+    server = "example.org",
+    collection = "x",
+    quiet = TRUE
+  )
+  discover_datasets(
+    versions,
+    server = "example.org",
+    collection = "x",
+    quiet = TRUE
+  )
 
   expect_equal(calls, 2L)
 })
@@ -258,7 +384,8 @@ test_that(":latest discovery bypasses the session memo", {
 test_that("offline discovery uses a persisted snapshot and reports staleness", {
   dir <- withr::local_tempdir()
   discovery <- fetcher_discovery(dv_listing_from_records(list(list(
-    label = "2001.parquet", directoryLabel = "yearly",
+    label = "2001.parquet",
+    directoryLabel = "yearly",
     dataFile = list(id = 1L, md5 = strrep("a", 32L), filesize = 10)
   ))))
   cache_discovery_write(dir, discovery, "x")
@@ -266,8 +393,11 @@ test_that("offline discovery uses a persisted snapshot and reports staleness", {
   expect_warning(
     restored <- discover_datasets(
       list(historical = ":latest", current = ":latest"),
-      server = "example.invalid", collection = "x", offline = TRUE,
-      cache_dir = dir, quiet = TRUE
+      server = "example.invalid",
+      collection = "x",
+      offline = TRUE,
+      cache_dir = dir,
+      quiet = TRUE
     ),
     "offline G-TROPIC discovery snapshot"
   )
@@ -276,15 +406,29 @@ test_that("offline discovery uses a persisted snapshot and reports staleness", {
 
 test_that("availability metadata records known lags and flood endpoint", {
   spec <- list(
-    type = "range", start = as.Date("2026-01-20"), end = as.Date("2026-01-25")
+    type = "range",
+    start = as.Date("2026-01-20"),
+    end = as.Date("2026-01-25")
   )
   availability <- availability_metadata(
-    spec, c("wind", "precip", "flood"), today = as.Date("2026-01-26")
+    spec,
+    c("wind", "precip", "flood"),
+    today = as.Date("2026-01-26")
   )
   warnings <- availability_warnings(availability)
 
-  expect_equal(availability$groundsource_flood$available_through, as.Date("2026-01-22"))
-  expect_true(all(c("ibtracs_provisional", "era5_land_lag", "groundsource_flood_coverage") %in% names(warnings)))
+  expect_equal(
+    availability$groundsource_flood$available_through,
+    as.Date("2026-01-22")
+  )
+  expect_true(all(
+    c(
+      "ibtracs_provisional",
+      "era5_land_lag",
+      "groundsource_flood_coverage"
+    ) %in%
+      names(warnings)
+  ))
   expect_match(warnings$groundsource_flood_coverage, "exceeds")
 })
 
@@ -317,23 +461,46 @@ test_that("availability diagnostics use resolved storms and hazard windows", {
 
 test_that("an old named storm without a date filter emits no current-period warning", {
   historical <- list(
-    doi = "doi:10.0000/HIST", version = "1.0", listing = dv_empty_listing()
+    doi = "doi:10.0000/HIST",
+    version = "1.0",
+    listing = dv_empty_listing()
   )
   discovery <- list(
-    server = "example.org", historical = historical, current = NULL,
+    server = "example.org",
+    historical = historical,
+    current = NULL,
     year_index = tibble::tibble(year = 2013L, dataset = "historical")
   )
   args <- list(
-    quiet = TRUE, version = ":latest", cache = FALSE, manifest = NULL,
-    offline = FALSE, date_range = NULL, date_list = NULL, date_format = NULL,
-    storm_name_years = 2013L, geo_filters = list(), polygon = NULL,
-    reproject = TRUE, storm_filters = list(STORM_NAME = "Haiyan-2013"),
-    tables = c("wind", "storm_metadata"), wind_radius_km = 500,
-    precip_days_before = 2, precip_days_after = 1, precip_radius_km = 500,
-    flood_days_before = 2, flood_days_after = 1, flood_radius_km = 500,
-    flood_match = "start", geometry_resolution = "simplified", make_valid = TRUE,
-    confirm = FALSE, resolved_adm2_ids = NULL, resolved_storm_ids = NULL,
-    storm_metadata_years = NULL, resolved_query = NULL
+    quiet = TRUE,
+    version = ":latest",
+    cache = FALSE,
+    manifest = NULL,
+    offline = FALSE,
+    date_range = NULL,
+    date_list = NULL,
+    date_format = NULL,
+    storm_name_years = 2013L,
+    geo_filters = list(),
+    polygon = NULL,
+    reproject = TRUE,
+    storm_filters = list(STORM_NAME = "Haiyan-2013"),
+    tables = c("wind", "storm_metadata"),
+    wind_radius_km = 500,
+    precip_days_before = 2,
+    precip_days_after = 1,
+    precip_radius_km = 500,
+    flood_days_before = 2,
+    flood_days_after = 1,
+    flood_radius_km = 500,
+    flood_match = "start",
+    geometry_resolution = "simplified",
+    make_valid = TRUE,
+    confirm = FALSE,
+    resolved_adm2_ids = NULL,
+    resolved_storm_ids = NULL,
+    storm_metadata_years = NULL,
+    resolved_query = NULL
   )
   local_mocked_bindings(
     cache_resolve = function(...) list(enabled = FALSE, dir = NULL),
@@ -342,21 +509,32 @@ test_that("an old named storm without a date filter emits no current-period warn
     fetch_file = function(dataset, directory_label, label, ctx, ...) {
       expect_identical(dataset, "historical")
       ctx$manifest_out$value <- manifest_add(
-        ctx$manifest_out$value, historical$doi, historical$version,
+        ctx$manifest_out$value,
+        historical$doi,
+        historical$version,
         tibble::tibble(
-          directory_label = directory_label, label = label, file_id = 1L,
-          checksum = "fixture", checksum_type = "SHA-256", size_bytes = 1
-        ), as.POSIXct("2026-01-01", tz = "UTC"), source_role = dataset
+          directory_label = directory_label,
+          label = label,
+          file_id = 1L,
+          checksum = "fixture",
+          checksum_type = "SHA-256",
+          size_bytes = 1
+        ),
+        as.POSIXct("2026-01-01", tz = "UTC"),
+        source_role = dataset
       )
       if (identical(directory_label, "02_wind/storm_metadata")) {
         return(tibble::tibble(
-          STORM_ID = "2013-HAIYAN", STORM_NAME = "Haiyan-2013",
+          STORM_ID = "2013-HAIYAN",
+          STORM_NAME = "Haiyan-2013",
           STORM_GENESIS_DATE_UTC = "2013-11-03"
         ))
       }
       if (identical(directory_label, "02_wind/exposures")) {
         return(tibble::tibble(
-          STORM_ID = "2013-HAIYAN", ADM2_ID = "ADM2.1", STORM_DIST_KM = 25,
+          STORM_ID = "2013-HAIYAN",
+          ADM2_ID = "ADM2.1",
+          STORM_DIST_KM = 25,
           LOCAL_DATETIME_STORM_CLOSEST = "2013-11-08T00:00:00+00:00"
         ))
       }
@@ -372,26 +550,38 @@ test_that("dataset roles appear in manifest and data summaries", {
   discovery <- list(server = "example.org")
   manifest <- manifest_new(discovery)
   row <- tibble::tibble(
-    directory_label = "02_wind/storm_metadata", label = "2026.parquet",
-    file_id = 1L, checksum = "fixture", checksum_type = "SHA-256", size_bytes = 1
+    directory_label = "02_wind/storm_metadata",
+    label = "2026.parquet",
+    file_id = 1L,
+    checksum = "fixture",
+    checksum_type = "SHA-256",
+    size_bytes = 1
   )
   manifest <- manifest_add(
-    manifest, "doi:10.0000/CURRENT", "2.0", row,
-    as.POSIXct("2026-01-01", tz = "UTC"), source_role = "current"
+    manifest,
+    "doi:10.0000/CURRENT",
+    "2.0",
+    row,
+    as.POSIXct("2026-01-01", tz = "UTC"),
+    source_role = "current"
   )
   manifest <- manifest_finalize(manifest)
   result <- new_gtropic_data(
-    tables = list(wind = tibble::tibble()), manifest = manifest,
-    filters_resolved = list(), retrieved_at = manifest$retrieved_at
+    tables = list(wind = tibble::tibble()),
+    manifest = manifest,
+    filters_resolved = list(),
+    retrieved_at = manifest$retrieved_at
   )
 
   expect_match(
     paste(testthat::capture_messages(print(manifest)), collapse = "\n"),
-    "Current-year dataset: doi:10.0000/CURRENT (version 2.0)", fixed = TRUE
+    "Current-year dataset: doi:10.0000/CURRENT (version 2.0)",
+    fixed = TRUE
   )
   expect_match(
     paste(testthat::capture_messages(print(summary(result))), collapse = "\n"),
-    "Current-year dataset: doi:10.0000/CURRENT v2.0", fixed = TRUE
+    "Current-year dataset: doi:10.0000/CURRENT v2.0",
+    fixed = TRUE
   )
 })
 
@@ -414,7 +604,15 @@ test_that("availability diagnostics retain warnings for current selected coverag
     today = as.Date("2026-01-26")
   )
 
-  expect_true(all(c("ibtracs_provisional", "era5_land_lag", "groundsource_flood_coverage", "gtropic_update_schedule") %in% names(availability_warnings(availability))))
+  expect_true(all(
+    c(
+      "ibtracs_provisional",
+      "era5_land_lag",
+      "groundsource_flood_coverage",
+      "gtropic_update_schedule"
+    ) %in%
+      names(availability_warnings(availability))
+  ))
 })
 
 test_that("download estimates require the resolved version and checksum", {
@@ -423,12 +621,18 @@ test_that("download estimates require the resolved version and checksum", {
   old <- charToRaw("old version")
   current <- charToRaw("current version")
   plan <- tibble::tibble(
-    dataset = "historical", directory_label = key$directory_label,
-    label = key$label, size_bytes = 100
+    dataset = "historical",
+    directory_label = key$directory_label,
+    label = key$label,
+    size_bytes = 100
   )
   discovery <- fetcher_discovery(tibble::tibble(
-    file_id = 1L, label = key$label, directory_label = key$directory_label,
-     checksum = checksum_raw(current), size_bytes = 100, content_type = "application/octet-stream"
+    file_id = 1L,
+    label = key$label,
+    directory_label = key$directory_label,
+    checksum = checksum_raw(current),
+    size_bytes = 100,
+    content_type = "application/octet-stream"
   ))
   discovery$historical$version <- "2.0"
 
@@ -440,7 +644,12 @@ test_that("download estimates require the resolved version and checksum", {
   cache_put_bytes(cache, fetcher_key(version = "2.0"), old, checksum_raw(old))
   expect_equal(estimate_download(plan, cache, discovery)$n_cached, 0L)
 
-  cache_put_bytes(cache, fetcher_key(version = "2.0"), current, checksum_raw(current))
+  cache_put_bytes(
+    cache,
+    fetcher_key(version = "2.0"),
+    current,
+    checksum_raw(current)
+  )
   expect_equal(estimate_download(plan, cache, discovery)$n_cached, 1L)
 })
 
@@ -453,9 +662,11 @@ test_that("a pinned version downloads and records that version's files", {
   pinned <- served$historical
   pinned$file_id <- pinned$file_id + 100L
   pinned$checksum <- unname(vapply(
-    served$path[as.character(served$historical$file_id)], digest::digest,
+    served$path[as.character(served$historical$file_id)],
+    digest::digest,
     character(1),
-    algo = "sha256", file = TRUE
+    algo = "sha256",
+    file = TRUE
   ))
   pinned$checksum_type <- "SHA-256"
   local_dv_transport(
@@ -468,21 +679,30 @@ test_that("a pinned version downloads and records that version's files", {
     },
     dv_version_label = function(doi, version = ":latest", ...) {
       role <- names(golden_doi)[match(doi, golden_doi)]
-      if (identical(version, ":latest")) unname(golden_version[role]) else version
+      if (identical(version, ":latest")) {
+        unname(golden_version[role])
+      } else {
+        version
+      }
     },
     dv_get_file = function(file_id, ..., dest) {
       log$downloads <- c(log$downloads, as.integer(file_id))
       id <- as.integer(file_id)
-      if (id > 100L) id <- id - 100L
+      if (id > 100L) {
+        id <- id - 100L
+      }
       file.copy(served$path[[as.character(id)]], dest)
       invisible(dest)
     }
   )
 
   res <- gtropic_data(
-    STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
+    STORM_ID = "2002BBB",
+    tables = c("wind", "storm_metadata"),
     version = c(historical = "2.0", current = ":latest"),
-    cache = FALSE, quiet = TRUE, confirm = FALSE
+    cache = FALSE,
+    quiet = TRUE,
+    confirm = FALSE
   )
   files <- gtropic_manifest(res)$files
   historical <- files[files$dataset_doi == golden_doi[["historical"]], ]
@@ -490,10 +710,12 @@ test_that("a pinned version downloads and records that version's files", {
   expect_gt(nrow(historical), 0L)
   expect_true(all(historical$dataset_version == "2.0"))
   expect_true(all(historical$file_id > 100L))
-  expected <- pinned[match(
-    paste(historical$directory_label, historical$label),
-    paste(pinned$directory_label, pinned$label)
-  ), ]
+  expected <- pinned[
+    match(
+      paste(historical$directory_label, historical$label),
+      paste(pinned$directory_label, pinned$label)
+    ),
+  ]
   expect_identical(historical$file_id, expected$file_id)
   expect_identical(historical$checksum, expected$checksum)
   expect_true(all(historical$checksum_type == "SHA-256"))

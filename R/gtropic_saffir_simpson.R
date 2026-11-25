@@ -20,8 +20,13 @@ gtropic_saffir_simpson <- function() {
     threshold = c(17, 32, 42, 49, 58, 70, Inf),
     unit = rep("m/s", 7L),
     color = c(
-      "#6EC1EA", "#55FFFF", "#FFFFD9", "#FBDA8C", "#F89F59",
-      "#F6738A", "#A188FC"
+      "#6EC1EA",
+      "#55FFFF",
+      "#FFFFD9",
+      "#FBDA8C",
+      "#F89F59",
+      "#F6738A",
+      "#A188FC"
     )
   )
 }
@@ -48,33 +53,51 @@ plot_validate_wind_category_key <- function(key, argument = "wind_categories") {
     ))
   }
   if (length(colour_columns) == 2L && !identical(key$colour, key$color)) {
-    cli::cli_abort("{.arg {argument}} cannot contain conflicting colour and color columns.")
+    cli::cli_abort(
+      "{.arg {argument}} cannot contain conflicting colour and color columns."
+    )
   }
   if (!nrow(key)) {
     cli::cli_abort("{.arg {argument}} must contain at least one category.")
   }
   key$colour <- key[[colour_columns[1L]]]
   if (
-    !is.character(key$category) || anyNA(key$category) ||
-      any(!nzchar(key$category)) || anyDuplicated(key$category)
+    !is.character(key$category) ||
+      anyNA(key$category) ||
+      any(!nzchar(key$category)) ||
+      anyDuplicated(key$category)
   ) {
-    cli::cli_abort("{.arg {argument}}$category must contain unique, nonempty strings.")
+    cli::cli_abort(
+      "{.arg {argument}}$category must contain unique, nonempty strings."
+    )
   }
   if (!is.numeric(key$threshold) || anyNA(key$threshold)) {
     cli::cli_abort("{.arg {argument}}$threshold must contain numeric ceilings.")
   }
   if (
-    !is.character(key$unit) || anyNA(key$unit) ||
-      length(unique(key$unit)) != 1L || !nzchar(key$unit[1L])
+    !is.character(key$unit) ||
+      anyNA(key$unit) ||
+      length(unique(key$unit)) != 1L ||
+      !nzchar(key$unit[1L])
   ) {
-    cli::cli_abort("{.arg {argument}}$unit must contain one constant, nonempty unit.")
+    cli::cli_abort(
+      "{.arg {argument}}$unit must contain one constant, nonempty unit."
+    )
   }
-  if (!is.character(key$colour) || anyNA(key$colour) || any(!nzchar(key$colour))) {
-    cli::cli_abort("{.arg {argument}}$colour must contain nonempty colour values.")
+  if (
+    !is.character(key$colour) || anyNA(key$colour) || any(!nzchar(key$colour))
+  ) {
+    cli::cli_abort(
+      "{.arg {argument}}$colour must contain nonempty colour values."
+    )
   }
-  invalid_colours <- vapply(key$colour, function(x) {
-    inherits(try(grDevices::col2rgb(x), silent = TRUE), "try-error")
-  }, logical(1))
+  invalid_colours <- vapply(
+    key$colour,
+    function(x) {
+      inherits(try(grDevices::col2rgb(x), silent = TRUE), "try-error")
+    },
+    logical(1)
+  )
   if (any(invalid_colours)) {
     cli::cli_abort("{.arg {argument}}$colour contains invalid colour values.")
   }
@@ -84,7 +107,9 @@ plot_validate_wind_category_key <- function(key, argument = "wind_categories") {
       any(!is.finite(thresholds[-length(thresholds)])) ||
       any(diff(thresholds) <= 0)
   ) {
-    cli::cli_abort("{.arg {argument}}$threshold must be strictly increasing ceilings ending in Inf.")
+    cli::cli_abort(
+      "{.arg {argument}}$threshold must be strictly increasing ceilings ending in Inf."
+    )
   }
   key
 }
@@ -119,7 +144,9 @@ plot_normalize_mps_unit <- function(unit) {
 #' @keywords internal
 #' @noRd
 plot_units_are_compatible <- function(key_unit, source_unit) {
-  if (identical(key_unit, source_unit)) return(TRUE)
+  if (identical(key_unit, source_unit)) {
+    return(TRUE)
+  }
   identical(plot_normalize_mps_unit(key_unit), "m/s") &&
     identical(plot_normalize_mps_unit(source_unit), "m/s")
 }

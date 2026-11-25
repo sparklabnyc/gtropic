@@ -29,8 +29,12 @@
 #' @return Never returns.
 #' @keywords internal
 #' @noRd
-abort_dataverse <- function(err, what = "request", server = opt_server(),
-                            call = rlang::caller_env()) {
+abort_dataverse <- function(
+  err,
+  what = "request",
+  server = opt_server(),
+  call = rlang::caller_env()
+) {
   gtropic_abort(
     c(
       "Could not complete {what} against {.val {server}}.",
@@ -62,7 +66,8 @@ dv_api_url <- function(server) {
 #' @noRd
 gtropic_user_agent <- function() {
   paste0(
-    "gtropic/", utils::packageVersion("gtropic"),
+    "gtropic/",
+    utils::packageVersion("gtropic"),
     " (https://github.com/sparklabnyc/gtropic)"
   )
 }
@@ -77,7 +82,10 @@ gtropic_user_agent <- function() {
 #' @keywords internal
 #' @noRd
 dv_path_segment <- function(x) {
-  gsub("%3A", ":", utils::URLencode(as.character(x), reserved = TRUE),
+  gsub(
+    "%3A",
+    ":",
+    utils::URLencode(as.character(x), reserved = TRUE),
     fixed = TRUE
   )
 }
@@ -97,8 +105,11 @@ gtropic_request <- function(url) {
   req <- httr2::request(url)
   req <- httr2::req_user_agent(req, gtropic_user_agent())
   timeout <- opt_timeout()
-  if (is.finite(timeout)) req <- httr2::req_timeout(req, timeout)
-  req <- httr2::req_retry(req,
+  if (is.finite(timeout)) {
+    req <- httr2::req_timeout(req, timeout)
+  }
+  req <- httr2::req_retry(
+    req,
     max_tries = opt_max_tries(),
     retry_on_failure = TRUE,
     is_transient = dv_is_transient,
@@ -157,8 +168,13 @@ dv_retry_after <- function(resp) {
 #' @return The value of `expr`.
 #' @keywords internal
 #' @noRd
-dv_perform <- function(expr, what, server, quiet = FALSE,
-                       call = rlang::caller_env()) {
+dv_perform <- function(
+  expr,
+  what,
+  server,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   max_tries <- opt_max_tries()
   # httr2 announces its own waits too, with a progress bar when interactive.
   # The notice below says which request is waiting; httr2's is dropped.
@@ -227,7 +243,11 @@ dv_error_body <- function(resp) {
     error = function(e) NULL
   )
   msg <- if (is.list(body)) body$message else NULL
-  if (is.character(msg) && length(msg) == 1L && !is.na(msg)) msg else character(0)
+  if (is.character(msg) && length(msg) == 1L && !is.na(msg)) {
+    msg
+  } else {
+    character(0)
+  }
 }
 
 #' Perform a metadata request and return its `data` element
@@ -244,7 +264,10 @@ dv_error_body <- function(resp) {
 dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
   dv_perform(
     dv_json_data(httr2::req_perform(req)),
-    what = what, server = server, quiet = quiet, call = call
+    what = what,
+    server = server,
+    quiet = quiet,
+    call = call
   )
 }
 
@@ -265,30 +288,56 @@ dv_get_json <- function(req, what, server, quiet, call = rlang::caller_env()) {
 #'   order.
 #' @keywords internal
 #' @noRd
-dv_get_json_each <- function(reqs, what, server, quiet,
-                             call = rlang::caller_env()) {
+dv_get_json_each <- function(
+  reqs,
+  what,
+  server,
+  quiet,
+  call = rlang::caller_env()
+) {
   if (length(reqs) == 1L) {
-    return(list(dv_get_json(reqs[[1L]], what[[1L]], server, quiet, call = call)))
+    return(list(dv_get_json(
+      reqs[[1L]],
+      what[[1L]],
+      server,
+      quiet,
+      call = call
+    )))
   }
   # In pairs: httr2 (1.3.0) can have more than `max_active` requests in
   # flight at once, and the server should never see more than two.
   batches <- split(reqs, ceiling(seq_along(reqs) / 2))
   resps <- dv_perform(
-    unlist(lapply(batches, function(batch) {
-      httr2::req_perform_parallel(batch,
-        on_error = "continue", progress = FALSE, max_active = 2L
-      )
-    }), recursive = FALSE, use.names = FALSE),
-    what = "metadata requests", server = server, quiet = quiet, call = call
+    unlist(
+      lapply(batches, function(batch) {
+        httr2::req_perform_parallel(
+          batch,
+          on_error = "continue",
+          progress = FALSE,
+          max_active = 2L
+        )
+      }),
+      recursive = FALSE,
+      use.names = FALSE
+    ),
+    what = "metadata requests",
+    server = server,
+    quiet = quiet,
+    call = call
   )
   lapply(seq_along(resps), function(i) {
     dv_perform(
       {
         resp <- resps[[i]]
-        if (inherits(resp, "error")) stop(resp)
+        if (inherits(resp, "error")) {
+          stop(resp)
+        }
         dv_json_data(resp)
       },
-      what = what[[i]], server = server, quiet = quiet, call = call
+      what = what[[i]],
+      server = server,
+      quiet = quiet,
+      call = call
     )
   })
 }
@@ -318,10 +367,12 @@ dv_json_data <- function(resp) {
 #'   `checksum`, `checksum_type`, `size_bytes`, `content_type`.
 #' @keywords internal
 #' @noRd
-dv_list_files <- function(doi,
-                          version = ":latest",
-                          server = opt_server(),
-                          quiet = FALSE) {
+dv_list_files <- function(
+  doi,
+  version = ":latest",
+  server = opt_server(),
+  quiet = FALSE
+) {
   dv_list_files_each(doi, version, server, quiet)[[1L]]
 }
 
@@ -334,21 +385,34 @@ dv_list_files <- function(doi,
 #' @return A list of listings as returned by `dv_list_files()`, one per DOI.
 #' @keywords internal
 #' @noRd
-dv_list_files_each <- function(dois,
-                               version = ":latest",
-                               server = opt_server(),
-                               quiet = FALSE) {
+dv_list_files_each <- function(
+  dois,
+  version = ":latest",
+  server = opt_server(),
+  quiet = FALSE
+) {
   version <- rep_len(version, length(dois))
-  reqs <- Map(function(doi, v) {
-    req <- dv_request(
-      server, "datasets", ":persistentId", "versions",
-      dv_path_segment(v), "files"
-    )
-    httr2::req_url_query(req, persistentId = doi)
-  }, dois, version, USE.NAMES = FALSE)
-  records <- dv_get_json_each(reqs,
+  reqs <- Map(
+    function(doi, v) {
+      req <- dv_request(
+        server,
+        "datasets",
+        ":persistentId",
+        "versions",
+        dv_path_segment(v),
+        "files"
+      )
+      httr2::req_url_query(req, persistentId = doi)
+    },
+    dois,
+    version,
+    USE.NAMES = FALSE
+  )
+  records <- dv_get_json_each(
+    reqs,
     what = glue::glue("file listing for {dois}"),
-    server = server, quiet = quiet
+    server = server,
+    quiet = quiet
   )
   lapply(records, dv_listing_from_records)
 }
@@ -372,10 +436,15 @@ dv_listing_from_records <- function(raw_files) {
   # Preserve its declared algorithm. Each column is built in one pass over the
   # records (PERF-06), not one tibble per file.
   field <- function(get, cast, na) {
-    vapply(raw_files, function(f) {
-      x <- get(f)
-      if (length(x) == 0L) na else cast(x[[1L]])
-    }, na, USE.NAMES = FALSE)
+    vapply(
+      raw_files,
+      function(f) {
+        x <- get(f)
+        if (length(x) == 0L) na else cast(x[[1L]])
+      },
+      na,
+      USE.NAMES = FALSE
+    )
   }
   data_file <- function(f) f$dataFile %||% list()
   checksum_record <- function(f) data_file(f)$checksum %||% list()
@@ -394,16 +463,22 @@ dv_listing_from_records <- function(raw_files) {
   out <- tibble::tibble(
     file_id = field(function(f) data_file(f)$id, as.integer, NA_integer_),
     label = field(
-      function(f) f$label %||% data_file(f)$filename, as.character, NA_character_
+      function(f) f$label %||% data_file(f)$filename,
+      as.character,
+      NA_character_
     ),
     directory_label = field(
-      function(f) f$directoryLabel %||% "", as.character, NA_character_
+      function(f) f$directoryLabel %||% "",
+      as.character,
+      NA_character_
     ),
     checksum = field(checksum_value, as.character, NA_character_),
     checksum_type = field(checksum_type, as.character, NA_character_),
     size_bytes = field(function(f) data_file(f)$filesize, as.numeric, NA_real_),
     content_type = field(
-      function(f) data_file(f)$contentType, as.character, NA_character_
+      function(f) data_file(f)$contentType,
+      as.character,
+      NA_character_
     )
   )
   # Checksums later name files in the cache. Anything that is not a plain
@@ -437,10 +512,16 @@ dv_empty_listing <- function() {
 #' @return A one-row tibble from `listing`, or `NULL` when absent.
 #' @keywords internal
 #' @noRd
-dv_resolve_file <- function(listing, directory_label, label, doi = NULL,
-                            call = rlang::caller_env()) {
+dv_resolve_file <- function(
+  listing,
+  directory_label,
+  label,
+  doi = NULL,
+  call = rlang::caller_env()
+) {
   hit <- listing[
-    listing$directory_label == directory_label & listing$label == label, ,
+    listing$directory_label == directory_label & listing$label == label,
+    ,
     drop = FALSE
   ]
 
@@ -452,7 +533,8 @@ dv_resolve_file <- function(listing, directory_label, label, doi = NULL,
     # A duplicated pair means the upstream publication contract has broken.
     # Guessing would make results irreproducible, so refuse.
     cli::cli_abort(
-      c("Ambiguous file in {.val {doi %||% 'dataset'}}.",
+      c(
+        "Ambiguous file in {.val {doi %||% 'dataset'}}.",
         x = "{nrow(hit)} files share the path
              {.path {file.path(directory_label, label)}}.",
         i = "This indicates a publication error upstream; please report it."
@@ -491,9 +573,13 @@ dv_resolve_file <- function(listing, directory_label, label, doi = NULL,
 #' @return `dest`, invisibly.
 #' @keywords internal
 #' @noRd
-dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE,
-                        dest = tempfile(fileext = ".download"),
-                        size_bytes = NA_real_) {
+dv_get_file <- function(
+  file_id,
+  server = opt_server(),
+  quiet = FALSE,
+  dest = tempfile(fileext = ".download"),
+  size_bytes = NA_real_
+) {
   req <- dv_request(server, "access", "datafile", dv_file_id(file_id))
   req <- httr2::req_url_query(req, format = "original")
   what <- glue::glue("download of file {file_id}")
@@ -501,7 +587,9 @@ dv_get_file <- function(file_id, server = opt_server(), quiet = FALSE,
   on.exit(if (!done) unlink(dest), add = TRUE)
   dv_perform(
     dv_download(req, dest, bound = download_bound(size_bytes, what)),
-    what = what, server = server, quiet = quiet
+    what = what,
+    server = server,
+    quiet = quiet
   )
   done <- TRUE
   invisible(dest)
@@ -543,7 +631,9 @@ download_limit <- function(size_bytes) {
 #' @noRd
 download_bound <- function(size_bytes, what = "download") {
   listed <- suppressWarnings(as.numeric(size_bytes))
-  if (length(listed) != 1L || !is.finite(listed) || listed < 0) listed <- NA_real_
+  if (length(listed) != 1L || !is.finite(listed) || listed < 0) {
+    listed <- NA_real_
+  }
   list(limit = download_limit(listed), listed = listed, what = what)
 }
 
@@ -579,9 +669,15 @@ abort_download_size <- function(bound, call = rlang::caller_env()) {
 #' @keywords internal
 #' @noRd
 dv_file_id <- function(file_id, call = rlang::caller_env()) {
-  if (!is.numeric(file_id) || length(file_id) != 1L || is.na(file_id) ||
-    file_id < 1 || file_id != round(file_id)) {
-    cli::cli_abort("A Dataverse file id must be a whole positive number.",
+  if (
+    !is.numeric(file_id) ||
+      length(file_id) != 1L ||
+      is.na(file_id) ||
+      file_id < 1 ||
+      file_id != round(file_id)
+  ) {
+    cli::cli_abort(
+      "A Dataverse file id must be a whole positive number.",
       call = call
     )
   }
@@ -598,8 +694,12 @@ dv_file_id <- function(file_id, call = rlang::caller_env()) {
 #' @return `dest`, invisibly.
 #' @keywords internal
 #' @noRd
-dv_download <- function(req, dest, bound = download_bound(NA),
-                        max_redirects = 5L) {
+dv_download <- function(
+  req,
+  dest,
+  bound = download_bound(NA),
+  max_redirects = 5L
+) {
   for (hop in seq_len(max_redirects + 1L)) {
     resp <- httr2::req_perform_connection(
       httr2::req_options(dv_stream_timeouts(req), followlocation = 0L)
@@ -632,7 +732,8 @@ dv_stream_timeouts <- function(req) {
   if (!is.finite(timeout)) {
     return(httr2::req_options(req, timeout_ms = 0L))
   }
-  httr2::req_options(req,
+  httr2::req_options(
+    req,
     timeout_ms = 0L,
     connecttimeout_ms = ceiling(timeout * 1000),
     low_speed_limit = 1L,
@@ -654,8 +755,10 @@ dv_redirect_request <- function(location, from) {
     cli::cli_abort("The server sent a redirect without a location.")
   }
   url <- httr2::url_parse(location, base_url = from)
-  if (identical(httr2::url_parse(from)$scheme, "https") &&
-    !identical(url$scheme, "https")) {
+  if (
+    identical(httr2::url_parse(from)$scheme, "https") &&
+      !identical(url$scheme, "https")
+  ) {
     cli::cli_abort("Refusing a redirect from HTTPS to {.val {url$scheme}}.")
   }
   gtropic_request(httr2::url_build(url))
@@ -686,7 +789,9 @@ dv_write_body <- function(resp, dest, bound = download_bound(NA)) {
   con <- file(dest, open = "wb")
   on.exit(close(con), add = TRUE)
   if (is.raw(resp$body)) {
-    if (length(resp$body) > bound$limit) abort_download_size(bound)
+    if (length(resp$body) > bound$limit) {
+      abort_download_size(bound)
+    }
     writeBin(resp$body, con)
     return(dest)
   }
@@ -694,11 +799,15 @@ dv_write_body <- function(resp, dest, bound = download_bound(NA)) {
   repeat {
     chunk <- httr2::resp_stream_raw(resp, kb = 256)
     if (length(chunk) == 0L) {
-      if (httr2::resp_stream_is_complete(resp)) break
+      if (httr2::resp_stream_is_complete(resp)) {
+        break
+      }
       next
     }
     received <- received + length(chunk)
-    if (received > bound$limit) abort_download_size(bound)
+    if (received > bound$limit) {
+      abort_download_size(bound)
+    }
     writeBin(chunk, con)
   }
   dest
@@ -713,15 +822,22 @@ dv_write_body <- function(resp, dest, bound = download_bound(NA)) {
 #' @return A tibble with a `doi` column (possibly zero rows).
 #' @keywords internal
 #' @noRd
-dv_list_datasets <- function(collection = opt_collection(),
-                             server = opt_server(),
-                             quiet = FALSE) {
+dv_list_datasets <- function(
+  collection = opt_collection(),
+  server = opt_server(),
+  quiet = FALSE
+) {
   req <- dv_request(
-    server, "dataverses", dv_path_segment(collection), "contents"
+    server,
+    "dataverses",
+    dv_path_segment(collection),
+    "contents"
   )
-  contents <- dv_get_json(req,
+  contents <- dv_get_json(
+    req,
     what = glue::glue("listing of collection {collection}"),
-    server = server, quiet = quiet
+    server = server,
+    quiet = quiet
   )
 
   datasets <- Filter(function(x) identical(x$type, "dataset"), contents)
@@ -729,16 +845,20 @@ dv_list_datasets <- function(collection = opt_collection(),
   if (length(datasets) == 0L) {
     return(tibble::tibble(doi = character(0)))
   }
-  dois <- vapply(datasets, function(d) {
-    # Dataverse reports either a ready-made `persistentUrl` or the components.
-    if (!is.null(d$persistentUrl)) {
-      sub("^https?://doi\\.org/", "doi:", d$persistentUrl)
-    } else if (!is.null(d$protocol)) {
-      paste0(d$protocol, ":", d$authority, "/", d$identifier)
-    } else {
-      NA_character_
-    }
-  }, character(1))
+  dois <- vapply(
+    datasets,
+    function(d) {
+      # Dataverse reports either a ready-made `persistentUrl` or the components.
+      if (!is.null(d$persistentUrl)) {
+        sub("^https?://doi\\.org/", "doi:", d$persistentUrl)
+      } else if (!is.null(d$protocol)) {
+        paste0(d$protocol, ":", d$authority, "/", d$identifier)
+      } else {
+        NA_character_
+      }
+    },
+    character(1)
+  )
 
   tibble::tibble(doi = dois[!is.na(dois)])
 }
@@ -756,10 +876,12 @@ dv_list_datasets <- function(collection = opt_collection(),
 #' @return A character scalar such as `"2.0"`.
 #' @keywords internal
 #' @noRd
-dv_version_label <- function(doi,
-                             version = ":latest",
-                             server = opt_server(),
-                             quiet = FALSE) {
+dv_version_label <- function(
+  doi,
+  version = ":latest",
+  server = opt_server(),
+  quiet = FALSE
+) {
   dv_version_labels(doi, version, server, quiet)
 }
 
@@ -772,28 +894,45 @@ dv_version_label <- function(doi,
 #' @return A character vector, one label per DOI.
 #' @keywords internal
 #' @noRd
-dv_version_labels <- function(dois,
-                              versions = ":latest",
-                              server = opt_server(),
-                              quiet = FALSE) {
+dv_version_labels <- function(
+  dois,
+  versions = ":latest",
+  server = opt_server(),
+  quiet = FALSE
+) {
   versions <- rep_len(as.character(versions), length(dois))
-  reqs <- Map(function(doi, version) {
-    req <- dv_request(
-      server, "datasets", ":persistentId", "versions", dv_path_segment(version)
-    )
-    # Only the version numbers are needed; the file list is fetched separately.
-    httr2::req_url_query(req, persistentId = doi, excludeFiles = "true")
-  }, dois, versions, USE.NAMES = FALSE)
-  data <- dv_get_json_each(reqs,
-    what = glue::glue("metadata for {dois}"),
-    server = server, quiet = quiet
+  reqs <- Map(
+    function(doi, version) {
+      req <- dv_request(
+        server,
+        "datasets",
+        ":persistentId",
+        "versions",
+        dv_path_segment(version)
+      )
+      # Only the version numbers are needed; the file list is fetched separately.
+      httr2::req_url_query(req, persistentId = doi, excludeFiles = "true")
+    },
+    dois,
+    versions,
+    USE.NAMES = FALSE
   )
-  vapply(seq_along(data), function(i) {
-    ds <- data[[i]]
-    major <- ds$versionNumber %||% ds$majorVersion
-    minor <- ds$versionMinorNumber %||% ds$minorVersion
-    if (is.null(major)) versions[[i]] else paste0(major, ".", minor %||% 0L)
-  }, character(1))
+  data <- dv_get_json_each(
+    reqs,
+    what = glue::glue("metadata for {dois}"),
+    server = server,
+    quiet = quiet
+  )
+  vapply(
+    seq_along(data),
+    function(i) {
+      ds <- data[[i]]
+      major <- ds$versionNumber %||% ds$majorVersion
+      minor <- ds$versionMinorNumber %||% ds$minorVersion
+      if (is.null(major)) versions[[i]] else paste0(major, ".", minor %||% 0L)
+    },
+    character(1)
+  )
 }
 
 #' API key for a Dataverse host, if the user has one
@@ -816,7 +955,8 @@ dv_key <- function(server) {
   configured <- opt_server()
   if (!identical(tolower(server), tolower(configured))) {
     cli::cli_warn(
-      c("Not sending {.envvar DATAVERSE_KEY} to {.val {server}}.",
+      c(
+        "Not sending {.envvar DATAVERSE_KEY} to {.val {server}}.",
         i = "Set {.code options(gtropic.server = \"{server}\")} to authenticate
              against it."
       ),
@@ -840,8 +980,7 @@ dv_key <- function(server) {
 #' @noRd
 is_hex_checksum <- function(x) {
   x <- as.character(x)
-  !is.na(x) & grepl("^[0-9a-fA-F]+$", x) &
-    nchar(x) %in% c(32L, 40L, 64L, 128L)
+  !is.na(x) & grepl("^[0-9a-fA-F]+$", x) & nchar(x) %in% c(32L, 40L, 64L, 128L)
 }
 
 #' Identify the hashing algorithm used by a published checksum
@@ -856,9 +995,16 @@ is_hex_checksum <- function(x) {
 checksum_algorithm <- function(checksum, checksum_type = NA_character_) {
   if (!is.na(checksum_type) && nzchar(checksum_type)) {
     type <- toupper(gsub("[-_ ]", "", checksum_type))
-    algorithms <- c(MD5 = "md5", SHA1 = "sha1", SHA256 = "sha256", SHA512 = "sha512")
+    algorithms <- c(
+      MD5 = "md5",
+      SHA1 = "sha1",
+      SHA256 = "sha256",
+      SHA512 = "sha512"
+    )
     if (!type %in% names(algorithms)) {
-      cli::cli_abort("Unsupported Dataverse checksum algorithm {.val {checksum_type}}.")
+      cli::cli_abort(
+        "Unsupported Dataverse checksum algorithm {.val {checksum_type}}."
+      )
     }
     return(unname(algorithms[[type]]))
   }
@@ -868,10 +1014,18 @@ checksum_algorithm <- function(checksum, checksum_type = NA_character_) {
   }
 
   n <- nchar(checksum, type = "chars")
-  if (identical(n, 32L)) return("md5")
-  if (identical(n, 40L)) return("sha1")
-  if (identical(n, 64L)) return("sha256")
-  if (identical(n, 128L)) return("sha512")
+  if (identical(n, 32L)) {
+    return("md5")
+  }
+  if (identical(n, 40L)) {
+    return("sha1")
+  }
+  if (identical(n, 64L)) {
+    return("sha256")
+  }
+  if (identical(n, 128L)) {
+    return("sha512")
+  }
   cli::cli_abort(
     "Unsupported published checksum with {n} hexadecimal characters."
   )
@@ -886,9 +1040,15 @@ checksum_algorithm <- function(checksum, checksum_type = NA_character_) {
 #' @param checksum_type Optional declared checksum algorithm.
 #' @keywords internal
 #' @noRd
-checksum_file <- function(path, checksum = NULL, checksum_type = NA_character_) {
+checksum_file <- function(
+  path,
+  checksum = NULL,
+  checksum_type = NA_character_
+) {
   digest::digest(
-    path, algo = checksum_algorithm(checksum, checksum_type), file = TRUE
+    path,
+    algo = checksum_algorithm(checksum, checksum_type),
+    file = TRUE
   )
 }
 
@@ -903,9 +1063,13 @@ checksum_file <- function(path, checksum = NULL, checksum_type = NA_character_) 
 #' @return Invisibly `TRUE`; aborts on mismatch.
 #' @keywords internal
 #' @noRd
-verify_checksum <- function(path, expected_checksum, label = "file",
-                            call = rlang::caller_env(),
-                            checksum_type = NA_character_) {
+verify_checksum <- function(
+  path,
+  expected_checksum,
+  label = "file",
+  call = rlang::caller_env(),
+  checksum_type = NA_character_
+) {
   if (is.na(expected_checksum) || !nzchar(expected_checksum)) {
     # Nothing published to check against; not an error, but worth knowing.
     cli::cli_warn(
@@ -917,7 +1081,8 @@ verify_checksum <- function(path, expected_checksum, label = "file",
   got <- checksum_file(path, expected_checksum, checksum_type)
   if (!identical(tolower(got), tolower(expected_checksum))) {
     gtropic_abort(
-      c("Checksum mismatch for {.path {label}}.",
+      c(
+        "Checksum mismatch for {.path {label}}.",
         x = "Expected {.val {expected_checksum}} but the download hashed to
              {.val {got}}.",
         i = "The download was likely truncated. Try again; if it persists the

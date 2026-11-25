@@ -61,7 +61,11 @@ test_that("unmatched filter values and suggestions are not evaluated", {
     match_values("{A}", "Example Coast", arg = "ADM2_NAME"),
     class = "rlang_error"
   )
-  expect_match(conditionMessage(err), "\"{A}\" - no close match found", fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    "\"{A}\" - no close match found",
+    fixed = TRUE
+  )
 })
 
 # --- regression guard --------------------------------------------------------
@@ -73,14 +77,35 @@ test_that("unmatched filter values and suggestions are not evaluated", {
 # passed through the package's `cli_escape()`.
 
 cli_template_sinks <- c(
-  "cli_abort", "cli_warn", "cli_inform", "cli_text", "cli_bullets",
-  "cli_alert", "cli_alert_info", "cli_alert_success", "cli_alert_warning",
-  "cli_alert_danger", "cli_h1", "cli_h2", "cli_h3", "cli_li", "cli_ul",
-  "cli_ol", "cli_dl", "cli_blockquote", "cli_rule", "format_inline",
-  "format_message", "format_warning", "format_error",
+  "cli_abort",
+  "cli_warn",
+  "cli_inform",
+  "cli_text",
+  "cli_bullets",
+  "cli_alert",
+  "cli_alert_info",
+  "cli_alert_success",
+  "cli_alert_warning",
+  "cli_alert_danger",
+  "cli_h1",
+  "cli_h2",
+  "cli_h3",
+  "cli_li",
+  "cli_ul",
+  "cli_ol",
+  "cli_dl",
+  "cli_blockquote",
+  "cli_rule",
+  "format_inline",
+  "format_message",
+  "format_warning",
+  "format_error",
   # The package's own wrappers around cli::cli_inform(), cli::cli_abort() and
   # cli::cli_warn().
-  "inform_unless_quiet", "gtropic_abort", "gtropic_warn", "confirm_action"
+  "inform_unless_quiet",
+  "gtropic_abort",
+  "gtropic_warn",
+  "confirm_action"
 )
 
 is_literal_template <- function(e) {
@@ -99,8 +124,10 @@ is_literal_template <- function(e) {
     return(all(vapply(parts, is_literal_template, logical(1))))
   }
   if (identical(head, as.name("if"))) {
-    return(is_literal_template(e[[3L]]) &&
-      (length(e) < 4L || is_literal_template(e[[4L]])))
+    return(
+      is_literal_template(e[[3L]]) &&
+        (length(e) < 4L || is_literal_template(e[[4L]]))
+    )
   }
   if (identical(head, as.name("{"))) {
     return(length(e) == 1L || is_literal_template(e[[length(e)]]))
@@ -144,8 +171,11 @@ find_unsafe_cli_calls <- function(e, where) {
     tmpl <- template_arg(e)
     # `...` is a pass-through (inform_unless_quiet() itself); its callers are
     # checked at their own call sites.
-    if (!is.null(tmpl) && !identical(tmpl, quote(...)) &&
-      !is_literal_template(tmpl)) {
+    if (
+      !is.null(tmpl) &&
+        !identical(tmpl, quote(...)) &&
+        !is_literal_template(tmpl)
+    ) {
       found <- c(found, paste0(where, ": ", deparse(e, nlines = 1L)))
     }
   }
@@ -160,7 +190,9 @@ find_unsafe_cli_calls <- function(e, where) {
 test_that("the guard flags templates built from data", {
   bad <- list(
     function(x) cli::cli_warn(x),
-    function(x) cli::cli_bullets(c("*" = "ok", stats::setNames(paste0("a", x), "*"))),
+    function(x) {
+      cli::cli_bullets(c("*" = "ok", stats::setNames(paste0("a", x), "*")))
+    },
     function(x) cli::cli_abort(c("ok", sprintf("%s", x))),
     function(x) inform_unless_quiet(glue::glue("{x}"))
   )

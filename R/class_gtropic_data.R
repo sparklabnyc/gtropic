@@ -15,13 +15,15 @@
 #' @return An object of class `gtropic_data`.
 #' @keywords internal
 #' @noRd
-new_gtropic_data <- function(tables,
-                             manifest,
-                              query = NULL,
-                              filters_resolved = list(),
-                              warnings = list(),
-                              availability = NULL,
-                              retrieved_at = Sys.time()) {
+new_gtropic_data <- function(
+  tables,
+  manifest,
+  query = NULL,
+  filters_resolved = list(),
+  warnings = list(),
+  availability = NULL,
+  retrieved_at = Sys.time()
+) {
   structure(
     tables,
     manifest = manifest,
@@ -138,8 +140,14 @@ gtropic_availability <- function(x) {
 #' @family result methods
 #' @export
 print.gtropic_filters <- function(x, n = 10L, ...) {
-  if (!is.numeric(n) || length(n) != 1L || is.na(n) || !is.finite(n) ||
-      n < 1L || n != floor(n)) {
+  if (
+    !is.numeric(n) ||
+      length(n) != 1L ||
+      is.na(n) ||
+      !is.finite(n) ||
+      n < 1L ||
+      n != floor(n)
+  ) {
     cli::cli_abort("{.arg n} must be a positive whole number.")
   }
   n <- as.integer(n)
@@ -271,9 +279,14 @@ print.gtropic_data <- function(x, ...) {
 #' @family result methods
 #' @export
 summary.gtropic_data <- function(object, ...) {
-  tables <- vapply(names(object), function(nm) {
-    as.character(table_dim_label(object[[nm]]))
-  }, character(1), USE.NAMES = FALSE)
+  tables <- vapply(
+    names(object),
+    function(nm) {
+      as.character(table_dim_label(object[[nm]]))
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
   structure(
     list(
       manifest = attr(object, "manifest"),
@@ -335,7 +348,9 @@ print.summary.gtropic_data <- function(x, ...) {
   if (length(wn) > 0L) {
     cli::cli_h2("Warnings")
     for (nm in names(wn)) {
-      cli::cli_li("{.field {nm}}: {truncate_display(as.character(wn[[nm]]), 5)}")
+      cli::cli_li(
+        "{.field {nm}}: {truncate_display(as.character(wn[[nm]]), 5)}"
+      )
     }
   }
 
@@ -442,11 +457,15 @@ table_dim_label <- function(x) {
 #' @return `x`, invisibly.
 #' @keywords internal
 #' @noRd
-check_gtropic_data <- function(x, arg = rlang::caller_arg(x),
-                               call = rlang::caller_env()) {
+check_gtropic_data <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
   if (!inherits(x, "gtropic_data")) {
     cli::cli_abort(
-      c("{.arg {arg}} must be a {.cls gtropic_data} object returned by
+      c(
+        "{.arg {arg}} must be a {.cls gtropic_data} object returned by
          {.fn gtropic_data}.",
         x = "Got {.obj_type_friendly {x}}."
       ),

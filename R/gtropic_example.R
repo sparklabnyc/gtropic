@@ -22,8 +22,10 @@
 #' @export
 gtropic_example <- function() {
   x <- readRDS(system.file(
-    "extdata", "gtropic-example.rds",
-    package = "gtropic", mustWork = TRUE
+    "extdata",
+    "gtropic-example.rds",
+    package = "gtropic",
+    mustWork = TRUE
   ))
   wkt <- x$geometry
   if (requireNamespace("sf", quietly = TRUE)) {

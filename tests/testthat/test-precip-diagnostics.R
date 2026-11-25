@@ -31,7 +31,10 @@ test_that("precipitation plot captions identify affected mapped units", {
   x <- plot_fixture()
 
   prepared <- prepare_plot_data(
-    x, "exposure", "PRECIP_MM", track = FALSE
+    x,
+    "exposure",
+    "PRECIP_MM",
+    track = FALSE
   )
   info <- attr(prepared, "plot_info")
   expect_identical(info$precip_all_missing_adm2_ids, "PLOT.5")
@@ -44,13 +47,18 @@ test_that("precipitation plot captions identify affected mapped units", {
 
   x$precip$PRECIP_MM[x$precip$ADM2_ID == "PLOT.5"] <- 1
   corrected <- prepare_plot_data(
-    x, "exposure", "PRECIP_MM", track = FALSE
+    x,
+    "exposure",
+    "PRECIP_MM",
+    track = FALSE
   )
   expect_length(
     attr(corrected, "plot_info")$precip_all_missing_adm2_ids,
     0L
   )
-  expect_false(grepl("known small/coastal", attr(corrected, "plot_info")$caption,
+  expect_false(grepl(
+    "known small/coastal",
+    attr(corrected, "plot_info")$caption,
     fixed = TRUE
   ))
 })

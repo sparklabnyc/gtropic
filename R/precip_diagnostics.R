@@ -38,9 +38,11 @@ NULL
 #' @return A sorted character vector.
 #' @keywords internal
 #' @noRd
-precip_all_missing_adm2_ids <- function(precip,
-                                        adm2_ids = NULL,
-                                        value_col = "PRECIP_MM") {
+precip_all_missing_adm2_ids <- function(
+  precip,
+  adm2_ids = NULL,
+  value_col = "PRECIP_MM"
+) {
   if (is.null(adm2_ids)) {
     adm2_ids <- if (!is.null(precip) && "ADM2_ID" %in% names(precip)) {
       precip$ADM2_ID
@@ -50,11 +52,15 @@ precip_all_missing_adm2_ids <- function(precip,
   }
   adm2_ids <- sort(unique(as.character(adm2_ids)))
   adm2_ids <- adm2_ids[!is.na(adm2_ids) & nzchar(adm2_ids)]
-  if (!length(adm2_ids)) return(character(0))
+  if (!length(adm2_ids)) {
+    return(character(0))
+  }
 
-  if (is.null(precip) ||
-    !all(c("ADM2_ID", value_col) %in% names(precip)) ||
-    !nrow(precip)) {
+  if (
+    is.null(precip) ||
+      !all(c("ADM2_ID", value_col) %in% names(precip)) ||
+      !nrow(precip)
+  ) {
     return(adm2_ids)
   }
 
@@ -72,7 +78,9 @@ precip_all_missing_adm2_ids <- function(precip,
 #' @keywords internal
 #' @noRd
 warn_precip_all_missing <- function(adm2_ids, call = rlang::caller_env()) {
-  if (!length(adm2_ids)) return(invisible(adm2_ids))
+  if (!length(adm2_ids)) {
+    return(invisible(adm2_ids))
+  }
 
   gtropic_warn(
     c(
@@ -100,13 +108,15 @@ warn_precip_all_missing <- function(adm2_ids, call = rlang::caller_env()) {
 #' @return A caption line, or `NULL`.
 #' @keywords internal
 #' @noRd
-plot_precip_limitation_caption <- function(adm2_ids,
-                                           has_diagnostics = FALSE) {
-  if (!length(adm2_ids)) return(NULL)
+plot_precip_limitation_caption <- function(adm2_ids, has_diagnostics = FALSE) {
+  if (!length(adm2_ids)) {
+    return(NULL)
+  }
 
   affected <- if (length(adm2_ids) <= 3L) {
     paste0(
-      "ADM2_ID", if (length(adm2_ids) == 1L) " " else "s ",
+      "ADM2_ID",
+      if (length(adm2_ids) == 1L) " " else "s ",
       paste(adm2_ids, collapse = ", ")
     )
   } else {
@@ -118,7 +128,9 @@ plot_precip_limitation_caption <- function(adm2_ids,
     ""
   }
   paste0(
-    "Warning: No non-missing precipitation data for ", affected, ".",
+    "Warning: No non-missing precipitation data for ",
+    affected,
+    ".",
     details,
     "\nKnown small/coastal-unit source-data limitation; see ",
     "?gtropic_known_limitations."

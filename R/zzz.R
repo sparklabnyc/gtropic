@@ -20,7 +20,9 @@
 
   # Only fill in options the user has not already set (e.g. in .Rprofile).
   unset <- !(names(defaults) %in% names(options()))
-  if (any(unset)) options(defaults[unset])
+  if (any(unset)) {
+    options(defaults[unset])
+  }
 
   invisible()
 }

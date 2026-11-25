@@ -2,7 +2,10 @@
 # Snapshots use gtropic_example(), whose values are synthetic and fixed.
 
 hide_version <- function(lines) {
-  gsub(as.character(utils::packageVersion("gtropic")), "<version>", lines,
+  gsub(
+    as.character(utils::packageVersion("gtropic")),
+    "<version>",
+    lines,
     fixed = TRUE
   )
 }
@@ -21,7 +24,8 @@ test_that("summary.gtropic_data() output is stable", {
 
 test_that("print.gtropic_manifest() output is stable", {
   testthat::local_reproducible_output(width = 80)
-  expect_snapshot(print(gtropic_manifest(gtropic_example())),
+  expect_snapshot(
+    print(gtropic_manifest(gtropic_example())),
     transform = hide_version
   )
 })
@@ -35,7 +39,10 @@ test_that("summary() returns a classed object and printing returns it", {
   x <- gtropic_example()
   s <- summary(x)
   expect_s3_class(s, "summary.gtropic_data")
-  expect_named(s, c("manifest", "filters", "diagnostics", "retrieved_at", "tables"))
+  expect_named(
+    s,
+    c("manifest", "filters", "diagnostics", "retrieved_at", "tables")
+  )
   expect_identical(names(s$tables), names(x))
   expect_identical(s$manifest, gtropic_manifest(x))
   out <- withVisible(suppressMessages(print(s)))

@@ -54,8 +54,12 @@ estimate_download <- function(plan, cache, discovery) {
 #' @return Invisibly `TRUE` when the download may proceed.
 #' @keywords internal
 #' @noRd
-apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
-                            call = rlang::caller_env()) {
+apply_guardrail <- function(
+  estimate,
+  confirm = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   if (!confirm) {
     return(invisible(TRUE))
   }
@@ -79,7 +83,8 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
 
   if (!is_interactive()) {
     gtropic_abort(
-      c("This query would download about {format_bytes(estimate$bytes)} across
+      c(
+        "This query would download about {format_bytes(estimate$bytes)} across
          {estimate$n_files} file{?s}, above the
          {threshold_gb} GB confirmation threshold.",
         i = "This session is not interactive, so there is no way to ask you to
@@ -105,7 +110,8 @@ apply_guardrail <- function(estimate, confirm = TRUE, quiet = FALSE,
 
   if (!proceed) {
     gtropic_abort(
-      c("Download cancelled.",
+      c(
+        "Download cancelled.",
         i = "Narrow the query, or pass {.code confirm = FALSE} to skip this
              check."
       ),

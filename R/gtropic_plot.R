@@ -169,20 +169,34 @@
 gtropic_plot <- function(
   data,
   type = c("exposure", "count", "track"),
-  metric = NULL, storm = NULL, adm2 = NULL,
-  aggregate = NULL, threshold = NULL, binary = FALSE,
+  metric = NULL,
+  storm = NULL,
+  adm2 = NULL,
+  aggregate = NULL,
+  threshold = NULL,
+  binary = FALSE,
   wind_categories = NULL,
   count_unit = c("storms", "days"),
-  facet_by = NULL, track = NULL,
-  track_map_key = gtropic_saffir_simpson(), track_labels = TRUE,
+  facet_by = NULL,
+  track = NULL,
+  track_map_key = gtropic_saffir_simpson(),
+  track_labels = TRUE,
   track_interval = 6,
   track_legend_position = NULL,
   basemap = c("countries", "admin1", "none"),
-  bbox = NULL, expand = 2, crs = NULL, interactive = FALSE,
-  palette = NULL, direction = NULL, gridlines = TRUE,
+  bbox = NULL,
+  expand = 2,
+  crs = NULL,
+  interactive = FALSE,
+  palette = NULL,
+  direction = NULL,
+  gridlines = TRUE,
   make_valid = TRUE,
-  title = NULL, subtitle = NULL, caption = NULL,
-  quiet = getOption("gtropic.quiet", FALSE), ...
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  quiet = getOption("gtropic.quiet", FALSE),
+  ...
 ) {
   type <- rlang::arg_match(type)
   count_unit <- rlang::arg_match(count_unit)
@@ -193,9 +207,13 @@ gtropic_plot <- function(
   check_flag(gridlines)
   check_flag(track_labels)
   check_flag(make_valid)
-  if (!is.null(track)) check_flag(track)
+  if (!is.null(track)) {
+    check_flag(track)
+  }
   if (interactive && !type %in% c("exposure", "count")) {
-    cli::cli_abort("Interactive plots support only type = 'exposure' or 'count'.")
+    cli::cli_abort(
+      "Interactive plots support only type = 'exposure' or 'count'."
+    )
   }
   if (binary && !type %in% c("exposure", "count")) {
     cli::cli_abort("{.arg binary} applies only to exposure and count maps.")
@@ -207,44 +225,79 @@ gtropic_plot <- function(
   if (!is.null(facet_by) && length(facet_by) != 1L) {
     cli::cli_abort("{.arg facet_by} must be one string or NULL.")
   }
-  if (!is.numeric(expand) || length(expand) != 1L || !is.finite(expand) || expand < 0) {
+  if (
+    !is.numeric(expand) ||
+      length(expand) != 1L ||
+      !is.finite(expand) ||
+      expand < 0
+  ) {
     cli::cli_abort("{.arg expand} must be one nonnegative finite number.")
   }
   track_map_key <- plot_validate_track_map_key(track_map_key)
   track_interval <- plot_validate_track_interval(track_interval)
-  track_legend_position <- plot_validate_track_legend_position(track_legend_position)
+  track_legend_position <- plot_validate_track_legend_position(
+    track_legend_position
+  )
   plot_validate_static_dots(type, interactive, ...)
 
   prepared <- prepare_plot_data(
     data,
-    type = type, metric = metric, storm = storm, adm2 = adm2,
-    aggregate = aggregate, threshold = threshold, binary = binary,
+    type = type,
+    metric = metric,
+    storm = storm,
+    adm2 = adm2,
+    aggregate = aggregate,
+    threshold = threshold,
+    binary = binary,
     wind_categories = wind_categories,
-    count_unit = count_unit, facet_by = facet_by, track = track,
-    palette = palette, direction = direction, track_map_key = track_map_key,
-    track_labels = track_labels, track_interval = track_interval,
-    track_legend_position = track_legend_position, make_valid = make_valid,
+    count_unit = count_unit,
+    facet_by = facet_by,
+    track = track,
+    palette = palette,
+    direction = direction,
+    track_map_key = track_map_key,
+    track_labels = track_labels,
+    track_interval = track_interval,
+    track_legend_position = track_legend_position,
+    make_valid = make_valid,
     quiet = quiet
   )
   rlang::check_installed("ggplot2", reason = "to build G-TROPIC plots")
-  if (interactive) rlang::check_installed("leaflet", reason = "to build interactive maps")
-  cartography <- plot_cartography(prepared,
-    basemap = basemap, bbox = bbox, expand = expand, crs = crs
+  if (interactive) {
+    rlang::check_installed("leaflet", reason = "to build interactive maps")
+  }
+  cartography <- plot_cartography(
+    prepared,
+    basemap = basemap,
+    bbox = bbox,
+    expand = expand,
+    crs = crs
   )
   if (interactive) {
-    return(build_interactive_plot(prepared, cartography,
-      title = title, subtitle = subtitle, caption = caption,
-      gridlines = gridlines, ...
+    return(build_interactive_plot(
+      prepared,
+      cartography,
+      title = title,
+      subtitle = subtitle,
+      caption = caption,
+      gridlines = gridlines,
+      ...
     ))
   }
-  builder <- switch(type,
+  builder <- switch(
+    type,
     exposure = build_exposure_plot,
     count = build_count_plot,
     track = build_track_plot
   )
-  builder(prepared, cartography,
-    title = title, subtitle = subtitle, caption = caption,
-    gridlines = gridlines, ...
+  builder(
+    prepared,
+    cartography,
+    title = title,
+    subtitle = subtitle,
+    caption = caption,
+    gridlines = gridlines,
+    ...
   )
 }
 
@@ -270,19 +323,36 @@ plot_validate_static_dots <- function(type, interactive, ...) {
   if (interactive || ...length() == 0L) {
     return(invisible(NULL))
   }
-  if (type == "track") cli::cli_abort("Unsupported arguments in {.arg ...} for track plots.")
+  if (type == "track") {
+    cli::cli_abort("Unsupported arguments in {.arg ...} for track plots.")
+  }
   dots <- list(...)
   nms <- names(dots)
   if (is.null(nms) || anyNA(nms) || any(!nzchar(nms))) {
     cli::cli_abort("All static plotting arguments in {.arg ...} must be named.")
   }
   nms[nms == "color"] <- "colour"
-  if (anyDuplicated(nms)) cli::cli_abort("Duplicate static plotting arguments in {.arg ...}.")
+  if (anyDuplicated(nms)) {
+    cli::cli_abort("Duplicate static plotting arguments in {.arg ...}.")
+  }
   conflicts <- intersect(nms, c("data", "mapping", "inherit.aes"))
-  if (length(conflicts)) cli::cli_abort("Arguments in {.arg ...} conflict with the map builder: {.val {conflicts}}.")
+  if (length(conflicts)) {
+    cli::cli_abort(
+      "Arguments in {.arg ...} conflict with the map builder: {.val {conflicts}}."
+    )
+  }
   rlang::check_installed("ggplot2", reason = "to validate plotting arguments")
-  supported <- c(names(formals(ggplot2::geom_sf)), ggplot2::GeomSf$parameters(extra = TRUE), ggplot2::GeomSf$aesthetics(), "key_glyph")
+  supported <- c(
+    names(formals(ggplot2::geom_sf)),
+    ggplot2::GeomSf$parameters(extra = TRUE),
+    ggplot2::GeomSf$aesthetics(),
+    "key_glyph"
+  )
   unknown <- setdiff(nms, supported)
-  if (length(unknown)) cli::cli_abort("Unknown static plotting arguments in {.arg ...}: {.val {unknown}}.")
+  if (length(unknown)) {
+    cli::cli_abort(
+      "Unknown static plotting arguments in {.arg ...}: {.val {unknown}}."
+    )
+  }
   invisible(NULL)
 }

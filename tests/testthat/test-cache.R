@@ -7,9 +7,13 @@ traversal_checksum <- function() paste0("../", strrep("v", 29L))
 tampered_index <- function(dir, checksum) {
   key <- fetcher_key()
   tibble::tibble(
-    server = key$server, doi = key$doi, version = key$version,
-    directory_label = key$directory_label, label = key$label,
-    checksum = checksum, size_bytes = 8,
+    server = key$server,
+    doi = key$doi,
+    version = key$version,
+    directory_label = key$directory_label,
+    label = key$label,
+    checksum = checksum,
+    size_bytes = 8,
     fetched_at = as.POSIXct("2000-01-01", tz = "UTC")
   )
 }
@@ -22,7 +26,13 @@ test_that("cache_blob_path() accepts only hexadecimal digests", {
     file.path(dir, "blobs", paste0(strrep("a", 32L), ".blob"))
   )
   expect_identical(cache_blob_path(dir, character(0)), character(0))
-  for (bad in c(traversal_checksum(), "", NA, strrep("g", 32L), "/etc/passwd")) {
+  for (bad in c(
+    traversal_checksum(),
+    "",
+    NA,
+    strrep("g", 32L),
+    "/etc/passwd"
+  )) {
     expect_error(cache_blob_path(dir, bad), "invalid checksum")
   }
 })
@@ -43,7 +53,9 @@ test_that("a tampered index cannot make the cache read or delete other files", {
 
   withr::local_options(gtropic.cache_dir = dir)
   try(
-    suppressWarnings(suppressMessages(gtropic_cache_prune(older_than_days = 0))),
+    suppressWarnings(suppressMessages(gtropic_cache_prune(
+      older_than_days = 0
+    ))),
     silent = TRUE
   )
   expect_true(file.exists(victim))
@@ -60,7 +72,10 @@ populated_index <- function() {
     label = c("2001.parquet", "2005.parquet"),
     checksum = c(strrep("a", 32L), strrep("b", 64L)),
     size_bytes = c(10, 12345678901),
-    fetched_at = as.POSIXct(c("2026-01-02 03:04:05", "2025-12-31 23:59:59"), tz = "UTC")
+    fetched_at = as.POSIXct(
+      c("2026-01-02 03:04:05", "2025-12-31 23:59:59"),
+      tz = "UTC"
+    )
   )
 }
 
@@ -78,19 +93,31 @@ test_that("the cache index round-trips through index.json", {
   expect_true(file.exists(file.path(dir, "index.json")))
   expect_identical(cache_index_read(dir), idx)
   expect_identical(attr(cache_index_read(dir)$fetched_at, "tzone"), "UTC")
-  expect_identical(cache_index_read(withr::local_tempdir()), cache_index_empty())
+  expect_identical(
+    cache_index_read(withr::local_tempdir()),
+    cache_index_empty()
+  )
 })
 
 test_that("an invalid index.json reads as an empty index, with a warning", {
   withr::local_options(rlib_warning_verbosity = "verbose")
   good <- jsonlite::toJSON(
-    within(as.data.frame(populated_index()), fetched_at <- format_cache_time(fetched_at)),
-    dataframe = "rows", digits = NA
+    within(
+      as.data.frame(populated_index()),
+      fetched_at <- format_cache_time(fetched_at)
+    ),
+    dataframe = "rows",
+    digits = NA
   )
   bad <- list(
     malformed = "{not json",
     not_array = '{"server": "example.invalid"}',
-    wrong_type = sub('"size_bytes":10', '"size_bytes":"10"', good, fixed = TRUE),
+    wrong_type = sub(
+      '"size_bytes":10',
+      '"size_bytes":"10"',
+      good,
+      fixed = TRUE
+    ),
     missing_field = sub('"doi":"doi:10.0000/HIST",', "", good, fixed = TRUE),
     traversal = sub(strrep("a", 32L), "../../x", good, fixed = TRUE),
     bad_server = sub("example.invalid", "evil.example/x", good, fixed = TRUE),
@@ -100,7 +127,11 @@ test_that("an invalid index.json reads as an empty index, with a warning", {
   for (nm in names(bad)) {
     dir <- withr::local_tempdir()
     write_index_json(dir, bad[[nm]])
-    expect_warning(idx <- cache_index_read(dir), "not valid gtropic metadata", label = nm)
+    expect_warning(
+      idx <- cache_index_read(dir),
+      "not valid gtropic metadata",
+      label = nm
+    )
     expect_identical(idx, cache_index_empty(), label = nm)
   }
 })
@@ -120,11 +151,19 @@ test_that("old R serialisation files in the cache are never read", {
   flag <- withr::local_tempfile()
   # A file whose deserialisation would have side effects is simply ignored.
   saveRDS(populated_index(), file.path(dir, "index.rds"))
-  saveRDS(list(discovery = "x", saved_at = Sys.time()), file.path(dir, "discovery.rds"))
+  saveRDS(
+    list(discovery = "x", saved_at = Sys.time()),
+    file.path(dir, "discovery.rds")
+  )
 
   expect_identical(cache_index_read(dir), cache_index_empty())
   expect_error(
-    cache_discovery_read(dir, "example.invalid", "x", list(historical = ":latest")),
+    cache_discovery_read(
+      dir,
+      "example.invalid",
+      "x",
+      list(historical = ":latest")
+    ),
     "needs a persisted discovery snapshot"
   )
   expect_false(file.exists(flag))
@@ -134,7 +173,11 @@ test_that("cache hits report the download time stored in the index", {
   dir <- withr::local_tempdir()
   cache <- fetcher_cache(dir)
   bytes <- charToRaw("bytes")
-  stored <- cache_put_bytes(cache, fetcher_key(), bytes, checksum_raw(bytes),
+  stored <- cache_put_bytes(
+    cache,
+    fetcher_key(),
+    bytes,
+    checksum_raw(bytes),
     downloaded_at = as.POSIXct("2026-01-02 03:04:05.75", tz = "UTC")
   )$downloaded_at
 
@@ -149,7 +192,12 @@ test_that("an invalid discovery snapshot cannot be used offline", {
   path <- file.path(dir, "discovery.json")
   good <- readLines(path, warn = FALSE)
   read <- function() {
-    cache_discovery_read(dir, "example.invalid", "x", list(historical = ":latest"))
+    cache_discovery_read(
+      dir,
+      "example.invalid",
+      "x",
+      list(historical = ":latest")
+    )
   }
   expect_true(is.list(read()))
 
@@ -224,7 +272,10 @@ test_that("a file planted at a predictable temp name is not written through", {
 
   expect_identical(readLines(victim), "keep me")
   expect_identical(cache_index_read(dir)$checksum, checksum)
-  expect_identical(read_bytes(cache_get(fetcher_cache(dir), fetcher_key())$path), bytes)
+  expect_identical(
+    read_bytes(cache_get(fetcher_cache(dir), fetcher_key())$path),
+    bytes
+  )
 })
 
 test_that("writes leave no temporary files behind", {
@@ -243,7 +294,10 @@ test_that("a failed rename is reported and cleaned up", {
   # A directory in the way makes the final rename fail.
   dir.create(file.path(dir, "index.json"), recursive = TRUE)
 
-  expect_warning(cache_index_write(dir, populated_index()), "Could not update the cache index")
+  expect_warning(
+    cache_index_write(dir, populated_index()),
+    "Could not update the cache index"
+  )
   expect_length(list_tmp(dir), 0L)
 })
 
@@ -255,7 +309,10 @@ test_that("stale temporary files are removed when the cache is next written", {
   fresh <- file.path(dir, ".tmp-fresh")
   file.create(c(stale, fresh))
   Sys.setFileTime(stale, Sys.time() - 2 * 86400)
-  rm(list = ls(.gtropic_session, pattern = "^tmp_swept"), envir = .gtropic_session)
+  rm(
+    list = ls(.gtropic_session, pattern = "^tmp_swept"),
+    envir = .gtropic_session
+  )
 
   bytes <- charToRaw("bytes")
   cache_put_bytes(fetcher_cache(dir), fetcher_key(), bytes, checksum_raw(bytes))
@@ -292,8 +349,11 @@ test_that("a query reads the index once, and writes it at most once", {
   withr::local_options(gtropic.cache_dir = withr::local_tempdir())
   query <- function() {
     gtropic_data(
-      STORM_ID = "2002BBB", tables = c("wind", "precip", "storm_metadata"),
-      cache = TRUE, quiet = TRUE, confirm = FALSE
+      STORM_ID = "2002BBB",
+      tables = c("wind", "precip", "storm_metadata"),
+      cache = TRUE,
+      quiet = TRUE,
+      confirm = FALSE
     )
   }
 
@@ -316,8 +376,11 @@ test_that("an interrupted query still records what it downloaded", {
 
   expect_error(
     gtropic_data(
-      STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
-      cache = TRUE, quiet = TRUE, confirm = FALSE
+      STORM_ID = "2002BBB",
+      tables = c("wind", "storm_metadata"),
+      cache = TRUE,
+      quiet = TRUE,
+      confirm = FALSE
     ),
     "interrupted"
   )
@@ -330,9 +393,14 @@ test_that("an interrupted query still records what it downloaded", {
 
 index_entry <- function(label, checksum, version = "1.0") {
   tibble::tibble(
-    server = "example.invalid", doi = "doi:10.0000/HIST", version = version,
-    directory_label = "yearly", label = label, checksum = checksum,
-    size_bytes = 1, fetched_at = as.POSIXct("2026-01-01", tz = "UTC")
+    server = "example.invalid",
+    doi = "doi:10.0000/HIST",
+    version = version,
+    directory_label = "yearly",
+    label = label,
+    checksum = checksum,
+    size_bytes = 1,
+    fetched_at = as.POSIXct("2026-01-01", tz = "UTC")
   )
 }
 
@@ -349,16 +417,23 @@ test_that("flushing a query's index keeps entries other sessions added", {
   cache_index_write(dir, index_entry("2002.parquet", b))
   cache_index_flush(cache)
 
-  expect_setequal(cache_index_read(dir)$label, c("2001.parquet", "2002.parquet"))
+  expect_setequal(
+    cache_index_read(dir)$label,
+    c("2001.parquet", "2002.parquet")
+  )
 })
 
 test_that("a query's drops and upserts reach the index in the order made", {
   dir <- withr::local_tempdir()
   a <- strrep("a", 32L)
   b <- strrep("b", 32L)
-  cache_index_write(dir, dplyr::bind_rows(
-    index_entry("2001.parquet", a), index_entry("2002.parquet", b)
-  ))
+  cache_index_write(
+    dir,
+    dplyr::bind_rows(
+      index_entry("2001.parquet", a),
+      index_entry("2002.parquet", b)
+    )
+  )
   cache <- fetcher_cache(dir)
   cache$index <- cache_index_handle(dir)
 
@@ -381,11 +456,19 @@ test_that("the download estimate checks the whole plan in one lookup", {
   fixture <- fetcher_listing(2001:2004)
   discovery <- fetcher_discovery(fixture$listing)
   # 2001 cached with the listed checksum; 2002 cached with other bytes.
-  cache_put_bytes(cache, fetcher_key(label = "2001.parquet"),
-    fixture$bytes[[1]], fixture$listing$checksum[1]
+  cache_put_bytes(
+    cache,
+    fetcher_key(label = "2001.parquet"),
+    fixture$bytes[[1]],
+    fixture$listing$checksum[1]
   )
   other <- charToRaw("other")
-  cache_put_bytes(cache, fetcher_key(label = "2002.parquet"), other, checksum_raw(other))
+  cache_put_bytes(
+    cache,
+    fetcher_key(label = "2002.parquet"),
+    other,
+    checksum_raw(other)
+  )
   plan <- tibble::tibble(
     dataset = c("historical", "historical", "historical", "current"),
     directory_label = "yearly",

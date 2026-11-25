@@ -2,24 +2,39 @@
 
 test_that("is_hex_checksum() accepts the four supported digest lengths only", {
   expect_true(all(is_hex_checksum(c(
-    strrep("a", 32L), strrep("B", 40L), strrep("0", 64L), strrep("f", 128L)
+    strrep("a", 32L),
+    strrep("B", 40L),
+    strrep("0", 64L),
+    strrep("f", 128L)
   ))))
   expect_false(any(is_hex_checksum(c(
-    NA, "", strrep("a", 31L), strrep("a", 33L), strrep("g", 32L),
-    paste0("../", strrep("a", 29L)), paste0(strrep("a", 31L), "/")
+    NA,
+    "",
+    strrep("a", 31L),
+    strrep("a", 33L),
+    strrep("g", 32L),
+    paste0("../", strrep("a", 29L)),
+    paste0(strrep("a", 31L), "/")
   ))))
 })
 
 test_that("listings drop checksums that are not hexadecimal digests", {
   records <- list(
     list(
-      label = "2001.parquet", directoryLabel = "yearly",
-      dataFile = list(id = 1L, md5 = paste0("../", strrep("a", 29L)), filesize = 10)
+      label = "2001.parquet",
+      directoryLabel = "yearly",
+      dataFile = list(
+        id = 1L,
+        md5 = paste0("../", strrep("a", 29L)),
+        filesize = 10
+      )
     ),
     list(
-      label = "2002.parquet", directoryLabel = "yearly",
+      label = "2002.parquet",
+      directoryLabel = "yearly",
       dataFile = list(
-        id = 2L, filesize = 10,
+        id = 2L,
+        filesize = 10,
         checksum = list(type = "MD5", value = strrep("a", 32L))
       )
     )
@@ -32,48 +47,81 @@ test_that("listings drop checksums that are not hexadecimal digests", {
 test_that("listings read every field from either checksum layout", {
   records <- list(
     list(
-      label = "a.parquet", directoryLabel = "x/y",
+      label = "a.parquet",
+      directoryLabel = "x/y",
       dataFile = list(
-        id = 1L, md5 = strrep("d", 32L), filesize = 10, contentType = "t"
+        id = 1L,
+        md5 = strrep("d", 32L),
+        filesize = 10,
+        contentType = "t"
       )
     ),
     list(
       label = "b.parquet",
       dataFile = list(
-        id = 2L, filesize = 1e10,
+        id = 2L,
+        filesize = 1e10,
         checksum = list(type = "SHA-256", value = strrep("a", 64L))
       )
     ),
-    list(dataFile = list(id = 3L, filename = "c.json", checksum = list(type = "MD5"))),
+    list(
+      dataFile = list(
+        id = 3L,
+        filename = "c.json",
+        checksum = list(type = "MD5")
+      )
+    ),
     list(label = "d")
   )
 
   listing <- dv_listing_from_records(records)
 
-  expect_identical(listing, tibble::tibble(
-    file_id = c(1L, 2L, 3L, NA),
-    label = c("a.parquet", "b.parquet", "c.json", "d"),
-    directory_label = c("x/y", "", "", ""),
-    checksum = c(strrep("d", 32L), strrep("a", 64L), NA, NA),
-    checksum_type = c("MD5", "SHA-256", "MD5", NA),
-    size_bytes = c(10, 1e10, NA, NA),
-    content_type = c("t", NA, NA, NA)
-  ))
+  expect_identical(
+    listing,
+    tibble::tibble(
+      file_id = c(1L, 2L, 3L, NA),
+      label = c("a.parquet", "b.parquet", "c.json", "d"),
+      directory_label = c("x/y", "", "", ""),
+      checksum = c(strrep("d", 32L), strrep("a", 64L), NA, NA),
+      checksum_type = c("MD5", "SHA-256", "MD5", NA),
+      size_bytes = c(10, 1e10, NA, NA),
+      content_type = c("t", NA, NA, NA)
+    )
+  )
 })
 
 test_that("validate_server() keeps bare host names and strips schemes", {
-  expect_identical(validate_server("dataverse.harvard.edu"), "dataverse.harvard.edu")
-  expect_identical(validate_server("https://dataverse.harvard.edu/"), "dataverse.harvard.edu")
-  expect_identical(validate_server("HTTP://dataverse.example.org//"), "dataverse.example.org")
+  expect_identical(
+    validate_server("dataverse.harvard.edu"),
+    "dataverse.harvard.edu"
+  )
+  expect_identical(
+    validate_server("https://dataverse.harvard.edu/"),
+    "dataverse.harvard.edu"
+  )
+  expect_identical(
+    validate_server("HTTP://dataverse.example.org//"),
+    "dataverse.example.org"
+  )
   expect_identical(validate_server("localhost:8080"), "localhost:8080")
   expect_identical(validate_server("example.invalid"), "example.invalid")
 })
 
 test_that("validate_server() rejects anything that is not a host name", {
   bad <- list(
-    "evil.example/path?", "user:pw@host", "a b", "host\n", "", NA_character_,
-    c("a.example", "b.example"), 123, strrep("a", 254L), "-bad.example",
-    "bad.example-", "host:123456", "host/../x"
+    "evil.example/path?",
+    "user:pw@host",
+    "a b",
+    "host\n",
+    "",
+    NA_character_,
+    c("a.example", "b.example"),
+    123,
+    strrep("a", 254L),
+    "-bad.example",
+    "bad.example-",
+    "host:123456",
+    "host/../x"
   )
   for (x in bad) {
     expect_error(validate_server(x, arg = "gtropic.server"), "gtropic.server")
@@ -95,7 +143,8 @@ test_that("the default server is defined once", {
 test_that("DATAVERSE_KEY is sent only to the configured server", {
   withr::local_envvar(DATAVERSE_KEY = "secret-token")
   withr::local_options(
-    gtropic.server = "dataverse.harvard.edu", rlib_warning_verbosity = "verbose"
+    gtropic.server = "dataverse.harvard.edu",
+    rlib_warning_verbosity = "verbose"
   )
 
   expect_identical(dv_key("dataverse.harvard.edu"), "secret-token")
@@ -151,12 +200,16 @@ test_that("the token is not sent to the storage host a download redirects to", {
   seen <- list()
   httr2::local_mocked_responses(function(req) {
     seen[[length(seen) + 1L]] <<- list(
-      url = req$url, key = sent_key(req)
+      url = req$url,
+      key = sent_key(req)
     )
     if (grepl("^https://dataverse.harvard.edu/", req$url)) {
-      httr2::response(303, headers = list(
-        Location = "https://storage.example/bucket/file?signature=abc"
-      ))
+      httr2::response(
+        303,
+        headers = list(
+          Location = "https://storage.example/bucket/file?signature=abc"
+        )
+      )
     } else {
       httr2::response(200, body = charToRaw("file bytes"))
     }
@@ -173,7 +226,10 @@ test_that("the token is not sent to the storage host a download redirects to", {
       "https://storage.example/bucket/file?signature=abc"
     )
   )
-  expect_identical(vapply(seen, `[[`, character(1), "key"), c("secret-token", ""))
+  expect_identical(
+    vapply(seen, `[[`, character(1), "key"),
+    c("secret-token", "")
+  )
 })
 
 test_that("a download redirect cannot downgrade to plain HTTP", {
@@ -190,7 +246,8 @@ test_that("a download redirect cannot downgrade to plain HTTP", {
 
 test_that("transport errors name the server that was contacted", {
   httr2::local_mocked_responses(function(req) {
-    httr2::response(404,
+    httr2::response(
+      404,
       headers = list(`Content-Type` = "application/json"),
       body = charToRaw('{"status":"ERROR","message":"Dataset not found"}')
     )
@@ -220,7 +277,8 @@ test_that("requests are built for the four native API endpoints", {
     } else {
       '{"versionNumber":3,"versionMinorNumber":1}'
     }
-    httr2::response(200,
+    httr2::response(
+      200,
       headers = list(`Content-Type` = "application/json"),
       body = charToRaw(paste0('{"status":"OK","data":', data, '}'))
     )
@@ -231,22 +289,35 @@ test_that("requests are built for the four native API endpoints", {
     "doi:10.0000/A"
   )
   expect_identical(
-    nrow(dv_list_files("doi:10.0000/A", "1.0", server = "dv.example", quiet = TRUE)),
+    nrow(dv_list_files(
+      "doi:10.0000/A",
+      "1.0",
+      server = "dv.example",
+      quiet = TRUE
+    )),
     0L
   )
   expect_identical(
-    dv_version_label("doi:10.0000/A", ":latest", server = "dv.example", quiet = TRUE),
+    dv_version_label(
+      "doi:10.0000/A",
+      ":latest",
+      server = "dv.example",
+      quiet = TRUE
+    ),
     "3.1"
   )
   path <- dv_get_file(12L, server = "dv.example", quiet = TRUE)
   unlink(path)
 
-  expect_identical(urls, c(
-    "https://dv.example/api/dataverses/gtropic/contents",
-    "https://dv.example/api/datasets/:persistentId/versions/1.0/files?persistentId=doi%3A10.0000%2FA",
-    "https://dv.example/api/datasets/:persistentId/versions/:latest?persistentId=doi%3A10.0000%2FA&excludeFiles=true",
-    "https://dv.example/api/access/datafile/12?format=original"
-  ))
+  expect_identical(
+    urls,
+    c(
+      "https://dv.example/api/dataverses/gtropic/contents",
+      "https://dv.example/api/datasets/:persistentId/versions/1.0/files?persistentId=doi%3A10.0000%2FA",
+      "https://dv.example/api/datasets/:persistentId/versions/:latest?persistentId=doi%3A10.0000%2FA&excludeFiles=true",
+      "https://dv.example/api/access/datafile/12?format=original"
+    )
+  )
 })
 
 test_that("path segments from options cannot leave their segment", {
@@ -319,7 +390,9 @@ test_that("a refused connection is retried, then reported once", {
     withCallingHandlers(
       dv_list_datasets("gtropic", server = "dv.invalid"),
       message = function(m) {
-        if (grepl("Retrying", conditionMessage(m))) notices <<- notices + 1L
+        if (grepl("Retrying", conditionMessage(m))) {
+          notices <<- notices + 1L
+        }
         invokeRestart("muffleMessage")
       }
     ),
@@ -332,7 +405,11 @@ test_that("a refused connection is retried, then reported once", {
 test_that("retry notices respect quiet", {
   web <- local_dataverse_app(dataverse_test_app())
   withr::local_options(gtropic.max_tries = 2L)
-  expect_no_message(dv_list_datasets("flaky", server = "dv.invalid", quiet = TRUE))
+  expect_no_message(dv_list_datasets(
+    "flaky",
+    server = "dv.invalid",
+    quiet = TRUE
+  ))
 })
 
 # --- bounded downloads (Plan 05 SEC-08) ----------------------------------------
@@ -360,7 +437,11 @@ test_that("a download larger than its listed size is stopped and removed", {
     httr2::local_mocked_responses(bodies[[kind]])
     dest <- withr::local_tempfile()
     err <- expect_error(
-      dv_get_file(1L, server = "example.invalid", quiet = TRUE, dest = dest,
+      dv_get_file(
+        1L,
+        server = "example.invalid",
+        quiet = TRUE,
+        dest = dest,
         size_bytes = 10
       ),
       class = "gtropic_error_download_size"
@@ -374,7 +455,11 @@ test_that("a download within its bound is written in full", {
   bytes <- as.raw(rep(1:255, 1000))
   httr2::local_mocked_responses(function(req) streaming_response(req, bytes))
   dest <- withr::local_tempfile()
-  dv_get_file(1L, server = "example.invalid", quiet = TRUE, dest = dest,
+  dv_get_file(
+    1L,
+    server = "example.invalid",
+    quiet = TRUE,
+    dest = dest,
     size_bytes = length(bytes)
   )
   expect_identical(read_bytes(dest), bytes)
@@ -396,7 +481,11 @@ test_that("a live transfer is stopped once it passes the bound", {
   web <- local_dataverse_app(dataverse_test_app())
   dest <- withr::local_tempfile()
   expect_error(
-    dv_get_file(99L, server = "dv.invalid", quiet = TRUE, dest = dest,
+    dv_get_file(
+      99L,
+      server = "dv.invalid",
+      quiet = TRUE,
+      dest = dest,
       size_bytes = 1
     ),
     class = "gtropic_error_download_size"
@@ -459,7 +548,8 @@ test_that("tests never wait between retries", {
 
 test_that("a server that fails every request gives one error and no warning", {
   httr2::local_mocked_responses(function(req) {
-    httr2::response(503,
+    httr2::response(
+      503,
       headers = list(`Content-Type` = "application/json"),
       body = charToRaw('{"status":"ERROR","message":"Service unavailable"}')
     )
@@ -473,8 +563,10 @@ test_that("a server that fails every request gives one error and no warning", {
   ))
   expect_no_warning(expect_error(
     gtropic_data(
-      STORM_NAME = "Katrina-2005", tables = "wind",
-      cache = FALSE, quiet = TRUE
+      STORM_NAME = "Katrina-2005",
+      tables = "wind",
+      cache = FALSE,
+      quiet = TRUE
     ),
     "Service unavailable",
     class = "gtropic_error_network"
@@ -488,8 +580,10 @@ test_that("an unreachable server gives one error and no warning", {
 
   expect_no_warning(expect_error(
     gtropic_data(
-      STORM_NAME = "Katrina-2005", tables = "wind",
-      cache = FALSE, quiet = TRUE
+      STORM_NAME = "Katrina-2005",
+      tables = "wind",
+      cache = FALSE,
+      quiet = TRUE
     ),
     "dv.invalid",
     class = "gtropic_error_network"

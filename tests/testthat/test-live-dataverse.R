@@ -23,7 +23,10 @@ test_that("live: discovery identifies the historical and current-year datasets",
   expect_identical(discovery$year_index$year, c(hist$years, current_years))
   expect_identical(
     discovery$year_index$dataset,
-    rep(c("historical", "current"), c(length(hist$years), length(current_years)))
+    rep(
+      c("historical", "current"),
+      c(length(hist$years), length(current_years))
+    )
   )
 })
 
@@ -42,9 +45,15 @@ test_that("live: files resolve by directory and label together", {
   })
 
   expect_true(all(vapply(resolved, nrow, integer(1)) == 1L))
-  expect_identical(vapply(resolved, `[[`, character(1), "directory_label"), paths)
+  expect_identical(
+    vapply(resolved, `[[`, character(1), "directory_label"),
+    paths
+  )
   # The same label exists in every directory, so the ids must all differ.
-  expect_length(unique(vapply(resolved, `[[`, integer(1), "file_id")), length(paths))
+  expect_length(
+    unique(vapply(resolved, `[[`, integer(1), "file_id")),
+    length(paths)
+  )
   expect_true(all(nzchar(vapply(resolved, `[[`, character(1), "checksum"))))
 })
 
@@ -64,7 +73,9 @@ test_that("live: manifest replay retrieves byte-identical input", {
 
   discovery <- discover_datasets(refresh = TRUE, quiet = TRUE)
   recorded <- dv_resolve_file(
-    discovery$historical$listing, path[1], path[2],
+    discovery$historical$listing,
+    path[1],
+    path[2],
     doi = discovery$historical$doi
   )
   first_context <- fetch_context(discovery, no_cache, quiet = TRUE)
@@ -72,8 +83,10 @@ test_that("live: manifest replay retrieves byte-identical input", {
   manifest <- manifest_finalize(ctx_manifest(first_context))
 
   replay_context <- fetch_context(
-    discovery, no_cache,
-    manifest_in = manifest, quiet = TRUE
+    discovery,
+    no_cache,
+    manifest_in = manifest,
+    quiet = TRUE
   )
   replay <- fetch_file("historical", path[1], path[2], replay_context)
 

@@ -38,7 +38,10 @@ keep_files <- list(
   )
 )
 version_fields <- c(
-  "versionNumber", "versionMinorNumber", "versionState", "datasetPersistentId"
+  "versionNumber",
+  "versionMinorNumber",
+  "versionState",
+  "datasetPersistentId"
 )
 
 unlink(dir, recursive = TRUE)
@@ -46,17 +49,25 @@ options(httptest2.mock.paths = dir, gtropic.server = host)
 Sys.setenv(DATAVERSE_KEY = "")
 
 json_response <- function(url, body) {
-  httr2::response(200,
+  httr2::response(
+    200,
     url = url,
     headers = list(`Content-Type` = "application/json"),
-    body = charToRaw(jsonlite::toJSON(body,
-      auto_unbox = TRUE, null = "null", digits = NA
+    body = charToRaw(jsonlite::toJSON(
+      body,
+      auto_unbox = TRUE,
+      null = "null",
+      digits = NA
     ))
   )
 }
 
 record <- function(req) {
-  live_url <- sub(paste0("^https://", host, "/"), paste0("https://", live, "/"), req$url)
+  live_url <- sub(
+    paste0("^https://", host, "/"),
+    paste0("https://", live, "/"),
+    req$url
+  )
   # `mock = NULL`: this request goes to the live server, not back to `record`.
   live_resp <- httr2::req_perform(
     httr2::req_user_agent(httr2::request(live_url), gtropic_user_agent()),
@@ -65,7 +76,8 @@ record <- function(req) {
   path <- httr2::url_parse(req$url)$path
   query <- httr2::url_parse(req$url)$query
   out <- if (grepl("/access/datafile/", path, fixed = TRUE)) {
-    httr2::response(200,
+    httr2::response(
+      200,
       url = req$url,
       headers = list(`Content-Type` = "application/octet-stream"),
       body = httr2::resp_body_raw(live_resp)
@@ -74,9 +86,12 @@ record <- function(req) {
     body <- httr2::resp_body_json(live_resp, simplifyVector = FALSE)
     if (endsWith(path, "/files")) {
       keep <- keep_files[[query$persistentId]]
-      body$data <- Filter(function(f) {
-        paste(f$directoryLabel, f$label, sep = "/") %in% keep
-      }, body$data)
+      body$data <- Filter(
+        function(f) {
+          paste(f$directoryLabel, f$label, sep = "/") %in% keep
+        },
+        body$data
+      )
     } else if (grepl("/versions/[^/]+$", path)) {
       body$data <- body$data[intersect(version_fields, names(body$data))]
     }
@@ -88,7 +103,11 @@ record <- function(req) {
 
 httr2::with_mocked_responses(record, {
   discovery <- discover_datasets(refresh = TRUE, quiet = TRUE)
-  ctx <- fetch_context(discovery, list(enabled = FALSE, dir = NULL), quiet = TRUE)
+  ctx <- fetch_context(
+    discovery,
+    list(enabled = FALSE, dir = NULL),
+    quiet = TRUE
+  )
   fetch_file("historical", "02_wind/excluded_storms", "2007.parquet", ctx)
   fetch_file("current", "02_wind/excluded_storms", "2026.parquet", ctx)
 })

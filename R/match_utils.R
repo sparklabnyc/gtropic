@@ -66,13 +66,15 @@ suggest_matches <- function(x, candidates, n = 3L) {
 #' @return The canonical spellings of the matched values.
 #' @keywords internal
 #' @noRd
-match_values <- function(values,
-                         candidates,
-                         arg,
-                         exact = FALSE,
-                         helper = "gtropic_adm2()",
-                         what = "ADM2 unit",
-                         call = rlang::caller_env()) {
+match_values <- function(
+  values,
+  candidates,
+  arg,
+  exact = FALSE,
+  helper = "gtropic_adm2()",
+  what = "ADM2 unit",
+  call = rlang::caller_env()
+) {
   candidates <- unique(as.character(candidates[!is.na(candidates)]))
 
   if (exact) {
@@ -96,14 +98,20 @@ match_values <- function(values,
   missed <- values[!hit]
   # Built from user input and published names, so escaped before it is placed
   # in the error's cli template.
-  bullets <- vapply(missed, function(m) {
-    sugg <- suggest_matches(m, candidates)
-    if (length(sugg) == 0L) {
-      glue::glue('"{m}" - no close match found')
-    } else {
-      glue::glue('"{m}" - did you mean {paste0(\'"\', sugg, \'"\', collapse = ", ")}?')
-    }
-  }, character(1))
+  bullets <- vapply(
+    missed,
+    function(m) {
+      sugg <- suggest_matches(m, candidates)
+      if (length(sugg) == 0L) {
+        glue::glue('"{m}" - no close match found')
+      } else {
+        glue::glue(
+          '"{m}" - did you mean {paste0(\'"\', sugg, \'"\', collapse = ", ")}?'
+        )
+      }
+    },
+    character(1)
+  )
   names(bullets) <- rep("x", length(bullets))
 
   gtropic_abort(

@@ -34,7 +34,9 @@ if (!requireNamespace("knitr", quietly = TRUE)) {
 # setup chunk of each .Rmd.orig). Without optipng, knitr only warns, and
 # unoptimised figures would be committed, so refuse to start instead.
 if (!requireNamespace("ragg", quietly = TRUE)) {
-  stop("ragg is required to precompute the vignettes: install.packages(\"ragg\").")
+  stop(
+    "ragg is required to precompute the vignettes: install.packages(\"ragg\")."
+  )
 }
 if (!nzchar(Sys.which("optipng"))) {
   stop(
@@ -63,9 +65,17 @@ documents <- c(
   "linkage",
   "plotting",
   "versions-and-caching",
-  file.path("articles", sub("\\.Rmd\\.orig$", "", list.files(
-    file.path("vignettes", "articles"), pattern = "\\.Rmd\\.orig$"
-  )))
+  file.path(
+    "articles",
+    sub(
+      "\\.Rmd\\.orig$",
+      "",
+      list.files(
+        file.path("vignettes", "articles"),
+        pattern = "\\.Rmd\\.orig$"
+      )
+    )
+  )
 )
 
 knit_document <- function(doc) {
@@ -107,7 +117,11 @@ precompute_vignettes <- function() {
   old_env <- Sys.getenv("OMP_THREAD_LIMIT", unset = NA)
   Sys.setenv(OMP_THREAD_LIMIT = "2")
   on.exit(
-    if (is.na(old_env)) Sys.unsetenv("OMP_THREAD_LIMIT") else Sys.setenv(OMP_THREAD_LIMIT = old_env),
+    if (is.na(old_env)) {
+      Sys.unsetenv("OMP_THREAD_LIMIT")
+    } else {
+      Sys.setenv(OMP_THREAD_LIMIT = old_env)
+    },
     add = TRUE
   )
   old_cpu <- arrow::cpu_count()
@@ -131,7 +145,13 @@ precompute_vignettes <- function() {
   on.exit(setwd(old), add = TRUE)
   seconds <- vapply(documents, knit_document, numeric(1))
   message("\nKnitting time (s):")
-  message(paste0("  ", format(names(seconds)), "  ", round(seconds), collapse = "\n"))
+  message(paste0(
+    "  ",
+    format(names(seconds)),
+    "  ",
+    round(seconds),
+    collapse = "\n"
+  ))
 }
 
 precompute_vignettes()

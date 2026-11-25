@@ -7,11 +7,18 @@ test_that("plotting fixtures have the published schemas and edge cases", {
   expect_equal(nrow(x$geometry), 6)
   expect_equal(nrow(x$storm_metadata), 3)
   expect_named(x$precip, c("ADM2_ID", "LOCAL_DATE", "PRECIP_MM"))
-  expect_named(x$flood, c(
-    "ADM2_ID", "FLOOD_ID", "FLOOD_START_DATE",
-    "FLOOD_END_DATE", "PROP_FLOODED_AREA", "PROP_FLOODED_POP",
-    "FLOODED_POP_CENTROID"
-  ))
+  expect_named(
+    x$flood,
+    c(
+      "ADM2_ID",
+      "FLOOD_ID",
+      "FLOOD_START_DATE",
+      "FLOOD_END_DATE",
+      "PROP_FLOODED_AREA",
+      "PROP_FLOODED_POP",
+      "FLOODED_POP_CENTROID"
+    )
+  )
   expect_true(any(abs(diff(x$tracks$LON)) > 180))
   expect_equal(nrow(x$precip), 60)
 })
@@ -38,7 +45,8 @@ test_that("missing tables and columns give a copyable amended query", {
   x$geometry <- NULL
   attr(x, "query") <- quote(gtropic_data(
     WHO_ENTITY = "United States",
-    date_range = c(2005, 2005), tables = c("wind", "adm2")
+    date_range = c(2005, 2005),
+    tables = c("wind", "adm2")
   ))
   expect_error(prepare_plot_data(x, "exposure"), "geometry")
   hint <- plot_query_hint(x, c("wind", "adm2", "geometry"))
@@ -61,7 +69,10 @@ test_that("metrics carry defaults, codebook units and explicit overrides", {
     c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
   )
   expect_equal(
-    attr(prepare_plot_data(x, "exposure", track = FALSE), "plot_info")$metrics$metric,
+    attr(
+      prepare_plot_data(x, "exposure", track = FALSE),
+      "plot_info"
+    )$metrics$metric,
     c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
   )
   expect_equal(resolve_plot_metrics(x, "count")$metric, "VMAX_SUST_MS")
@@ -72,14 +83,24 @@ test_that("metrics carry defaults, codebook units and explicit overrides", {
     c("VMAX_SUST_MS", "PRECIP_MM")
   )
   x <- plot_fixture()
-  spec <- resolve_plot_metrics(x, "count", c(
-    "VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_POP", "STORM_DIST_KM"
-  ))
+  spec <- resolve_plot_metrics(
+    x,
+    "count",
+    c(
+      "VMAX_SUST_MS",
+      "PRECIP_MM",
+      "PROP_FLOODED_POP",
+      "STORM_DIST_KM"
+    )
+  )
   expect_equal(spec$threshold, c(17.5, 75, 0, 100))
   expect_equal(spec$operator, c(">=", ">=", ">", "<="))
   expect_true(all(spec$aggregate == "n"))
   expect_error(resolve_plot_metrics(x, "count", "VMAX_GUST_MS"), "explicit")
-  spec <- resolve_plot_metrics(x, "count", "VMAX_GUST_MS",
+  spec <- resolve_plot_metrics(
+    x,
+    "count",
+    "VMAX_GUST_MS",
     threshold = list(VMAX_GUST_MS = 21)
   )
   expect_equal(spec$threshold, 21)
@@ -126,11 +147,11 @@ test_that("tracks need no geometry and retain metadata", {
 test_that("plot storm-name selection warns and preserves ambiguous IDs", {
   x <- list(
     storm_metadata = tibble::tribble(
-      ~STORM_ID, ~STORM_NAME,
-      "A", "Shared-2005",
-      "A", " shared-2005 ",
-      "B", "SHARED-2005",
-      "C", "Unique-2005"
+      ~STORM_ID , ~STORM_NAME     ,
+      "A"       , "Shared-2005"   ,
+      "A"       , " shared-2005 " ,
+      "B"       , "SHARED-2005"   ,
+      "C"       , "Unique-2005"
     ),
     tracks = tibble::tibble(STORM_ID = c("A", "B", "C"))
   )

@@ -1,9 +1,9 @@
 adm2 <- tibble::tribble(
-  ~ADM2_ID,   ~ADM2_NAME,  ~ADM2_GROUP, ~WHO_ENTITY,     ~WHO_REGION,
-  "USA.1.1",  "Harris",    "USA",       "United States", "AMRO",
-  "MEX.1.1",  "Cancun",    "MEX",       "Mexico",        "AMRO",
-  "PHL.1.1",  "Tacloban",  "PHL",       "Philippines",   "WPRO",
-  "CRI.1.1",  "San Jose",  "CRI",       "Costa Rica",    "AMRO"
+  ~ADM2_ID  , ~ADM2_NAME , ~ADM2_GROUP , ~WHO_ENTITY     , ~WHO_REGION ,
+  "USA.1.1" , "Harris"   , "USA"       , "United States" , "AMRO"      ,
+  "MEX.1.1" , "Cancun"   , "MEX"       , "Mexico"        , "AMRO"      ,
+  "PHL.1.1" , "Tacloban" , "PHL"       , "Philippines"   , "WPRO"      ,
+  "CRI.1.1" , "San Jose" , "CRI"       , "Costa Rica"    , "AMRO"
 )
 
 test_that("values within one argument are combined with OR", {
@@ -80,12 +80,14 @@ make_pop <- function(lat_phl) {
 test_that("a polygon with no CRS errors", {
   skip_if_no_sf()
   poly <- sf::st_sfc(sf::st_polygon(list(rbind(
-    c(-97, 28), c(-93, 28), c(-93, 31), c(-97, 31), c(-97, 28)
+    c(-97, 28),
+    c(-93, 28),
+    c(-93, 31),
+    c(-97, 31),
+    c(-97, 28)
   ))))
   expect_error(
-    resolve_geography(adm2, list("2001" = make_pop(11.24)),
-      polygon = poly
-    ),
+    resolve_geography(adm2, list("2001" = make_pop(11.24)), polygon = poly),
     "no coordinate reference system"
   )
 })
@@ -94,14 +96,21 @@ test_that("reproject = FALSE with a non-4326 CRS errors", {
   skip_if_no_sf()
   poly <- sf::st_sfc(
     sf::st_polygon(list(rbind(
-      c(-97, 28), c(-93, 28), c(-93, 31), c(-97, 31), c(-97, 28)
+      c(-97, 28),
+      c(-93, 28),
+      c(-93, 31),
+      c(-97, 31),
+      c(-97, 28)
     ))),
     crs = 4326
   )
   poly <- sf::st_transform(poly, 3857)
   expect_error(
-    resolve_geography(adm2, list("2001" = make_pop(11.24)),
-      polygon = poly, reproject = FALSE
+    resolve_geography(
+      adm2,
+      list("2001" = make_pop(11.24)),
+      polygon = poly,
+      reproject = FALSE
     ),
     "reproject"
   )
@@ -111,7 +120,11 @@ test_that("polygon membership across multiple years is reported, not warned", {
   skip_if_no_sf()
   poly <- sf::st_sfc(
     sf::st_polygon(list(rbind(
-      c(-97, 28), c(-93, 28), c(-93, 31), c(-97, 31), c(-97, 28)
+      c(-97, 28),
+      c(-93, 28),
+      c(-93, 31),
+      c(-97, 31),
+      c(-97, 28)
     ))),
     crs = 4326
   )
@@ -127,13 +140,18 @@ test_that("each distinct centroid is tested once, with the same membership", {
   skip_if_no_sf()
   poly <- sf::st_sfc(
     sf::st_polygon(list(rbind(
-      c(120, 5), c(130, 5), c(130, 15), c(120, 15), c(120, 5)
+      c(120, 5),
+      c(130, 5),
+      c(130, 15),
+      c(120, 15),
+      c(120, 5)
     ))),
     crs = 4326
   )
   # The PHL centroid moves out of the polygon in 2003; the others never move.
   pops <- list(
-    "2001" = make_pop(11.24), "2002" = make_pop(11.24),
+    "2001" = make_pop(11.24),
+    "2002" = make_pop(11.24),
     "2003" = make_pop(16.50)
   )
   intersects <- sf::st_intersects

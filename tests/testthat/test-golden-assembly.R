@@ -12,8 +12,15 @@ golden_query <- function(...) {
 }
 
 all_tables_but_geometry <- c(
-  "wind", "precip", "flood", "pop", "adm2", "codebook", "zero_pairs",
-  "tracks", "storm_metadata"
+  "wind",
+  "precip",
+  "flood",
+  "pop",
+  "adm2",
+  "codebook",
+  "zero_pairs",
+  "tracks",
+  "storm_metadata"
 )
 
 test_that("golden: a single storm, every table except geometry", {
@@ -29,8 +36,11 @@ test_that("golden: a warm cache returns the same tables as a download", {
   cache_dir <- withr::local_tempdir()
   query <- function() {
     gtropic_data(
-      STORM_ID = "2002BBB", tables = all_tables_but_geometry,
-      cache = TRUE, quiet = TRUE, confirm = FALSE
+      STORM_ID = "2002BBB",
+      tables = all_tables_but_geometry,
+      cache = TRUE,
+      quiet = TRUE,
+      confirm = FALSE
     )
   }
   withr::local_options(gtropic.cache_dir = cache_dir)
@@ -107,7 +117,9 @@ test_that("golden: manifest replay returns the original tables", {
 
   replay <- gtropic_data(
     manifest = gtropic_manifest(original),
-    cache = FALSE, quiet = TRUE, confirm = FALSE
+    cache = FALSE,
+    quiet = TRUE,
+    confirm = FALSE
   )
 
   expect_golden(replay, "country-date-range")

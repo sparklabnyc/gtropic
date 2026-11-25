@@ -7,12 +7,19 @@
 #' by this builder. No tiles, rendering, or scientific calculations are needed.
 #' @keywords internal
 #' @noRd
-build_interactive_plot <- function(data, cartography, title = NULL,
-                                   subtitle = NULL, caption = NULL,
-                                   gridlines = TRUE, ...) {
+build_interactive_plot <- function(
+  data,
+  cartography,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  gridlines = TRUE,
+  ...
+) {
   info <- attr(data, "plot_info", exact = TRUE)
   dots <- list(...)
-  rlang::check_installed(c("leaflet", "sf", "ggplot2"),
+  rlang::check_installed(
+    c("leaflet", "sf", "ggplot2"),
     reason = "to build interactive maps"
   )
   dots <- plot_interactive_options(dots)
@@ -20,10 +27,14 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   map <- leaflet::leaflet()
   groups <- character()
   if (!is.null(cartography$basemap)) {
-    map <- leaflet::addPolygons(map,
+    map <- leaflet::addPolygons(
+      map,
       data = plot_interactive_geometry(cartography$basemap, cartography),
-      group = "Basemap", color = "grey75", weight = 0.5,
-      fillColor = "grey95", fillOpacity = 1,
+      group = "Basemap",
+      color = "grey75",
+      weight = 0.5,
+      fillColor = "grey95",
+      fillOpacity = 1,
       options = leaflet::pathOptions(interactive = FALSE)
     )
     groups <- "Basemap"
@@ -41,14 +52,20 @@ build_interactive_plot <- function(data, cartography, title = NULL,
     } else {
       part$value
     }
-    if (is.null(category_config) && !info$binary) values[!is.finite(values)] <- NA_real_
+    if (is.null(category_config) && !info$binary) {
+      values[!is.finite(values)] <- NA_real_
+    }
     count_categories <- NULL
     if (info$type == "count" && !info$binary) {
       count_categories <- plot_count_categories(values)
       values <- plot_count_category(values, count_categories)
     }
     scale <- plot_interactive_scale(
-      values, spec, info$binary, category_config, count_categories
+      values,
+      spec,
+      info$binary,
+      category_config,
+      count_categories
     )
     facet <- setdiff(info$facet_by, "metric")
     levels <- if (length(facet)) unique(part[[facet]]) else NA_character_
@@ -64,14 +81,28 @@ build_interactive_plot <- function(data, cartography, title = NULL,
       label <- utils::tail(make.unique(c(panels, label)), 1L)
       panels <- c(panels, label)
       group <- plot_interactive_escape(label)
-      map <- do.call(leaflet::addPolygons, c(list(
-        map = map, data = panel, group = group,
-        layerId = paste0("panel-", length(panels), "-", panel$ADM2_ID),
-        fillColor = scale$map(values[selected]),
-        popup = plot_interactive_popup(panel, spec, info)
-      ), dots))
+      map <- do.call(
+        leaflet::addPolygons,
+        c(
+          list(
+            map = map,
+            data = panel,
+            group = group,
+            layerId = paste0("panel-", length(panels), "-", panel$ADM2_ID),
+            fillColor = scale$map(values[selected]),
+            popup = plot_interactive_popup(panel, spec, info)
+          ),
+          dots
+        )
+      )
       map <- plot_interactive_legend(
-        map, scale, values, group, spec, info, category_config
+        map,
+        scale,
+        values,
+        group,
+        spec,
+        info,
+        category_config
       )
     }
   }
@@ -79,12 +110,16 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   groups <- c(groups, panel_groups)
   if (isTRUE(info$track) && !is.null(cartography$tracks)) {
     overlay <- plot_interactive_tracks(
-      map, cartography$tracks, info$track_map_key, info$track_interval
+      map,
+      cartography$tracks,
+      info$track_map_key,
+      info$track_interval
     )
     map <- overlay$map
     groups <- c(groups, overlay$groups)
   }
-  map <- leaflet::addLayersControl(map,
+  map <- leaflet::addLayersControl(
+    map,
     overlayGroups = groups,
     options = leaflet::layersControlOptions(collapsed = FALSE)
   )
@@ -93,22 +128,33 @@ build_interactive_plot <- function(data, cartography, title = NULL,
   }
   default_title <- plot_default_title(info)
   heading <- paste0(
-    "<strong>", plot_interactive_escape(title %||% default_title), "</strong>",
-    "<br/>", plot_interactive_escape(
+    "<strong>",
+    plot_interactive_escape(title %||% default_title),
+    "</strong>",
+    "<br/>",
+    plot_interactive_escape(
       subtitle %||% plot_date_subtitle(info)
     )
   )
-  map <- leaflet::addControl(map, heading,
-    position = "topleft", layerId = "gtropic-title"
+  map <- leaflet::addControl(
+    map,
+    heading,
+    position = "topleft",
+    layerId = "gtropic-title"
   )
-  map <- leaflet::addControl(map,
+  map <- leaflet::addControl(
+    map,
     plot_interactive_escape(plot_caption(info, caption, cartography$crs)),
-    position = "bottomleft", layerId = "gtropic-caption"
+    position = "bottomleft",
+    layerId = "gtropic-caption"
   )
   bounds <- cartography$bbox
-  map <- leaflet::fitBounds(map,
-    lng1 = unname(bounds[1]), lat1 = unname(bounds[2]),
-    lng2 = unname(bounds[3]), lat2 = unname(bounds[4])
+  map <- leaflet::fitBounds(
+    map,
+    lng1 = unname(bounds[1]),
+    lat1 = unname(bounds[2]),
+    lng2 = unname(bounds[3]),
+    lat2 = unname(bounds[4])
   )
   plot_interactive_background(map)
 }
@@ -117,13 +163,16 @@ build_interactive_plot <- function(data, cartography, title = NULL,
 #' @keywords internal
 #' @noRd
 plot_interactive_background <- function(map) {
-  htmlwidgets::onRender(map, paste0(
-    "function(el) {",
-    "el.style.backgroundColor = '#FFFFFF';",
-    "var container = el.querySelector('.leaflet-container');",
-    "if (container) container.style.backgroundColor = '#FFFFFF';",
-    "}"
-  ))
+  htmlwidgets::onRender(
+    map,
+    paste0(
+      "function(el) {",
+      "el.style.backgroundColor = '#FFFFFF';",
+      "var container = el.querySelector('.leaflet-container');",
+      "if (container) container.style.backgroundColor = '#FFFFFF';",
+      "}"
+    )
+  )
 }
 
 #' Escape text inserted into Leaflet HTML without another dependency
@@ -133,8 +182,11 @@ plot_interactive_escape <- function(x) {
   x <- as.character(x)
   x[is.na(x)] <- "NA"
   for (pair in list(
-    c("&", "&amp;"), c("<", "&lt;"), c(">", "&gt;"),
-    c('"', "&quot;"), c("'", "&#39;")
+    c("&", "&amp;"),
+    c("<", "&lt;"),
+    c(">", "&gt;"),
+    c('"', "&quot;"),
+    c("'", "&#39;")
   )) {
     x <- gsub(pair[1], pair[2], x, fixed = TRUE)
   }
@@ -146,23 +198,44 @@ plot_interactive_escape <- function(x) {
 #' @noRd
 plot_interactive_options <- function(dots) {
   nms <- names(dots)
-  invalid_names <- is.null(nms) || anyNA(nms) ||
-    any(!nzchar(nms)) || anyDuplicated(nms)
+  invalid_names <- is.null(nms) ||
+    anyNA(nms) ||
+    any(!nzchar(nms)) ||
+    anyDuplicated(nms)
   if (length(dots) && invalid_names) {
-    cli::cli_abort("Interactive arguments in {.arg ...} must be uniquely named.")
+    cli::cli_abort(
+      "Interactive arguments in {.arg ...} must be uniquely named."
+    )
   }
   reserved <- c(
-    "map", "data", "lng", "lat", "layerId", "group", "fillColor", "popup", "label"
+    "map",
+    "data",
+    "lng",
+    "lat",
+    "layerId",
+    "group",
+    "fillColor",
+    "popup",
+    "label"
   )
   supported <- setdiff(names(formals(leaflet::addPolygons)), reserved)
   unknown <- setdiff(nms, supported)
   if (length(unknown)) {
-    cli::cli_abort("Unsupported or reserved interactive arguments in {.arg ...}:
-                    {.val {unknown}}. Supply Leaflet polygon styling options.")
+    cli::cli_abort(
+      "Unsupported or reserved interactive arguments in {.arg ...}:
+                    {.val {unknown}}. Supply Leaflet polygon styling options."
+    )
   }
-  utils::modifyList(list(
-    color = "grey50", weight = 0.5, opacity = 1, fillOpacity = 0.8
-  ), dots, keep.null = TRUE)
+  utils::modifyList(
+    list(
+      color = "grey50",
+      weight = 0.5,
+      opacity = 1,
+      fillOpacity = 0.8
+    ),
+    dots,
+    keep.null = TRUE
+  )
 }
 
 #' Normalize vector layers to the shared geographic longitude frame
@@ -170,36 +243,55 @@ plot_interactive_options <- function(dots) {
 #' @noRd
 plot_interactive_geometry <- function(data, cartography) {
   data <- plot_geographic_geometry(data)
-  if (isTRUE(cartography$shifted)) data <- sf::st_shift_longitude(data)
+  if (isTRUE(cartography$shifted)) {
+    data <- sf::st_shift_longitude(data)
+  }
   data
 }
 
 #' Train native ggplot2 scales over every facet of a metric
 #' @keywords internal
 #' @noRd
-plot_interactive_scale <- function(values, spec, binary, category_config = NULL,
-                                   count_categories = NULL) {
+plot_interactive_scale <- function(
+  values,
+  spec,
+  binary,
+  category_config = NULL,
+  count_categories = NULL
+) {
   if (!is.null(category_config)) {
     key <- category_config$key
     scale <- ggplot2::scale_fill_manual(
       values = stats::setNames(key$colour, key$category),
-      limits = key$category, breaks = key$category, drop = FALSE,
-      name = category_config$label, na.value = "grey90"
+      limits = key$category,
+      breaks = key$category,
+      drop = FALSE,
+      name = category_config$label,
+      na.value = "grey90"
     )
   } else if (binary) {
     scale <- scale_fill_gtropic_d(
-      metric = spec$metric, palette = spec$palette, direction = spec$direction,
-      limits = c(FALSE, TRUE), drop = FALSE
+      metric = spec$metric,
+      palette = spec$palette,
+      direction = spec$direction,
+      limits = c(FALSE, TRUE),
+      drop = FALSE
     )
   } else if (!is.null(count_categories)) {
     scale <- scale_fill_gtropic_d(
-      metric = spec$metric, palette = spec$palette, direction = spec$direction,
-      limits = count_categories, breaks = count_categories, drop = FALSE
+      metric = spec$metric,
+      palette = spec$palette,
+      direction = spec$direction,
+      limits = count_categories,
+      breaks = count_categories,
+      drop = FALSE
     )
   } else {
     observed <- values[is.finite(values)]
     scale <- scale_fill_gtropic_c(
-      metric = spec$metric, palette = spec$palette, direction = spec$direction,
+      metric = spec$metric,
+      palette = spec$palette,
+      direction = spec$direction,
       limits = if (length(observed)) range(observed) else c(0, 1)
     )
   }
@@ -210,8 +302,15 @@ plot_interactive_scale <- function(values, spec, binary, category_config = NULL,
 #' Attach group-aware legends, including constant and wholly missing metrics
 #' @keywords internal
 #' @noRd
-plot_interactive_legend <- function(map, scale, values, group, spec, info,
-                                    category_config = NULL) {
+plot_interactive_legend <- function(
+  map,
+  scale,
+  values,
+  group,
+  spec,
+  info,
+  category_config = NULL
+) {
   title <- plot_interactive_escape(category_config$label %||% spec$legend)
   observed <- if (!is.null(category_config)) {
     category_config$key$category
@@ -222,13 +321,17 @@ plot_interactive_legend <- function(map, scale, values, group, spec, info,
   }
   if (identical(info$type, "count") && !info$binary) {
     observed <- levels(values)
-  } else if (is.null(category_config) && !info$binary && length(observed) > 1L) {
+  } else if (
+    is.null(category_config) && !info$binary && length(observed) > 1L
+  ) {
     limits <- range(observed)
     observed <- pretty(limits, n = 5L)
     observed <- observed[observed >= limits[1] & observed <= limits[2]]
     if (!length(observed)) observed <- limits
   }
-  labels <- if (!is.null(category_config) || (identical(info$type, "count") && !info$binary)) {
+  labels <- if (
+    !is.null(category_config) || (identical(info$type, "count") && !info$binary)
+  ) {
     as.character(observed)
   } else if (info$binary) {
     c("Not exposed", "Exposed")
@@ -242,9 +345,14 @@ plot_interactive_legend <- function(map, scale, values, group, spec, info,
   }
   # Leaflet inserts legend labels as HTML; category names are user-supplied.
   labels <- plot_interactive_escape(labels)
-  leaflet::addLegend(map,
-    colors = colors, labels = labels, title = title, group = group,
-    position = "bottomright", opacity = 0.8
+  leaflet::addLegend(
+    map,
+    colors = colors,
+    labels = labels,
+    title = title,
+    group = group,
+    position = "bottomright",
+    opacity = 0.8
   )
 }
 
@@ -254,7 +362,9 @@ plot_interactive_legend <- function(map, scale, values, group, spec, info,
 plot_interactive_popup <- function(data, spec, info) {
   field <- function(column) {
     value <- data[[column]] %||% rep(NA_character_, nrow(data))
-    if (is.numeric(value)) value <- plot_format_number(value)
+    if (is.numeric(value)) {
+      value <- plot_format_number(value)
+    }
     plot_interactive_escape(value)
   }
   combined <- if ("STORM_ID" %in% names(data)) {
@@ -262,7 +372,8 @@ plot_interactive_popup <- function(data, spec, info) {
   } else {
     rep(TRUE, nrow(data))
   }
-  distance_label <- ifelse(combined,
+  distance_label <- ifelse(
+    combined,
     "STORM_DIST_KM (nearest published distance)",
     "STORM_DIST_KM (published distance)"
   )
@@ -272,56 +383,94 @@ plot_interactive_popup <- function(data, spec, info) {
     spec$value_unit
   }
   paste0(
-    "<b>ADM2_NAME:</b> ", field("ADM2_NAME"),
-    "<br/><b>WHO_ENTITY:</b> ", field("WHO_ENTITY"),
-    "<br/><b>", plot_interactive_escape(spec$metric), ":</b> ", field("value"),
-    " ", plot_interactive_escape(unit),
+    "<b>ADM2_NAME:</b> ",
+    field("ADM2_NAME"),
+    "<br/><b>WHO_ENTITY:</b> ",
+    field("WHO_ENTITY"),
+    "<br/><b>",
+    plot_interactive_escape(spec$metric),
+    ":</b> ",
+    field("value"),
+    " ",
+    plot_interactive_escape(unit),
     if (info$binary) paste0("<br/><b>Exposed:</b> ", field("exposed")),
     if (!is.null(info$wind_categories[[as.character(spec$metric)]])) {
       paste0("<br/><b>Category:</b> ", field("wind_category"))
     },
-    "<br/><b>", distance_label, ":</b> ", field("STORM_DIST_KM"), " km"
+    "<br/><b>",
+    distance_label,
+    ":</b> ",
+    field("STORM_DIST_KM"),
+    " km"
   )
 }
 
 #' Add independently selectable storm tracks with original seam splits
 #' @keywords internal
 #' @noRd
-plot_interactive_tracks <- function(map, tracks, track_map_key, track_interval) {
+plot_interactive_tracks <- function(
+  map,
+  tracks,
+  track_map_key,
+  track_interval
+) {
   tracks <- plot_split_tracks(tracks)
   key <- plot_validate_track_map_key(track_map_key)
   groups <- character()
   for (storm in unique(tracks$STORM_ID)) {
     part <- tracks[tracks$STORM_ID %in% storm, , drop = FALSE]
     group <- plot_interactive_escape(paste(
-      "Tracks:", plot_track_display_name(part)[1L]
+      "Tracks:",
+      plot_track_display_name(part)[1L]
     ))
     groups <- c(groups, group)
     for (segment in unique(part$.plot_group)) {
       path <- part[part$.plot_group == segment, , drop = FALSE]
       path <- path[is.finite(path$LON) & is.finite(path$LAT), , drop = FALSE]
-      if (nrow(path) < 2L) next
-      map <- leaflet::addPolylines(map,
-        lng = path$LON, lat = path$LAT, group = group,
-        color = "grey30", weight = 2, opacity = 1
+      if (nrow(path) < 2L) {
+        next
+      }
+      map <- leaflet::addPolylines(
+        map,
+        lng = path$LON,
+        lat = path$LAT,
+        group = group,
+        color = "grey30",
+        weight = 2,
+        opacity = 1
       )
     }
     part <- part[is.finite(part$LON) & is.finite(part$LAT), , drop = FALSE]
-    if (!nrow(part)) next
+    if (!nrow(part)) {
+      next
+    }
     part <- plot_sample_track_points(part, track_interval)
     wind <- plot_convert_track_wind(part$USA_WIND, key$unit[1L])
     category <- plot_categorize_track_wind(part$USA_WIND, key)
-    colors <- unname(stats::setNames(key$colour, key$category)[as.character(category)])
-    map <- leaflet::addCircleMarkers(map,
-      lng = part$LON, lat = part$LAT, group = group, radius = 5,
-      color = "grey20", fillColor = colors, weight = 1, fillOpacity = 0.9,
+    colors <- unname(stats::setNames(key$colour, key$category)[as.character(
+      category
+    )])
+    map <- leaflet::addCircleMarkers(
+      map,
+      lng = part$LON,
+      lat = part$LAT,
+      group = group,
+      radius = 5,
+      color = "grey20",
+      fillColor = colors,
+      weight = 1,
+      fillOpacity = 0.9,
       popup = paste0(
-        "<b>STORM_ID:</b> ", plot_interactive_escape(part$STORM_ID),
+        "<b>STORM_ID:</b> ",
+        plot_interactive_escape(part$STORM_ID),
         "<br/><b>ISO_TIME (UTC):</b> ",
         plot_interactive_escape(format(part$ISO_TIME, tz = "UTC")),
-        "<br/><b>USA_WIND:</b> ", plot_interactive_escape(plot_format_number(wind)),
-        " ", plot_interactive_escape(key$unit[1L]),
-        "<br/><b>Category:</b> ", plot_interactive_escape(category)
+        "<br/><b>USA_WIND:</b> ",
+        plot_interactive_escape(plot_format_number(wind)),
+        " ",
+        plot_interactive_escape(key$unit[1L]),
+        "<br/><b>Category:</b> ",
+        plot_interactive_escape(category)
       )
     )
   }

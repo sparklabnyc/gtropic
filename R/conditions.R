@@ -68,10 +68,16 @@ NULL
 #' @param .envir Environment in which the template is evaluated.
 #' @keywords internal
 #' @noRd
-gtropic_abort <- function(..., class, call = rlang::caller_env(),
-                          .envir = parent.frame()) {
-  cli::cli_abort(...,
-    class = c(class, "gtropic_error"), call = call,
+gtropic_abort <- function(
+  ...,
+  class,
+  call = rlang::caller_env(),
+  .envir = parent.frame()
+) {
+  cli::cli_abort(
+    ...,
+    class = c(class, "gtropic_error"),
+    call = call,
     .envir = .envir
   )
 }

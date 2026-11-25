@@ -12,7 +12,10 @@ vignette_dir <- function() {
 
 figure_references <- function(docs) {
   text <- unlist(lapply(docs, readLines, warn = FALSE))
-  unique(basename(unlist(regmatches(text, gregexpr("figs/[A-Za-z0-9._-]+\\.png", text)))))
+  unique(basename(unlist(regmatches(
+    text,
+    gregexpr("figs/[A-Za-z0-9._-]+\\.png", text)
+  ))))
 }
 
 test_that("every vignette figure is used, and every used figure exists", {
@@ -22,7 +25,15 @@ test_that("every vignette figure is used, and every used figure exists", {
     docs <- list.files(dir, pattern = "\\.Rmd$", full.names = TRUE)
     figs <- list.files(file.path(dir, "figs"), pattern = "\\.png$")
     used <- figure_references(docs)
-    expect_identical(sort(setdiff(figs, used)), character(), info = paste(dir, "orphans"))
-    expect_identical(sort(setdiff(used, figs)), character(), info = paste(dir, "missing"))
+    expect_identical(
+      sort(setdiff(figs, used)),
+      character(),
+      info = paste(dir, "orphans")
+    )
+    expect_identical(
+      sort(setdiff(used, figs)),
+      character(),
+      info = paste(dir, "missing")
+    )
   }
 })

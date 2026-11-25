@@ -97,7 +97,10 @@ test_that("date_range takes one or two elements", {
     parse_date_input(date_range = c("2001", "2002", "2003")),
     "one or two elements"
   )
-  expect_error(parse_date_input(date_range = character(0)), "one or two elements")
+  expect_error(
+    parse_date_input(date_range = character(0)),
+    "one or two elements"
+  )
 })
 
 test_that("date_list rejects partial dates", {

@@ -11,7 +11,9 @@ test_that(".onLoad() sets every registry option that is unset", {
   .onLoad(NULL, "gtropic")
 
   for (nm in names(specs)) {
-    expect_identical(getOption(paste0("gtropic.", nm)), specs[[nm]]$default,
+    expect_identical(
+      getOption(paste0("gtropic.", nm)),
+      specs[[nm]]$default,
       label = nm
     )
   }
@@ -31,11 +33,19 @@ test_that("unset options fall back to the registry default", {
 
 test_that("option values are checked when they are read", {
   bad <- list(
-    timeout = "fast", timeout = -1, timeout = c(1, 2),
-    max_tries = 0, max_tries = 2.5, max_tries = Inf,
-    confirm_threshold_gb = 0, confirm_threshold_gb = NA_real_,
-    cache_enabled = "yes", cache_enabled = NA,
-    doi_historical = 1, collection = NA_character_, cache_dir = character(0)
+    timeout = "fast",
+    timeout = -1,
+    timeout = c(1, 2),
+    max_tries = 0,
+    max_tries = 2.5,
+    max_tries = Inf,
+    confirm_threshold_gb = 0,
+    confirm_threshold_gb = NA_real_,
+    cache_enabled = "yes",
+    cache_enabled = NA,
+    doi_historical = 1,
+    collection = NA_character_,
+    cache_dir = character(0)
   )
   for (i in seq_along(bad)) {
     nm <- names(bad)[i]
@@ -48,7 +58,8 @@ test_that("option values are checked when they are read", {
 
 test_that("valid option values are returned with their natural type", {
   withr::local_options(
-    gtropic.max_tries = 2, gtropic.timeout = 30L,
+    gtropic.max_tries = 2,
+    gtropic.timeout = 30L,
     gtropic.confirm_threshold_gb = Inf
   )
   expect_identical(opt_max_tries(), 2L)

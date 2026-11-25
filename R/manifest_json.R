@@ -30,11 +30,17 @@
 #' @family retrieval functions
 #' @export
 gtropic_manifest_write <- function(x, path) {
-  if (inherits(x, "gtropic_data")) x <- gtropic_manifest(x)
+  if (inherits(x, "gtropic_data")) {
+    x <- gtropic_manifest(x)
+  }
   manifest_validate(x)
   check_path_string(path)
-  json <- jsonlite::toJSON(manifest_to_json(x),
-    auto_unbox = TRUE, null = "null", na = "null", pretty = TRUE,
+  json <- jsonlite::toJSON(
+    manifest_to_json(x),
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    pretty = TRUE,
     digits = NA
   )
   written <- cache_write_atomic(path, function(tmp) {
@@ -56,8 +62,10 @@ gtropic_manifest_read <- function(path) {
   json <- tryCatch(
     jsonlite::read_json(path, simplifyVector = FALSE),
     error = function(e) {
-      gtropic_abort("Could not read {.path {path}} as JSON.",
-        parent = e, class = "gtropic_error_manifest"
+      gtropic_abort(
+        "Could not read {.path {path}} as JSON.",
+        parent = e,
+        class = "gtropic_error_manifest"
       )
     }
   )
@@ -67,10 +75,14 @@ gtropic_manifest_read <- function(path) {
 #' Validate a single file path argument
 #' @keywords internal
 #' @noRd
-check_path_string <- function(path, arg = rlang::caller_arg(path),
-                              call = rlang::caller_env()) {
-  if (!is.character(path) || length(path) != 1L || is.na(path) ||
-    !nzchar(path)) {
+check_path_string <- function(
+  path,
+  arg = rlang::caller_arg(path),
+  call = rlang::caller_env()
+) {
+  if (
+    !is.character(path) || length(path) != 1L || is.na(path) || !nzchar(path)
+  ) {
     cli::cli_abort("{.arg {arg}} must be a single file path.", call = call)
   }
   invisible(path)
@@ -82,16 +94,23 @@ check_path_string <- function(path, arg = rlang::caller_arg(path),
 #' @keywords internal
 #' @noRd
 MANIFEST_FILE_FIELDS <- c(
-  source_role = "character", dataset_doi = "character",
-  dataset_version = "character", directory_label = "character",
-  label = "character", file_id = "integer", checksum = "character",
-  checksum_type = "character", size_bytes = "double", downloaded_at = "time"
+  source_role = "character",
+  dataset_doi = "character",
+  dataset_version = "character",
+  directory_label = "character",
+  label = "character",
+  file_id = "integer",
+  checksum = "character",
+  checksum_type = "character",
+  size_bytes = "double",
+  downloaded_at = "time"
 )
 
 #' @keywords internal
 #' @noRd
 MANIFEST_DATASET_FIELDS <- c(
-  source_role = "character", dataset_doi = "character",
+  source_role = "character",
+  dataset_doi = "character",
   dataset_version = "character"
 )
 
@@ -160,11 +179,13 @@ manifest_to_json <- function(m) {
 #' @noRd
 abort_manifest_json <- function(field, call = rlang::caller_env()) {
   gtropic_abort(
-    c("The manifest file has an invalid {.field {field}}.",
+    c(
+      "The manifest file has an invalid {.field {field}}.",
       i = "Files written by {.fn gtropic_manifest_write} always pass this
            check; this one may have been edited."
     ),
-    class = "gtropic_error_manifest", call = call
+    class = "gtropic_error_manifest",
+    call = call
   )
 }
 
@@ -179,16 +200,29 @@ abort_manifest_json <- function(field, call = rlang::caller_env()) {
 #' @noRd
 json_vector <- function(x, type, field) {
   if (is.list(x)) {
-    if (!all(vapply(x, function(e) is.null(e) || (is.atomic(e) && length(e) == 1L), logical(1)))) {
+    if (
+      !all(vapply(
+        x,
+        function(e) is.null(e) || (is.atomic(e) && length(e) == 1L),
+        logical(1)
+      ))
+    ) {
       abort_manifest_json(field)
     }
     x <- lapply(x, function(e) if (is.null(e)) NA else e)
     x <- if (length(x) == 0L) NULL else unlist(x, use.names = FALSE)
   }
-  if (!is.null(x) && !is.atomic(x)) abort_manifest_json(field)
+  if (!is.null(x) && !is.atomic(x)) {
+    abort_manifest_json(field)
+  }
   ok_chr <- function(v) is.character(v) || all(is.na(v))
-  out <- switch(type,
-    character = if (is.null(x)) character(0) else if (ok_chr(x)) as.character(x),
+  out <- switch(
+    type,
+    character = if (is.null(x)) {
+      character(0)
+    } else if (ok_chr(x)) {
+      as.character(x)
+    },
     logical = if (is.logical(x)) x,
     integer = if (is.null(x)) {
       integer(0)
@@ -211,12 +245,22 @@ json_vector <- function(x, type, field) {
     time = if (is.null(x)) {
       as.POSIXct(character(0), tz = "UTC")
     } else if (ok_chr(x)) {
-      t <- as.POSIXct(as.character(x), format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+      t <- as.POSIXct(
+        as.character(x),
+        format = "%Y-%m-%dT%H:%M:%OSZ",
+        tz = "UTC"
+      )
       if (!anyNA(t[!is.na(x)])) t
     },
-    date_or_number = if (is.numeric(x)) as.numeric(x) else if (ok_chr(x)) as.character(x)
+    date_or_number = if (is.numeric(x)) {
+      as.numeric(x)
+    } else if (ok_chr(x)) {
+      as.character(x)
+    }
   )
-  if (is.null(out)) abort_manifest_json(field)
+  if (is.null(out)) {
+    abort_manifest_json(field)
+  }
   out
 }
 
@@ -224,7 +268,9 @@ json_vector <- function(x, type, field) {
 #' @keywords internal
 #' @noRd
 json_table <- function(records, fields, field) {
-  if (!is.list(records) || !is.null(names(records))) abort_manifest_json(field)
+  if (!is.list(records) || !is.null(names(records))) {
+    abort_manifest_json(field)
+  }
   for (r in records) {
     if (!is.list(r) || !setequal(names(r), names(fields))) {
       abort_manifest_json(field)
@@ -240,12 +286,16 @@ json_table <- function(records, fields, field) {
 #' @keywords internal
 #' @noRd
 json_query <- function(q) {
-  if (!is.list(q) || is.null(names(q))) abort_manifest_json("resolved_query")
+  if (!is.list(q) || is.null(names(q))) {
+    abort_manifest_json("resolved_query")
+  }
   filters <- function(x, field) {
     if (is.null(x) || length(x) == 0L) {
       return(list())
     }
-    if (!is.list(x) || is.null(names(x))) abort_manifest_json(field)
+    if (!is.list(x) || is.null(names(x))) {
+      abort_manifest_json(field)
+    }
     lapply(stats::setNames(names(x), names(x)), function(nm) {
       json_vector(x[[nm]], "character", paste0(field, "$", nm))
     })
@@ -254,24 +304,38 @@ json_query <- function(q) {
     if (is.null(x)) NULL else json_vector(x, type, field)
   }
   types <- c(
-    storm_name_years = "integer", wind_radius_km = "double",
-    reproject = "logical", date_range = "date_or_number",
-    date_list = "date_or_number", date_format = "character",
-    tables = "character", precip_days_before = "double",
-    precip_days_after = "double", precip_radius_km = "double",
-    flood_days_before = "double", flood_days_after = "double",
-    flood_radius_km = "double", flood_match = "character",
-    geometry_resolution = "character", make_valid = "logical",
-    resolved_adm2_ids = "character", resolved_storm_ids = "character",
+    storm_name_years = "integer",
+    wind_radius_km = "double",
+    reproject = "logical",
+    date_range = "date_or_number",
+    date_list = "date_or_number",
+    date_format = "character",
+    tables = "character",
+    precip_days_before = "double",
+    precip_days_after = "double",
+    precip_radius_km = "double",
+    flood_days_before = "double",
+    flood_days_after = "double",
+    flood_radius_km = "double",
+    flood_match = "character",
+    geometry_resolution = "character",
+    make_valid = "logical",
+    resolved_adm2_ids = "character",
+    resolved_storm_ids = "character",
     storm_metadata_years = "integer"
   )
   out <- list()
   for (nm in intersect(manifest_query_fields(), names(q))) {
     value <- q[[nm]]
-    out[nm] <- list(switch(nm,
+    out[nm] <- list(switch(
+      nm,
       geo_filters = filters(value, "resolved_query$geo_filters"),
       storm_filters = filters(value, "resolved_query$storm_filters"),
-      polygon = if (is.null(value)) NULL else abort_manifest_json("resolved_query$polygon"),
+      polygon = if (is.null(value)) {
+        NULL
+      } else {
+        abort_manifest_json("resolved_query$polygon")
+      },
       optional(value, types[[nm]], paste0("resolved_query$", nm))
     ))
   }
@@ -295,10 +359,15 @@ json_availability <- function(x, key = "availability") {
     }))
   }
   dates <- c(
-    "assessed_on", "start", "end", "available_from", "available_through"
+    "assessed_on",
+    "start",
+    "end",
+    "available_from",
+    "available_through"
   )
   integers <- c(
-    "provisional_lag_days", "best_track_finalization_years",
+    "provisional_lag_days",
+    "best_track_finalization_years",
     "typical_lag_days"
   )
   flat <- if (is.list(x)) unlist(x) else x
@@ -321,8 +390,9 @@ json_availability <- function(x, key = "availability") {
 #' @keywords internal
 #' @noRd
 manifest_from_json <- function(j) {
-  if (!is.list(j) || is.null(names(j)) ||
-    !identical(j$format, "gtropic_manifest")) {
+  if (
+    !is.list(j) || is.null(names(j)) || !identical(j$format, "gtropic_manifest")
+  ) {
     gtropic_abort(
       "The file is not a manifest written by {.fn gtropic_manifest_write}.",
       class = "gtropic_error_manifest"
@@ -330,7 +400,9 @@ manifest_from_json <- function(j) {
   }
   scalar <- function(x, type, field) {
     v <- json_vector(x, type, field)
-    if (length(v) != 1L) abort_manifest_json(field)
+    if (length(v) != 1L) {
+      abort_manifest_json(field)
+    }
     v
   }
   structure(
@@ -346,7 +418,11 @@ manifest_from_json <- function(j) {
       availability = json_availability(j$availability),
       retrieved_at = scalar(j$retrieved_at %||% NA, "time", "retrieved_at"),
       schema_version = scalar(j$schema_version, "integer", "schema_version"),
-      gtropic_version = scalar(j$gtropic_version, "character", "gtropic_version")
+      gtropic_version = scalar(
+        j$gtropic_version,
+        "character",
+        "gtropic_version"
+      )
     ),
     class = "gtropic_manifest"
   )

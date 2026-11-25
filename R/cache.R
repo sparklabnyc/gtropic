@@ -99,12 +99,16 @@ gtropic_cache_enable <- function(dir = NULL, persist = FALSE) {
   check_flag(persist)
   if (!is.null(dir)) {
     if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
-      cli::cli_abort("{.arg dir} must be a non-empty character path or {.code NULL}.")
+      cli::cli_abort(
+        "{.arg dir} must be a non-empty character path or {.code NULL}."
+      )
     }
     options(gtropic.cache_dir = path.expand(dir))
   }
   options(gtropic.cache_enabled = TRUE)
-  if (persist) cache_config_write(TRUE)
+  if (persist) {
+    cache_config_write(TRUE)
+  }
 
   path <- gtropic_cache_dir()
   cache_ensure_dirs(path)
@@ -116,7 +120,9 @@ gtropic_cache_enable <- function(dir = NULL, persist = FALSE) {
 gtropic_cache_disable <- function(persist = FALSE) {
   check_flag(persist)
   options(gtropic.cache_enabled = FALSE)
-  if (persist) cache_config_write(FALSE)
+  if (persist) {
+    cache_config_write(FALSE)
+  }
   invisible(gtropic_cache_dir())
 }
 
@@ -161,7 +167,10 @@ gtropic_cache_list <- function() {
 #' @rdname gtropic_cache_list
 #' @export
 gtropic_cache_size <- function() {
-  blobs <- list.files(file.path(gtropic_cache_dir(), "blobs"), full.names = TRUE)
+  blobs <- list.files(
+    file.path(gtropic_cache_dir(), "blobs"),
+    full.names = TRUE
+  )
   if (length(blobs) == 0L) {
     return(0)
   }
@@ -219,7 +228,8 @@ gtropic_cache_clear <- function(confirm = TRUE) {
 
   unlink(blobs, recursive = FALSE, force = FALSE)
   cache_index_write(dir, cache_index_empty())
-  inform_unless_quiet(c(v = "Removed {length(blobs)} cached file{?s}."),
+  inform_unless_quiet(
+    c(v = "Removed {length(blobs)} cached file{?s}."),
     quiet = opt("quiet")
   )
   invisible(length(blobs))
@@ -269,7 +279,8 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
   dir <- gtropic_cache_dir()
   idx <- cache_index_read(dir)
   if (nrow(idx) == 0L) {
-    inform_unless_quiet(c(i = "Cache is empty; nothing to prune."),
+    inform_unless_quiet(
+      c(i = "Cache is empty; nothing to prune."),
       quiet = opt("quiet")
     )
     return(invisible(idx[0, , drop = FALSE]))
@@ -298,8 +309,10 @@ gtropic_cache_prune <- function(max_size_gb = NULL, older_than_days = NULL) {
 
   removed <- cache_remove_entries(dir, idx, drop)
   inform_unless_quiet(
-    c(v = "Pruned {nrow(removed)} entr{?y/ies}, freeing
-           {format_bytes(sum(removed$size_bytes, na.rm = TRUE))}."),
+    c(
+      v = "Pruned {nrow(removed)} entr{?y/ies}, freeing
+           {format_bytes(sum(removed$size_bytes, na.rm = TRUE))}."
+    ),
     quiet = opt("quiet")
   )
   invisible(removed)
@@ -343,7 +356,8 @@ cache_blob_path <- function(dir, checksum, call = rlang::caller_env()) {
   ok <- is_hex_checksum(checksum)
   if (!all(ok)) {
     cli::cli_abort(
-      c("Refusing to use an invalid checksum as a cache file name.",
+      c(
+        "Refusing to use an invalid checksum as a cache file name.",
         x = "Got {.val {checksum[!ok]}}.",
         i = "The cache index may be corrupt; {.code gtropic_cache_clear()}
              resets it."
@@ -358,8 +372,11 @@ cache_blob_path <- function(dir, checksum, call = rlang::caller_env()) {
 #' @noRd
 cache_ensure_dirs <- function(dir) {
   # Private to the user: whoever can write here can change what is read back.
-  dir.create(file.path(dir, "blobs"),
-    recursive = TRUE, showWarnings = FALSE, mode = "0700"
+  dir.create(
+    file.path(dir, "blobs"),
+    recursive = TRUE,
+    showWarnings = FALSE,
+    mode = "0700"
   )
   cache_check_permissions(dir)
   cache_sweep_tmp(dir)
@@ -384,7 +401,8 @@ cache_check_permissions <- function(dir) {
     return(invisible(TRUE))
   }
   cli::cli_warn(
-    c("The gtropic cache directory {.path {dir}} is writable by other users.",
+    c(
+      "The gtropic cache directory {.path {dir}} is writable by other users.",
       i = "They could change the cached metadata your queries read.
            {.code Sys.chmod(\"{dir}\", \"0700\")} makes it private."
     ),
@@ -404,7 +422,9 @@ cache_check_permissions <- function(dir) {
 #' @keywords internal
 #' @noRd
 cache_index_read <- function(dir) {
-  cache_read_json(cache_index_path(dir), cache_index_schema,
+  cache_read_json(
+    cache_index_path(dir),
+    cache_index_schema,
     empty = cache_index_empty()
   )
 }
@@ -433,8 +453,11 @@ cache_index_write <- function(dir, idx) {
 #' @return A list with `enabled` (logical) and `dir` (path).
 #' @keywords internal
 #' @noRd
-cache_resolve <- function(cache = NULL, quiet = FALSE,
-                          call = rlang::caller_env()) {
+cache_resolve <- function(
+  cache = NULL,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   check_flag(cache, "cache", allow_null = TRUE, call = call)
   enabled <- cache %||% opt("cache_enabled")
   if (!isTRUE(enabled)) {
@@ -474,14 +497,20 @@ cache_config_read <- function() {
 #' @noRd
 cache_config_write <- function(enabled) {
   dir <- cache_config_dir()
-  if (!dir.exists(dir) &&
-    !dir.create(dir, recursive = TRUE, showWarnings = FALSE, mode = "0700")) {
-    cli::cli_abort("Could not create the gtropic configuration directory {.path {dir}}.")
+  if (
+    !dir.exists(dir) &&
+      !dir.create(dir, recursive = TRUE, showWarnings = FALSE, mode = "0700")
+  ) {
+    cli::cli_abort(
+      "Could not create the gtropic configuration directory {.path {dir}}."
+    )
   }
 
   path <- cache_config_path()
   if (!cache_write_json(path, list(cache_enabled = jsonlite::unbox(enabled)))) {
-    cli::cli_abort("Could not save the gtropic cache setting at {.path {path}}.")
+    cli::cli_abort(
+      "Could not save the gtropic cache setting at {.path {path}}."
+    )
   }
   invisible(enabled)
 }
@@ -533,7 +562,8 @@ cache_get <- function(cache, key, expected_checksum = NA_character_) {
     got <- checksum_file(blob, reference)
     if (!identical(tolower(got), tolower(reference))) {
       cli::cli_warn(
-        c("Cached copy of {.path {file.path(key$directory_label, key$label)}}
+        c(
+          "Cached copy of {.path {file.path(key$directory_label, key$label)}}
            failed checksum verification.",
           i = "Discarding it and downloading a fresh copy."
         )
@@ -582,7 +612,9 @@ cache_blob_mark_verified <- function(blob, checksum) {
   }
   info <- file.info(blob, extra_cols = FALSE)
   .gtropic_session$verified_blobs[[blob]] <- list(
-    checksum = tolower(checksum), size = info$size, mtime = info$mtime
+    checksum = tolower(checksum),
+    size = info$size,
+    mtime = info$mtime
   )
   invisible(blob)
 }
@@ -637,18 +669,30 @@ cache_download_path <- function(cache) {
 #'   hit reports the same time).
 #' @keywords internal
 #' @noRd
-cache_put <- function(cache, key, path, checksum = NA_character_,
-                      downloaded_at = Sys.time(), quiet = FALSE) {
+cache_put <- function(
+  cache,
+  key,
+  path,
+  checksum = NA_character_,
+  downloaded_at = Sys.time(),
+  quiet = FALSE
+) {
   if (!isTRUE(cache$enabled)) {
     return(list(
       path = path,
-      downloaded_at = as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC")
+      downloaded_at = as.POSIXct(
+        downloaded_at,
+        origin = "1970-01-01",
+        tz = "UTC"
+      )
     ))
   }
   downloaded_at <- cache_time(downloaded_at)
   cache_first_use_notice(cache$dir, quiet = quiet)
 
-  if (is.na(checksum) || !nzchar(checksum)) checksum <- checksum_file(path)
+  if (is.na(checksum) || !nzchar(checksum)) {
+    checksum <- checksum_file(path)
+  }
   size_bytes <- file.size(path)
 
   cache_ensure_dirs(cache$dir)
@@ -673,11 +717,19 @@ cache_put <- function(cache, key, path, checksum = NA_character_,
     if (stored) cache_blob_mark_verified(blob, checksum)
   }
 
-  cache_index_upsert(cache, tibble::tibble(
-    server = key$server, doi = key$doi, version = key$version,
-    directory_label = key$directory_label, label = key$label,
-    checksum = checksum, size_bytes = size_bytes, fetched_at = downloaded_at
-  ))
+  cache_index_upsert(
+    cache,
+    tibble::tibble(
+      server = key$server,
+      doi = key$doi,
+      version = key$version,
+      directory_label = key$directory_label,
+      label = key$label,
+      checksum = checksum,
+      size_bytes = size_bytes,
+      fetched_at = downloaded_at
+    )
+  )
 
   list(path = blob, downloaded_at = downloaded_at)
 }
@@ -710,7 +762,11 @@ cache_has <- function(cache, keys) {
   wanted <- key_of(keys)
   # Only entries for planned files, and only those whose blob is present.
   idx <- idx[key_of(idx) %in% wanted, , drop = FALSE]
-  idx <- idx[file.exists(cache_blob_path(cache$dir, idx$checksum)), , drop = FALSE]
+  idx <- idx[
+    file.exists(cache_blob_path(cache$dir, idx$checksum)),
+    ,
+    drop = FALSE
+  ]
   if (nrow(idx) == 0L) {
     return(out)
   }
@@ -718,7 +774,8 @@ cache_has <- function(cache, keys) {
   have <- key_of(idx)
   expected <- keys$checksum %||% rep(NA_character_, nrow(keys))
   known <- !is.na(expected) & nzchar(expected)
-  ifelse(known,
+  ifelse(
+    known,
     paste(wanted, tolower(expected)) %in% paste(have, tolower(idx$checksum)),
     wanted %in% have
   )
@@ -733,9 +790,11 @@ cache_has <- function(cache, keys) {
 #' @keywords internal
 #' @noRd
 cache_key_match <- function(idx, key) {
-  idx$server == key$server & idx$doi == key$doi &
+  idx$server == key$server &
+    idx$doi == key$doi &
     idx$version == key$version &
-    idx$directory_label == key$directory_label & idx$label == key$label
+    idx$directory_label == key$directory_label &
+    idx$label == key$label
 }
 
 # --- the index of one query (PERF-04) ---------------------------------------
@@ -780,7 +839,9 @@ cache_index_get <- function(cache) {
   if (is.null(handle)) {
     return(cache_index_read(cache$dir))
   }
-  if (is.null(handle$idx)) handle$idx <- cache_index_read(handle$dir)
+  if (is.null(handle$idx)) {
+    handle$idx <- cache_index_read(handle$dir)
+  }
   handle$idx
 }
 
@@ -791,14 +852,23 @@ cache_index_upsert <- function(cache, entry) {
   handle <- cache$index
   if (is.null(handle)) {
     idx <- cache_index_read(cache$dir)
-    idx <- dplyr::bind_rows(idx[!cache_key_match(idx, entry), , drop = FALSE], entry)
+    idx <- dplyr::bind_rows(
+      idx[!cache_key_match(idx, entry), , drop = FALSE],
+      entry
+    )
     cache_index_write(cache$dir, idx)
     return(invisible(idx))
   }
   idx <- cache_index_get(cache)
-  handle$idx <- dplyr::bind_rows(idx[!cache_key_match(idx, entry), , drop = FALSE], entry)
+  handle$idx <- dplyr::bind_rows(
+    idx[!cache_key_match(idx, entry), , drop = FALSE],
+    entry
+  )
   up <- handle$upserts
-  handle$upserts <- dplyr::bind_rows(up[!cache_key_match(up, entry), , drop = FALSE], entry)
+  handle$upserts <- dplyr::bind_rows(
+    up[!cache_key_match(up, entry), , drop = FALSE],
+    entry
+  )
   handle$dirty <- TRUE
   invisible(handle$idx)
 }
@@ -838,8 +908,19 @@ cache_index_flush <- function(cache) {
   up <- handle$upserts
   if (nrow(up) > 0L) {
     replaced <- cache_key_string(
-      idx$server, idx$doi, idx$directory_label, idx$label, idx$version
-    ) %in% cache_key_string(up$server, up$doi, up$directory_label, up$label, up$version)
+      idx$server,
+      idx$doi,
+      idx$directory_label,
+      idx$label,
+      idx$version
+    ) %in%
+      cache_key_string(
+        up$server,
+        up$doi,
+        up$directory_label,
+        up$label,
+        up$version
+      )
     idx <- dplyr::bind_rows(idx[!replaced, , drop = FALSE], up)
   }
   cache_index_write(handle$dir, idx)
@@ -860,15 +941,20 @@ cache_discovery_path <- function(dir) file.path(dir, "discovery.json")
 #' @keywords internal
 #' @noRd
 cache_discovery_write <- function(dir, discovery, collection) {
-  if (is.null(dir)) return(invisible(FALSE))
+  if (is.null(dir)) {
+    return(invisible(FALSE))
+  }
   cache_ensure_dirs(dir)
   path <- cache_discovery_path(dir)
-  ok <- cache_write_json(path, list(
-    saved_at = jsonlite::unbox(format_cache_time(Sys.time())),
-    server = jsonlite::unbox(discovery$server),
-    collection = jsonlite::unbox(collection),
-    discovery = discovery_to_json(discovery)
-  ))
+  ok <- cache_write_json(
+    path,
+    list(
+      saved_at = jsonlite::unbox(format_cache_time(Sys.time())),
+      server = jsonlite::unbox(discovery$server),
+      collection = jsonlite::unbox(collection),
+      discovery = discovery_to_json(discovery)
+    )
+  )
   if (!ok) {
     cli::cli_warn("Could not save the discovery snapshot at {.path {path}}.")
     return(invisible(FALSE))
@@ -879,28 +965,45 @@ cache_discovery_write <- function(dir, discovery, collection) {
 #' Read and validate a persisted discovery result
 #' @keywords internal
 #' @noRd
-cache_discovery_read <- function(dir, server, collection, versions,
-                                 call = rlang::caller_env()) {
+cache_discovery_read <- function(
+  dir,
+  server,
+  collection,
+  versions,
+  call = rlang::caller_env()
+) {
   path <- cache_discovery_path(dir)
   if (!file.exists(path)) {
-    cli::cli_abort(c(
-      "Offline retrieval needs a persisted discovery snapshot.",
-      i = "Run the query online once with caching enabled before using {.code offline = TRUE}."
-    ), call = call)
+    cli::cli_abort(
+      c(
+        "Offline retrieval needs a persisted discovery snapshot.",
+        i = "Run the query online once with caching enabled before using {.code offline = TRUE}."
+      ),
+      call = call
+    )
   }
   snapshot <- cache_read_json(path, cache_discovery_schema, warn = FALSE)
   if (is.null(snapshot)) {
-    cli::cli_abort(c(
-      "The discovery snapshot at {.path {path}} is unreadable.",
-      i = "Run the query online once with caching enabled to replace it."
-    ), call = call)
+    cli::cli_abort(
+      c(
+        "The discovery snapshot at {.path {path}} is unreadable.",
+        i = "Run the query online once with caching enabled to replace it."
+      ),
+      call = call
+    )
   }
-  if (!identical(snapshot$server, server) || !identical(snapshot$collection, collection)) {
-    cli::cli_abort(c(
-      "The persisted discovery snapshot is for a different server or collection.",
-      i = "Snapshot: {.val {snapshot$server}} / {.val {snapshot$collection}}.",
-      i = "Requested: {.val {server}} / {.val {collection}}."
-    ), call = call)
+  if (
+    !identical(snapshot$server, server) ||
+      !identical(snapshot$collection, collection)
+  ) {
+    cli::cli_abort(
+      c(
+        "The persisted discovery snapshot is for a different server or collection.",
+        i = "Snapshot: {.val {snapshot$server}} / {.val {snapshot$collection}}.",
+        i = "Requested: {.val {server}} / {.val {collection}}."
+      ),
+      call = call
+    )
   }
   discovered <- snapshot$discovery
   requested <- unlist(versions, use.names = TRUE)
@@ -908,12 +1011,17 @@ cache_discovery_read <- function(dir, server, collection, versions,
     historical = discovered$historical$version,
     current = discovered$current$version %||% NA_character_
   )
-  incompatible <- names(requested)[requested != ":latest" & requested != concrete[names(requested)]]
+  incompatible <- names(requested)[
+    requested != ":latest" & requested != concrete[names(requested)]
+  ]
   if (length(incompatible) > 0L) {
-    cli::cli_abort(c(
-      "The discovery snapshot does not contain the requested dataset version{?s}.",
-      x = "Incompatible dataset{?s}: {.field {incompatible}}."
-    ), call = call)
+    cli::cli_abort(
+      c(
+        "The discovery snapshot does not contain the requested dataset version{?s}.",
+        x = "Incompatible dataset{?s}: {.field {incompatible}}."
+      ),
+      call = call
+    )
   }
   snapshot
 }
@@ -963,10 +1071,17 @@ cache_remove_entries <- function(dir, idx, drop) {
 #' One string per cache key, for matching index entries
 #' @keywords internal
 #' @noRd
-cache_key_string <- function(server, doi, directory_label, label,
-                             version = NULL) {
+cache_key_string <- function(
+  server,
+  doi,
+  directory_label,
+  label,
+  version = NULL
+) {
   parts <- list(server, doi, directory_label, label)
-  if (!is.null(version)) parts <- c(parts, list(version))
+  if (!is.null(version)) {
+    parts <- c(parts, list(version))
+  }
   do.call(paste, c(parts, sep = "\r"))
 }
 
@@ -977,11 +1092,15 @@ cache_key_string <- function(server, doi, directory_label, label,
 #' @keywords internal
 #' @noRd
 version_older <- function(a, b) {
-  vapply(seq_along(a), function(i) {
-    va <- numeric_version(a[i], strict = FALSE)
-    vb <- numeric_version(b[i], strict = FALSE)
-    isTRUE(!is.na(va) && !is.na(vb) && va < vb)
-  }, logical(1))
+  vapply(
+    seq_along(a),
+    function(i) {
+      va <- numeric_version(a[i], strict = FALSE)
+      vb <- numeric_version(b[i], strict = FALSE)
+      isTRUE(!is.na(va) && !is.na(vb) && va < vb)
+    },
+    logical(1)
+  )
 }
 
 #' Manage the cache automatically after a retrieval
@@ -1011,28 +1130,42 @@ version_older <- function(a, b) {
 #' @return The removed entries, invisibly.
 #' @keywords internal
 #' @noRd
-cache_manage <- function(dir, keep = character(0), latest = NULL,
-                         quiet = FALSE, now = Sys.time(),
-                         idx = cache_index_read(dir)) {
+cache_manage <- function(
+  dir,
+  keep = character(0),
+  latest = NULL,
+  quiet = FALSE,
+  now = Sys.time(),
+  idx = cache_index_read(dir)
+) {
   if (nrow(idx) == 0L) {
     return(invisible(idx))
   }
   protected <- cache_key_string(
-    idx$server, idx$doi, idx$directory_label, idx$label, idx$version
-  ) %in% keep
+    idx$server,
+    idx$doi,
+    idx$directory_label,
+    idx$label,
+    idx$version
+  ) %in%
+    keep
   drop <- rep(FALSE, nrow(idx))
 
   max_age_days <- opt("cache_max_age_days")
   if (is.finite(max_age_days)) {
-    drop <- drop | (!is.na(idx$fetched_at) &
-      idx$fetched_at < now - max_age_days * 86400)
+    drop <- drop |
+      (!is.na(idx$fetched_at) &
+        idx$fetched_at < now - max_age_days * 86400)
   }
 
   if (!is.null(latest) && nrow(latest) > 0L) {
     newest <- latest$version[match(
       cache_key_string(idx$server, idx$doi, idx$directory_label, idx$label),
       cache_key_string(
-        latest$server, latest$doi, latest$directory_label, latest$label
+        latest$server,
+        latest$doi,
+        latest$directory_label,
+        latest$label
       )
     )]
     drop <- drop | (!is.na(newest) & version_older(idx$version, newest))
@@ -1045,7 +1178,8 @@ cache_manage <- function(dir, keep = character(0), latest = NULL,
     # count towards the budget first.
     survivors <- which(!drop)
     ord <- survivors[order(
-      !protected[survivors], -as.numeric(idx$fetched_at[survivors])
+      !protected[survivors],
+      -as.numeric(idx$fetched_at[survivors])
     )]
     size <- idx$size_bytes[ord]
     running <- cumsum(ifelse(is.na(size), 0, size))
@@ -1057,9 +1191,11 @@ cache_manage <- function(dir, keep = character(0), latest = NULL,
   }
   removed <- cache_remove_entries(dir, idx, drop)
   inform_unless_quiet(
-    c(i = "Removed {nrow(removed)} old or outdated cached file{?s}
+    c(
+      i = "Removed {nrow(removed)} old or outdated cached file{?s}
            ({format_bytes(sum(removed$size_bytes, na.rm = TRUE))}) to keep the
-           cache within its limits (see {.code ?gtropic_options})."),
+           cache within its limits (see {.code ?gtropic_options})."
+    ),
     quiet = quiet
   )
   invisible(removed)
@@ -1083,7 +1219,10 @@ cache_manage_ctx <- function(ctx) {
   mf <- ctx_manifest(ctx)
   files <- mf$files
   keep <- cache_key_string(
-    mf$server, files$dataset_doi, files$directory_label, files$label,
+    mf$server,
+    files$dataset_doi,
+    files$directory_label,
+    files$label,
     files$dataset_version
   )
   at_latest <- files[files$dataset_doi %in% ctx$latest_dois, , drop = FALSE]
@@ -1094,7 +1233,11 @@ cache_manage_ctx <- function(ctx) {
     label = at_latest$label,
     version = at_latest$dataset_version
   )
-  cache_manage(ctx$cache$dir, keep = keep, latest = latest,
-    quiet = ctx$notice_quiet, idx = cache_index_get(ctx$cache)
+  cache_manage(
+    ctx$cache$dir,
+    keep = keep,
+    latest = latest,
+    quiet = ctx$notice_quiet,
+    idx = cache_index_get(ctx$cache)
   )
 }

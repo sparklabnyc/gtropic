@@ -8,7 +8,10 @@
 # verification, reading and assembly all run exactly as they do against
 # Dataverse.
 
-golden_doi <- c(historical = "doi:10.0000/GOLDEN-HIST", current = "doi:10.0000/GOLDEN-CURR")
+golden_doi <- c(
+  historical = "doi:10.0000/GOLDEN-HIST",
+  current = "doi:10.0000/GOLDEN-CURR"
+)
 golden_version <- c(historical = "3.0", current = "1.0")
 
 #' Build per-dataset listings for a fixture directory
@@ -22,13 +25,18 @@ golden_listings <- function(dir) {
     file_id = seq_along(rel),
     label = basename(rel),
     directory_label = dirname(rel),
-    checksum = unname(vapply(path, digest::digest,
+    checksum = unname(vapply(
+      path,
+      digest::digest,
       character(1),
-      algo = "md5", file = TRUE
+      algo = "md5",
+      file = TRUE
     )),
     checksum_type = "MD5",
     size_bytes = as.integer(file.size(path)),
-    content_type = ifelse(grepl("\\.json$", rel), "application/json",
+    content_type = ifelse(
+      grepl("\\.json$", rel),
+      "application/json",
       "application/vnd.apache.parquet"
     )
   )

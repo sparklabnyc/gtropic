@@ -22,8 +22,11 @@ test_that("a manifest cannot set how its replay is executed", {
 test_that("a manifest with confirm = FALSE still meets the download guardrail", {
   local_golden_collection()
   original <- gtropic_data(
-    STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
-    cache = FALSE, quiet = TRUE, confirm = FALSE
+    STORM_ID = "2002BBB",
+    tables = c("wind", "storm_metadata"),
+    cache = FALSE,
+    quiet = TRUE,
+    confirm = FALSE
   )
   m <- gtropic_manifest(original)
   m$resolved_query$confirm <- FALSE
@@ -153,26 +156,46 @@ test_that("replaying a manifest from another server warns, naming both hosts", {
 
 test_that("a context's manifest entries are bound once, first record kept", {
   discovery <- fetcher_discovery(fetcher_listing()$listing)
-  ctx <- fetch_context(discovery, list(enabled = FALSE, dir = NULL), quiet = TRUE)
+  ctx <- fetch_context(
+    discovery,
+    list(enabled = FALSE, dir = NULL),
+    quiet = TRUE
+  )
   row <- function(label, id) {
     list(
-      directory_label = "yearly", label = label, file_id = id,
-      checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
+      directory_label = "yearly",
+      label = label,
+      file_id = id,
+      checksum = strrep("a", 32L),
+      checksum_type = "MD5",
+      size_bytes = 1
     )
   }
   times <- as.POSIXct(c("2026-01-01", "2026-01-02", "2026-01-03"), tz = "UTC")
   added <- list(
-    list("2001.parquet", 1L, times[1]), list("2002.parquet", 2L, times[2]),
+    list("2001.parquet", 1L, times[1]),
+    list("2002.parquet", 2L, times[2]),
     list("2001.parquet", 1L, times[3])
   )
 
   sequential <- manifest_new(discovery)
   for (a in added) {
-    ctx_manifest_add(ctx, manifest_entry(
-      "doi:10.0000/HIST", "1.0", row(a[[1]], a[[2]]), a[[3]], "historical"
-    ))
-    sequential <- manifest_add(sequential, "doi:10.0000/HIST", "1.0",
-      row(a[[1]], a[[2]]), a[[3]],
+    ctx_manifest_add(
+      ctx,
+      manifest_entry(
+        "doi:10.0000/HIST",
+        "1.0",
+        row(a[[1]], a[[2]]),
+        a[[3]],
+        "historical"
+      )
+    )
+    sequential <- manifest_add(
+      sequential,
+      "doi:10.0000/HIST",
+      "1.0",
+      row(a[[1]], a[[2]]),
+      a[[3]],
       source_role = "historical"
     )
   }

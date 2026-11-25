@@ -1,7 +1,10 @@
 # JSON manifest exchange (Plan 05 SEC-12 item 3).
 
 json_round_trip <- function(m) {
-  path <- withr::local_tempfile(fileext = ".json", .local_envir = parent.frame())
+  path <- withr::local_tempfile(
+    fileext = ".json",
+    .local_envir = parent.frame()
+  )
   gtropic_manifest_write(m, path)
   gtropic_manifest_read(path)
 }
@@ -18,7 +21,8 @@ test_that("gtropic_manifest_write() accepts a result and returns the path", {
   path <- withr::local_tempfile(fileext = ".json")
   expect_identical(gtropic_manifest_write(gtropic_example(), path), path)
   expect_equal(
-    gtropic_manifest_read(path), gtropic_manifest(gtropic_example()),
+    gtropic_manifest_read(path),
+    gtropic_manifest(gtropic_example()),
     ignore_attr = "names"
   )
 })
@@ -39,12 +43,19 @@ test_that("a replay from a JSON manifest returns the original tables", {
     WHO_ENTITY = "United States",
     date_range = c("2002-01-01", "2003-12-31"),
     tables = c("wind", "precip", "flood", "zero_pairs", "storm_metadata"),
-    cache = FALSE, quiet = TRUE, confirm = FALSE
+    cache = FALSE,
+    quiet = TRUE,
+    confirm = FALSE
   )
   m <- json_round_trip(gtropic_manifest(original))
   expect_equal(m, gtropic_manifest(original), ignore_attr = "names")
 
-  replay <- gtropic_data(manifest = m, cache = FALSE, quiet = TRUE, confirm = FALSE)
+  replay <- gtropic_data(
+    manifest = m,
+    cache = FALSE,
+    quiet = TRUE,
+    confirm = FALSE
+  )
 
   expect_golden(replay, "country-date-range")
 })
@@ -59,14 +70,20 @@ test_that("infinite radii and missing checksums round-trip", {
 })
 
 write_json_text <- function(text) {
-  path <- withr::local_tempfile(fileext = ".json", .local_envir = parent.frame())
+  path <- withr::local_tempfile(
+    fileext = ".json",
+    .local_envir = parent.frame()
+  )
   writeLines(text, path)
   path
 }
 
 edited_manifest <- function(edit) {
   m <- gtropic_manifest(gtropic_example())
-  path <- withr::local_tempfile(fileext = ".json", .local_envir = parent.frame())
+  path <- withr::local_tempfile(
+    fileext = ".json",
+    .local_envir = parent.frame()
+  )
   gtropic_manifest_write(m, path)
   j <- jsonlite::read_json(path, simplifyVector = FALSE)
   j <- edit(j)
@@ -104,8 +121,10 @@ test_that("files that are not valid manifests are rejected", {
     })
   )
   for (nm in names(bad)) {
-    expect_error(gtropic_manifest_read(bad[[nm]]),
-      class = "gtropic_error_manifest", label = nm
+    expect_error(
+      gtropic_manifest_read(bad[[nm]]),
+      class = "gtropic_error_manifest",
+      label = nm
     )
   }
 })
@@ -133,7 +152,10 @@ test_that("unknown query fields are dropped", {
 test_that("paths are checked", {
   expect_error(gtropic_manifest_read(c("a", "b")), "single file path")
   expect_error(gtropic_manifest_read(tempfile()), "does not exist")
-  expect_error(gtropic_manifest_write(gtropic_example(), NA_character_), "single file path")
+  expect_error(
+    gtropic_manifest_write(gtropic_example(), NA_character_),
+    "single file path"
+  )
 })
 
 test_that("manifest times are UTC whatever the input's time zone", {
@@ -142,11 +164,20 @@ test_that("manifest times are UTC whatever the input's time zone", {
   local_time <- as.POSIXct("2026-01-05 12:00:00", tz = "America/New_York")
   attr(local_time, "tzone") <- ""
   row <- tibble::tibble(
-    directory_label = "yearly", label = "2001.parquet", file_id = 1L,
-    checksum = strrep("a", 32L), checksum_type = "MD5", size_bytes = 1
+    directory_label = "yearly",
+    label = "2001.parquet",
+    file_id = 1L,
+    checksum = strrep("a", 32L),
+    checksum_type = "MD5",
+    size_bytes = 1
   )
-  m <- manifest_add(gtropic_manifest(gtropic_example()), "doi:10.0000/EXAMPLE",
-    "1.0", row, downloaded_at = local_time, source_role = "historical"
+  m <- manifest_add(
+    gtropic_manifest(gtropic_example()),
+    "doi:10.0000/EXAMPLE",
+    "1.0",
+    row,
+    downloaded_at = local_time,
+    source_role = "historical"
   )
   added <- m$files$downloaded_at
   expect_identical(attr(added, "tzone"), "UTC")

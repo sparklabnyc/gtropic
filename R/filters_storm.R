@@ -34,17 +34,20 @@
 #' @return A character vector of `STORM_ID`.
 #' @keywords internal
 #' @noRd
-resolve_storms <- function(storm_metadata,
-                           date_spec = list(type = "none"),
-                           storm_filters = list(),
-                           excluded_lookup = NULL,
-                           warn_ambiguous_name = TRUE,
-                           call = rlang::caller_env()) {
+resolve_storms <- function(
+  storm_metadata,
+  date_spec = list(type = "none"),
+  storm_filters = list(),
+  excluded_lookup = NULL,
+  warn_ambiguous_name = TRUE,
+  call = rlang::caller_env()
+) {
   storm_filters <- compact(storm_filters)
 
   if (!"STORM_GENESIS_DATE_UTC" %in% names(storm_metadata)) {
     cli::cli_abort(
-      c("The published {.field storm_metadata} table has no
+      c(
+        "The published {.field storm_metadata} table has no
          {.field STORM_GENESIS_DATE_UTC} column.",
         i = "All temporal filtering keys on it; the dataset may predate the
              column's introduction."
@@ -60,8 +63,10 @@ resolve_storms <- function(storm_metadata,
 
   # --- temporal ------------------------------------------------------------
   if (identical(date_spec$type, "range")) {
-    keep <- keep & !is.na(genesis) &
-      genesis >= date_spec$start & genesis <= date_spec$end
+    keep <- keep &
+      !is.na(genesis) &
+      genesis >= date_spec$start &
+      genesis <= date_spec$end
     used_args <- c(used_args, "date_range")
   } else if (identical(date_spec$type, "list")) {
     keep <- keep & !is.na(genesis) & genesis %in% date_spec$dates
@@ -73,7 +78,8 @@ resolve_storms <- function(storm_metadata,
     )
     if (length(unmatched) > 0L) {
       gtropic_abort(
-        c("{length(unmatched)} date{?s} in {.arg date_list} matched no storm
+        c(
+          "{length(unmatched)} date{?s} in {.arg date_list} matched no storm
            genesis date.",
           x = "{.val {truncate_display(unmatched)}}",
           i = "{.arg date_list} matches {.field STORM_GENESIS_DATE_UTC}
@@ -96,7 +102,9 @@ resolve_storms <- function(storm_metadata,
 
   for (arg in names(id_spec)) {
     values <- storm_filters[[arg]]
-    if (is.null(values)) next
+    if (is.null(values)) {
+      next
+    }
 
     column <- id_spec[[arg]]$column
     if (!column %in% names(storm_metadata)) {
@@ -137,7 +145,8 @@ resolve_storms <- function(storm_metadata,
 
   if (!any(keep)) {
     gtropic_abort(
-      c("No storms satisfy all of the filters supplied.",
+      c(
+        "No storms satisfy all of the filters supplied.",
         x = "Filters in play: {.arg {used_args}}.",
         i = "Storm and date filters are combined with AND. A storm is selected
              by the date its track begins, not by when or where it struck.",
@@ -173,22 +182,30 @@ resolve_storms <- function(storm_metadata,
 #' @return `NULL`, invisibly.
 #' @keywords internal
 #' @noRd
-warn_ambiguous_storm_names <- function(storm_metadata,
-                                       values,
-                                       excluded = FALSE,
-                                       call = rlang::caller_env()) {
-  if (is.null(values) ||
-    !all(c("STORM_ID", "STORM_NAME") %in% names(storm_metadata))) {
+warn_ambiguous_storm_names <- function(
+  storm_metadata,
+  values,
+  excluded = FALSE,
+  call = rlang::caller_env()
+) {
+  if (
+    is.null(values) ||
+      !all(c("STORM_ID", "STORM_NAME") %in% names(storm_metadata))
+  ) {
     return(invisible(NULL))
   }
 
   ids <- as.character(storm_metadata$STORM_ID)
   keys <- norm_key(storm_metadata$STORM_NAME)
   requested_keys <- unique(norm_key(values))
-  ambiguous_keys <- requested_keys[vapply(requested_keys, function(key) {
-    matched_ids <- ids[!is.na(keys) & keys == key & !is.na(ids)]
-    length(unique(matched_ids)) > 1L
-  }, logical(1))]
+  ambiguous_keys <- requested_keys[vapply(
+    requested_keys,
+    function(key) {
+      matched_ids <- ids[!is.na(keys) & keys == key & !is.na(ids)]
+      length(unique(matched_ids)) > 1L
+    },
+    logical(1)
+  )]
 
   if (length(ambiguous_keys) == 0L) {
     return(invisible(NULL))
@@ -233,14 +250,16 @@ warn_ambiguous_storm_names <- function(storm_metadata,
 #' @return Canonical matched values.
 #' @keywords internal
 #' @noRd
-match_storm_values <- function(values,
-                               candidates,
-                               arg,
-                               exact = FALSE,
-                               helper = "gtropic_storms()",
-                               what = "storm",
-                               excluded_lookup = NULL,
-                               call = rlang::caller_env()) {
+match_storm_values <- function(
+  values,
+  candidates,
+  arg,
+  exact = FALSE,
+  helper = "gtropic_storms()",
+  what = "storm",
+  excluded_lookup = NULL,
+  call = rlang::caller_env()
+) {
   candidates <- unique(as.character(candidates[!is.na(candidates)]))
   hit <- if (exact) {
     values %in% candidates
@@ -250,14 +269,23 @@ match_storm_values <- function(values,
 
   if (all(hit) || is.null(excluded_lookup)) {
     return(match_values(
-      values, candidates, arg = arg, exact = exact, helper = helper,
-      what = what, call = call
+      values,
+      candidates,
+      arg = arg,
+      exact = exact,
+      helper = helper,
+      what = what,
+      call = call
     ))
   }
 
   excluded <- excluded_lookup()
   abort_unavailable_storms(
-    values[!hit], excluded, arg = arg, exact = exact, call = call
+    values[!hit],
+    excluded,
+    arg = arg,
+    exact = exact,
+    call = call
   )
 }
 
@@ -272,11 +300,13 @@ match_storm_values <- function(values,
 #' @return Never returns.
 #' @keywords internal
 #' @noRd
-abort_unavailable_storms <- function(values,
-                                     excluded,
-                                     arg,
-                                     exact,
-                                     call = rlang::caller_env()) {
+abort_unavailable_storms <- function(
+  values,
+  excluded,
+  arg,
+  exact,
+  call = rlang::caller_env()
+) {
   column <- arg
   excluded_values <- if (is.null(excluded) || !column %in% names(excluded)) {
     character(0)
@@ -297,10 +327,14 @@ abort_unavailable_storms <- function(values,
     c(
       "{length(values)} value{?s} in {.arg {arg}} did not match an available storm.",
       if (length(excluded_matches) > 0L) {
-        c("x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data.")
+        c(
+          "x" = "{.val {truncate_display(excluded_matches)}} {if (length(excluded_matches) == 1L) 'is' else 'are'} listed as excluded from the G-TROPIC wind data."
+        )
       },
       if (length(absent_matches) > 0L) {
-        c("x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists.")
+        c(
+          "x" = "{.val {truncate_display(absent_matches)}} {if (length(absent_matches) == 1L) 'is' else 'are'} absent from both the available and excluded storm lists."
+        )
       },
       i = "Use {.code gtropic_excluded_storms()} to review excluded storm records."
     ),
@@ -323,9 +357,11 @@ abort_unavailable_storms <- function(values,
 #' @return An integer vector of unique season suffix years, or `NULL`.
 #' @keywords internal
 #' @noRd
-storm_name_years <- function(values,
-                             arg = "STORM_NAME",
-                             call = rlang::caller_env()) {
+storm_name_years <- function(
+  values,
+  arg = "STORM_NAME",
+  call = rlang::caller_env()
+) {
   if (is.null(values)) {
     return(NULL)
   }
@@ -333,7 +369,8 @@ storm_name_years <- function(values,
   valid <- grepl("^.+-[0-9]{4}$", values)
   if (any(!valid)) {
     cli::cli_abort(
-      c("Every {.arg {arg}} value must end with {.val Name-YYYY}.",
+      c(
+        "Every {.arg {arg}} value must end with {.val Name-YYYY}.",
         x = "Invalid value{?s}: {.val {values[!valid]}}.",
         i = "Use the published {.val Name-YYYY} convenience label, for example {.val Katrina-2005}."
       ),
@@ -378,8 +415,10 @@ storm_name_genesis_years <- function(season_years) {
 #' @keywords internal
 #' @noRd
 assert_genesis_year_convention <- function(storm_metadata, years) {
-  if (nrow(storm_metadata) == 0L ||
-    !".gtropic_file_year" %in% names(storm_metadata)) {
+  if (
+    nrow(storm_metadata) == 0L ||
+      !".gtropic_file_year" %in% names(storm_metadata)
+  ) {
     return(list(years = years, violated = FALSE))
   }
 
@@ -391,7 +430,8 @@ assert_genesis_year_convention <- function(storm_metadata, years) {
 
   # (b) every storm's genesis year must equal its file year
   genesis_year <- as.integer(format(
-    as.Date(storm_metadata$STORM_GENESIS_DATE_UTC), "%Y"
+    as.Date(storm_metadata$STORM_GENESIS_DATE_UTC),
+    "%Y"
   ))
   mismatch <- which(genesis_year != storm_metadata$.gtropic_file_year)
 

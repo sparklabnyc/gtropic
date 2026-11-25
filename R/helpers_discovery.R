@@ -33,17 +33,22 @@
 #'
 #' @family discovery functions
 #' @export
-gtropic_adm2 <- function(ADM2_NAME = NULL,
-                         ADM2_GROUP = NULL,
-                         WHO_ENTITY = NULL,
-                         WHO_REGION = NULL,
-                         version = ":latest",
-                         cache = NULL) {
+gtropic_adm2 <- function(
+  ADM2_NAME = NULL,
+  ADM2_GROUP = NULL,
+  WHO_ENTITY = NULL,
+  WHO_REGION = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   ctx <- helper_context(version, cache)
   on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   adm2 <- tibble::as_tibble(dplyr::collect(fetch_file(
-    "historical", "metadata", "adm2.parquet", ctx
+    "historical",
+    "metadata",
+    "adm2.parquet",
+    ctx
   )))
 
   filters <- compact(list(
@@ -112,10 +117,12 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #'
 #' @family discovery functions
 #' @export
-gtropic_storms <- function(date_range = NULL,
-                            STORM_NAME = NULL,
-                            version = ":latest",
-                            cache = NULL) {
+gtropic_storms <- function(
+  date_range = NULL,
+  STORM_NAME = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
@@ -132,17 +139,24 @@ gtropic_storms <- function(date_range = NULL,
   meta <- filter_genesis_dates(meta, date_spec)
 
   if (!is.null(storm_name)) {
-    canonical <- match_storm_values(storm_name, meta$STORM_NAME,
+    canonical <- match_storm_values(
+      storm_name,
+      meta$STORM_NAME,
       arg = "STORM_NAME",
-      exact = FALSE, helper = "gtropic_storms()",
+      exact = FALSE,
+      helper = "gtropic_storms()",
       what = "storm",
       excluded_lookup = function() {
-        fetch_excluded_storms(years, ctx,
+        fetch_excluded_storms(
+          years,
+          ctx,
           col_select = c("STORM_ID", "STORM_NAME")
         )
       }
     )
-    meta <- meta[norm_key(meta$STORM_NAME) %in% norm_key(canonical), ,
+    meta <- meta[
+      norm_key(meta$STORM_NAME) %in% norm_key(canonical),
+      ,
       drop = FALSE
     ]
     warn_ambiguous_storm_names(meta, canonical)
@@ -189,10 +203,12 @@ gtropic_storms <- function(date_range = NULL,
 #'
 #' @family discovery functions
 #' @export
-gtropic_excluded_storms <- function(date_range = NULL,
-                                     STORM_NAME = NULL,
-                                     version = ":latest",
-                                     cache = NULL) {
+gtropic_excluded_storms <- function(
+  date_range = NULL,
+  STORM_NAME = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
@@ -209,13 +225,17 @@ gtropic_excluded_storms <- function(date_range = NULL,
   excluded <- filter_genesis_dates(excluded, date_spec)
 
   if (!is.null(storm_name)) {
-    canonical <- match_values(storm_name, excluded$STORM_NAME,
+    canonical <- match_values(
+      storm_name,
+      excluded$STORM_NAME,
       arg = "STORM_NAME",
-      exact = FALSE, helper = "gtropic_excluded_storms()",
+      exact = FALSE,
+      helper = "gtropic_excluded_storms()",
       what = "excluded storm"
     )
     excluded <- excluded[
-      norm_key(excluded$STORM_NAME) %in% norm_key(canonical), ,
+      norm_key(excluded$STORM_NAME) %in% norm_key(canonical),
+      ,
       drop = FALSE
     ]
     warn_ambiguous_storm_names(excluded, canonical, excluded = TRUE)
@@ -239,10 +259,18 @@ gtropic_excluded_storms <- function(date_range = NULL,
 resolve_helper_years <- function(date_spec, storm_name_year, ctx) {
   published <- ctx$discovery$year_index$year
   has_dates <- !identical(date_spec$type, "none")
-  years <- if (has_dates) year_span(date_spec$start, date_spec$end) else published
+  years <- if (has_dates) {
+    year_span(date_spec$start, date_spec$end)
+  } else {
+    published
+  }
   if (!is.null(storm_name_year)) {
     storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (has_dates) intersect(years, storm_genesis_year) else storm_genesis_year
+    years <- if (has_dates) {
+      intersect(years, storm_genesis_year)
+    } else {
+      storm_genesis_year
+    }
   }
   intersect(years, published)
 }
@@ -261,7 +289,8 @@ filter_genesis_dates <- function(x, date_spec) {
   }
   genesis <- as.Date(x$STORM_GENESIS_DATE_UTC)
   x[
-    !is.na(genesis) & genesis >= date_spec$start & genesis <= date_spec$end, ,
+    !is.na(genesis) & genesis >= date_spec$start & genesis <= date_spec$end,
+    ,
     drop = FALSE
   ]
 }
@@ -276,7 +305,10 @@ filter_genesis_dates <- function(x, date_spec) {
 #' @keywords internal
 #' @noRd
 fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
-  excluded <- fetch_yearly("excluded_storms", years, ctx,
+  excluded <- fetch_yearly(
+    "excluded_storms",
+    years,
+    ctx,
     col_select = col_select
   )
   if (!is.null(excluded)) {
@@ -360,7 +392,9 @@ gtropic_codebook <- function(version = ":latest", cache = NULL) {
 helper_context <- function(version = ":latest", cache = NULL) {
   versions <- resolve_versions(version)
   discovery <- discover_datasets(versions, quiet = TRUE)
-  fetch_context(discovery, cache_resolve(cache, quiet = TRUE),
+  fetch_context(
+    discovery,
+    cache_resolve(cache, quiet = TRUE),
     quiet = TRUE,
     latest_dois = latest_dois(discovery, versions),
     notice_quiet = opt("quiet")

@@ -25,27 +25,47 @@ test_that("overlapping precip days are deduplicated within the target group", {
   x <- plot_fixture()
   total <- prepare_plot_data(x, "exposure", "PRECIP_MM", track = FALSE)
   expect_equal(total$value[total$ADM2_ID == "PLOT.2"], 120)
-  storm <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    facet_by = "STORM_ID", track = FALSE
+  storm <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    facet_by = "STORM_ID",
+    track = FALSE
   )
   expect_equal(storm$value[storm$ADM2_ID == "PLOT.2"], rep(80, 3))
-  name <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    facet_by = "STORM_NAME", track = FALSE
+  name <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    facet_by = "STORM_NAME",
+    track = FALSE
   )
   expect_equal(name$value[name$ADM2_ID == "PLOT.2"], rep(80, 3))
-  regional <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    facet_by = "WHO_ENTITY", track = FALSE
+  regional <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    facet_by = "WHO_ENTITY",
+    track = FALSE
   )
   expect_equal(regional$value[regional$ADM2_ID == "PLOT.2"], 120)
   expect_equal(total$ADM2_NAME[total$ADM2_ID == "PLOT.2"], "Inland")
   expect_true(is.na(total$STORM_NAME[total$ADM2_ID == "PLOT.2"]))
 
   # Equal numeric values on different dates are separate source observations.
-  mean <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    aggregate = "mean", track = FALSE
+  mean <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    aggregate = "mean",
+    track = FALSE
   )
-  number <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    aggregate = "n", track = FALSE
+  number <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    aggregate = "n",
+    track = FALSE
   )
   expect_equal(mean$value[mean$ADM2_ID == "PLOT.2"], 20)
   expect_equal(number$value[number$ADM2_ID == "PLOT.2"], 6)
@@ -54,16 +74,24 @@ test_that("overlapping precip days are deduplicated within the target group", {
 test_that("precip thresholds use daily values and counts use distinct units", {
   x <- plot_fixture()
   storms <- prepare_plot_data(x, "count", "PRECIP_MM", track = FALSE)
-  days <- prepare_plot_data(x, "count", "PRECIP_MM",
-    count_unit = "days", track = FALSE
+  days <- prepare_plot_data(
+    x,
+    "count",
+    "PRECIP_MM",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.2"], 0)
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.3"], 3)
   expect_equal(days$value[days$ADM2_ID == "PLOT.3"], 6)
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.4"], 1)
   expect_equal(days$value[days$ADM2_ID == "PLOT.4"], 4)
-  binary <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    binary = TRUE, track = FALSE
+  binary <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    binary = TRUE,
+    track = FALSE
   )
   expect_type(binary$exposed, "logical")
   expect_equal(binary$value[binary$ADM2_ID == "PLOT.2"], 120)
@@ -73,8 +101,12 @@ test_that("precip thresholds use daily values and counts use distinct units", {
   day <- x$precip$ADM2_ID == "PLOT.2" & x$precip$LOCAL_DATE == "2020-08-04"
   x$precip$PRECIP_MM[day] <- 75
   storms <- prepare_plot_data(x, "count", "PRECIP_MM", track = FALSE)
-  days <- prepare_plot_data(x, "count", "PRECIP_MM",
-    count_unit = "days", track = FALSE
+  days <- prepare_plot_data(
+    x,
+    "count",
+    "PRECIP_MM",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.2"], 3)
   expect_equal(days$value[days$ADM2_ID == "PLOT.2"], 1)
@@ -89,8 +121,12 @@ test_that("observed zeros, missing values and out-of-field pairs differ", {
     expect_true(is.na(out$value[out$ADM2_ID == "PLOT.2"]))
     expect_true(is.na(out$value[out$ADM2_ID == "PLOT.5"]))
   }
-  binary <- prepare_plot_data(x, "exposure", "PRECIP_MM",
-    binary = TRUE, track = FALSE
+  binary <- prepare_plot_data(
+    x,
+    "exposure",
+    "PRECIP_MM",
+    binary = TRUE,
+    track = FALSE
   )
   expect_true(is.na(binary$exposed[binary$ADM2_ID == "PLOT.2"]))
   expect_false(binary$exposed[binary$ADM2_ID == "PLOT.1"])
@@ -116,15 +152,24 @@ test_that("wind thresholds and counts preserve raw pairs and local dates", {
   expect_identical(rows$.plot_row_id, seq_len(nrow(x$wind)))
   x$wind$LOCAL_DATE_STORM_CLOSEST[] <- "2020-08-04"
   storms <- prepare_plot_data(x, "count", "VMAX_SUST_MS", track = FALSE)
-  days <- prepare_plot_data(x, "count", "VMAX_SUST_MS",
-    count_unit = "days", track = FALSE
+  days <- prepare_plot_data(
+    x,
+    "count",
+    "VMAX_SUST_MS",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.2"], 3)
   expect_equal(days$value[days$ADM2_ID == "PLOT.2"], 1)
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.3"], 0)
   expect_true(is.na(days$value[days$ADM2_ID == "PLOT.6"]))
-  by_storm <- prepare_plot_data(x, "count", "VMAX_SUST_MS",
-    count_unit = "days", facet_by = "STORM_ID", track = FALSE
+  by_storm <- prepare_plot_data(
+    x,
+    "count",
+    "VMAX_SUST_MS",
+    count_unit = "days",
+    facet_by = "STORM_ID",
+    track = FALSE
   )
   expect_equal(by_storm$value[by_storm$ADM2_ID == "PLOT.2"], rep(1, 3))
 })
@@ -150,31 +195,52 @@ test_that("flood start and overlap rules retain events and matching windows", {
 
 test_that("flood days union events after clipping every storm window", {
   x <- plot_fixture()
-  start <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", track = FALSE
+  start <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(start$value[start$ADM2_ID == "PLOT.1"], 4)
   expect_equal(start$value[start$ADM2_ID == "PLOT.2"], 0)
   expect_true(is.na(start$value[start$ADM2_ID == "PLOT.3"]))
   expect_true(is.na(start$value[start$ADM2_ID == "PLOT.5"]))
   attr(x, "filters_resolved")$flood_match <- "overlap"
-  overlap <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", track = FALSE
+  overlap <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(overlap$value[overlap$ADM2_ID == "PLOT.1"], 5)
-  facets <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", facet_by = "STORM_ID", track = FALSE
+  facets <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    facet_by = "STORM_ID",
+    track = FALSE
   )
   expect_equal(facets$value[facets$ADM2_ID == "PLOT.1"], c(4, 4, 3))
   storms <- prepare_plot_data(x, "count", "PROP_FLOODED_POP", track = FALSE)
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.1"], 3)
-  sums <- prepare_plot_data(x, "exposure", "PROP_FLOODED_POP",
-    aggregate = "sum", track = FALSE
+  sums <- prepare_plot_data(
+    x,
+    "exposure",
+    "PROP_FLOODED_POP",
+    aggregate = "sum",
+    track = FALSE
   )
   expect_equal(sums$value[sums$ADM2_ID == "PLOT.1"], 0.15)
   attr(x, "filters_resolved") <- NULL
-  plain <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", track = FALSE
+  plain <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(plain$value, start$value)
   expect_equal(attr(plain, "plot_info")$flood_match, "start")
@@ -188,18 +254,32 @@ test_that("flood interval unions handle nested and disjoint windows", {
   x$flood <- x$flood[rep(1, 4), ]
   x$flood$FLOOD_ID <- paste0("nested", 1:4)
   x$flood$FLOOD_START_DATE <- c(
-    "2020-08-01", "2020-08-02", "2020-08-12", "2020-08-13"
+    "2020-08-01",
+    "2020-08-02",
+    "2020-08-12",
+    "2020-08-13"
   )
   x$flood$FLOOD_END_DATE <- c(
-    "2020-08-10", "2020-08-03", "2020-08-12", "2020-08-14"
+    "2020-08-10",
+    "2020-08-03",
+    "2020-08-12",
+    "2020-08-14"
   )
-  out <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", track = FALSE
+  out <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    track = FALSE
   )
   expect_equal(out$value, 13)
   x$flood$FLOOD_END_DATE[] <- NA_character_
-  out <- prepare_plot_data(x, "count", "PROP_FLOODED_POP",
-    count_unit = "days", track = FALSE
+  out <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_FLOODED_POP",
+    count_unit = "days",
+    track = FALSE
   )
   expect_true(is.na(out$value))
 })

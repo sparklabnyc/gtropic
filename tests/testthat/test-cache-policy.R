@@ -102,13 +102,23 @@ local_cache_index <- function(rows, env = parent.frame()) {
     } else {
       checksum_raw(charToRaw(paste(r$label, r$version)))
     }
-    writeBin(charToRaw(strrep("x", r$size_bytes)), cache_blob_path(dir, checksum))
-    idx <- dplyr::bind_rows(idx, tibble::tibble(
-      server = "example.invalid", doi = "doi:10.0000/HIST",
-      version = r$version, directory_label = "yearly", label = r$label,
-      checksum = checksum, size_bytes = r$size_bytes,
-      fetched_at = cache_time(r$fetched_at)
-    ))
+    writeBin(
+      charToRaw(strrep("x", r$size_bytes)),
+      cache_blob_path(dir, checksum)
+    )
+    idx <- dplyr::bind_rows(
+      idx,
+      tibble::tibble(
+        server = "example.invalid",
+        doi = "doi:10.0000/HIST",
+        version = r$version,
+        directory_label = "yearly",
+        label = r$label,
+        checksum = checksum,
+        size_bytes = r$size_bytes,
+        fetched_at = cache_time(r$fetched_at)
+      )
+    )
   }
   cache_index_write(dir, idx)
   dir
@@ -118,11 +128,16 @@ days_ago <- function(n) Sys.time() - n * 86400
 
 test_that("entries older than gtropic.cache_max_age_days are removed", {
   dir <- local_cache_index(tibble::tibble(
-    label = c("2001.parquet", "2002.parquet"), version = "1.0",
-    size_bytes = 10, fetched_at = c(days_ago(200), days_ago(1))
+    label = c("2001.parquet", "2002.parquet"),
+    version = "1.0",
+    size_bytes = 10,
+    fetched_at = c(days_ago(200), days_ago(1))
   ))
   old_blob <- cache_blob_path(dir, cache_index_read(dir)$checksum[1])
-  withr::local_options(gtropic.cache_max_age_days = 180, gtropic.cache_max_gb = Inf)
+  withr::local_options(
+    gtropic.cache_max_age_days = 180,
+    gtropic.cache_max_gb = Inf
+  )
 
   removed <- cache_manage(dir, quiet = TRUE)
 
@@ -133,39 +148,56 @@ test_that("entries older than gtropic.cache_max_age_days are removed", {
 
 test_that("Inf switches each rule off", {
   dir <- local_cache_index(tibble::tibble(
-    label = c("2001.parquet", "2002.parquet"), version = "1.0",
-    size_bytes = 100, fetched_at = c(days_ago(2000), days_ago(1))
+    label = c("2001.parquet", "2002.parquet"),
+    version = "1.0",
+    size_bytes = 100,
+    fetched_at = c(days_ago(2000), days_ago(1))
   ))
-  withr::local_options(gtropic.cache_max_age_days = Inf, gtropic.cache_max_gb = Inf)
+  withr::local_options(
+    gtropic.cache_max_age_days = Inf,
+    gtropic.cache_max_gb = Inf
+  )
   expect_identical(nrow(cache_manage(dir, quiet = TRUE)), 0L)
   expect_identical(nrow(cache_index_read(dir)), 2L)
 })
 
 test_that("the least recently downloaded entries go first beyond gtropic.cache_max_gb", {
   dir <- local_cache_index(tibble::tibble(
-    label = c("2001.parquet", "2002.parquet", "2003.parquet"), version = "1.0",
-    size_bytes = 100, fetched_at = c(days_ago(3), days_ago(1), days_ago(2))
+    label = c("2001.parquet", "2002.parquet", "2003.parquet"),
+    version = "1.0",
+    size_bytes = 100,
+    fetched_at = c(days_ago(3), days_ago(1), days_ago(2))
   ))
   withr::local_options(
-    gtropic.cache_max_age_days = Inf, gtropic.cache_max_gb = 250 / 1024^3
+    gtropic.cache_max_age_days = Inf,
+    gtropic.cache_max_gb = 250 / 1024^3
   )
 
   removed <- cache_manage(dir, quiet = TRUE)
 
   expect_identical(removed$label, "2001.parquet")
-  expect_setequal(cache_index_read(dir)$label, c("2002.parquet", "2003.parquet"))
+  expect_setequal(
+    cache_index_read(dir)$label,
+    c("2002.parquet", "2003.parquet")
+  )
 })
 
 test_that("entries superseded by a :latest retrieval are removed", {
   dir <- local_cache_index(tibble::tibble(
     label = c("2001.parquet", "2001.parquet", "2002.parquet", "2003.parquet"),
     version = c("1.0", "2.0", "1.0", "unparsed"),
-    size_bytes = 10, fetched_at = days_ago(1)
+    size_bytes = 10,
+    fetched_at = days_ago(1)
   ))
-  withr::local_options(gtropic.cache_max_age_days = Inf, gtropic.cache_max_gb = Inf)
+  withr::local_options(
+    gtropic.cache_max_age_days = Inf,
+    gtropic.cache_max_gb = Inf
+  )
   latest <- tibble::tibble(
-    server = "example.invalid", doi = "doi:10.0000/HIST",
-    directory_label = "yearly", label = c("2001.parquet", "2003.parquet"),
+    server = "example.invalid",
+    doi = "doi:10.0000/HIST",
+    directory_label = "yearly",
+    label = c("2001.parquet", "2003.parquet"),
     version = "2.0"
   )
 
@@ -181,14 +213,21 @@ test_that("entries superseded by a :latest retrieval are removed", {
 
 test_that("files used by the retrieval are never removed", {
   dir <- local_cache_index(tibble::tibble(
-    label = c("2001.parquet", "2002.parquet"), version = "1.0",
-    size_bytes = 100, fetched_at = c(days_ago(400), days_ago(1))
+    label = c("2001.parquet", "2002.parquet"),
+    version = "1.0",
+    size_bytes = 100,
+    fetched_at = c(days_ago(400), days_ago(1))
   ))
   withr::local_options(
-    gtropic.cache_max_age_days = 180, gtropic.cache_max_gb = 50 / 1024^3
+    gtropic.cache_max_age_days = 180,
+    gtropic.cache_max_gb = 50 / 1024^3
   )
   keep <- cache_key_string(
-    "example.invalid", "doi:10.0000/HIST", "yearly", "2001.parquet", "1.0"
+    "example.invalid",
+    "doi:10.0000/HIST",
+    "yearly",
+    "2001.parquet",
+    "1.0"
   )
 
   removed <- cache_manage(dir, keep = keep, quiet = TRUE)
@@ -200,13 +239,22 @@ test_that("files used by the retrieval are never removed", {
 test_that("a blob shared with a remaining entry is kept", {
   shared <- checksum_raw(charToRaw("shared"))
   dir <- local_cache_index(tibble::tibble(
-    label = c("2001.parquet", "2001.parquet"), version = c("1.0", "2.0"),
-    checksum = shared, size_bytes = 10, fetched_at = days_ago(1)
+    label = c("2001.parquet", "2001.parquet"),
+    version = c("1.0", "2.0"),
+    checksum = shared,
+    size_bytes = 10,
+    fetched_at = days_ago(1)
   ))
-  withr::local_options(gtropic.cache_max_age_days = Inf, gtropic.cache_max_gb = Inf)
+  withr::local_options(
+    gtropic.cache_max_age_days = Inf,
+    gtropic.cache_max_gb = Inf
+  )
   latest <- tibble::tibble(
-    server = "example.invalid", doi = "doi:10.0000/HIST",
-    directory_label = "yearly", label = "2001.parquet", version = "2.0"
+    server = "example.invalid",
+    doi = "doi:10.0000/HIST",
+    directory_label = "yearly",
+    label = "2001.parquet",
+    version = "2.0"
   )
   removed <- cache_manage(dir, latest = latest, quiet = TRUE)
   expect_identical(removed$version, "1.0")
@@ -220,26 +268,39 @@ test_that("the first cached file of a session is announced once", {
   raw <- charToRaw("bytes")
 
   expect_no_message(
-    cache_put_bytes(cache, fetcher_key(label = "2001.parquet"), raw, quiet = TRUE)
+    cache_put_bytes(
+      cache,
+      fetcher_key(label = "2001.parquet"),
+      raw,
+      quiet = TRUE
+    )
   )
   expect_message(
     cache_put_bytes(cache, fetcher_key(label = "2002.parquet"), raw),
     "Caching downloads in"
   )
-  expect_no_message(cache_put_bytes(cache, fetcher_key(label = "2003.parquet"), raw))
+  expect_no_message(cache_put_bytes(
+    cache,
+    fetcher_key(label = "2003.parquet"),
+    raw
+  ))
 })
 
 test_that("a retrieval that writes to the cache prunes outdated versions", {
   log <- local_golden_collection()
   dir <- withr::local_tempdir()
   withr::local_options(
-    gtropic.cache_dir = dir, gtropic.cache_max_age_days = Inf,
+    gtropic.cache_dir = dir,
+    gtropic.cache_max_age_days = Inf,
     gtropic.cache_max_gb = Inf
   )
   query <- function() {
     gtropic_data(
-      STORM_ID = "2002BBB", tables = c("wind", "storm_metadata"),
-      cache = TRUE, quiet = TRUE, confirm = FALSE
+      STORM_ID = "2002BBB",
+      tables = c("wind", "storm_metadata"),
+      cache = TRUE,
+      quiet = TRUE,
+      confirm = FALSE
     )
   }
   first <- query()
@@ -260,10 +321,17 @@ test_that("a retrieval that writes to the cache prunes outdated versions", {
   second <- query()
 
   left <- cache_index_read(dir)
-  expect_false("1.0" %in% left$version[left$label == stale$label &
-    left$directory_label == stale$directory_label &
-    left$doi == stale$doi])
+  expect_false(
+    "1.0" %in%
+      left$version[
+        left$label == stale$label &
+          left$directory_label == stale$directory_label &
+          left$doi == stale$doi
+      ]
+  )
   expect_false(file.exists(cache_blob_path(dir, stale$checksum)))
-  expect_true(all(paste(used$directory_label, used$label) %in%
-    paste(left$directory_label, left$label)))
+  expect_true(all(
+    paste(used$directory_label, used$label) %in%
+      paste(left$directory_label, left$label)
+  ))
 })

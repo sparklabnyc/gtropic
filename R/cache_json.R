@@ -35,7 +35,8 @@ cache_read_json <- function(path, schema, empty = NULL, warn = TRUE) {
   }
   if (warn) {
     cli::cli_warn(
-      c("Ignoring {.path {path}}: it is not valid gtropic metadata.",
+      c(
+        "Ignoring {.path {path}}: it is not valid gtropic metadata.",
         x = "{conditionMessage(out)}"
       ),
       .frequency = "once",
@@ -60,8 +61,12 @@ cache_read_json <- function(path, schema, empty = NULL, warn = TRUE) {
 cache_write_json <- function(path, value) {
   cache_write_atomic(path, function(tmp) {
     jsonlite::write_json(
-      value, tmp,
-      dataframe = "rows", na = "null", null = "null", digits = NA
+      value,
+      tmp,
+      dataframe = "rows",
+      na = "null",
+      null = "null",
+      digits = NA
     )
   })
 }
@@ -104,8 +109,12 @@ cache_sweep_tmp <- function(dir) {
     return(invisible(character(0)))
   }
   .gtropic_session[[key]] <- TRUE
-  tmp <- list.files(c(dir, file.path(dir, "blobs")),
-    pattern = "^[.]tmp-", all.files = TRUE, full.names = TRUE, no.. = TRUE
+  tmp <- list.files(
+    c(dir, file.path(dir, "blobs")),
+    pattern = "^[.]tmp-",
+    all.files = TRUE,
+    full.names = TRUE,
+    no.. = TRUE
   )
   old <- tmp[!is.na(file.mtime(tmp)) & file.mtime(tmp) < Sys.time() - 86400]
   unlink(old, recursive = FALSE, force = FALSE)
@@ -152,7 +161,9 @@ format_cache_time <- function(x) {
 #' @noRd
 parse_cache_time <- function(x) {
   out <- as.POSIXct(x, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
-  out[!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", x)] <- NA
+  out[
+    !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", x)
+  ] <- NA
   out
 }
 
@@ -175,7 +186,8 @@ json_column <- function(values, type, field) {
   present <- values[!is_null]
   # Check each element's JSON type before flattening, so that a mixed array
   # such as ["a", 5] is not silently coerced.
-  is_type <- switch(base,
+  is_type <- switch(
+    base,
     chr = ,
     time = is.character,
     num = ,
@@ -184,33 +196,43 @@ json_column <- function(values, type, field) {
     json_fail(paste0("Unknown field type '", type, "'."))
   )
   scalar <- vapply(
-    present, function(v) is.atomic(v) && length(v) == 1L && is_type(v),
+    present,
+    function(v) is.atomic(v) && length(v) == 1L && is_type(v),
     logical(1)
   )
   if (!all(scalar)) {
     json_fail(paste0("Field '", field, "' is not a single ", base, " value."))
   }
   flat <- unlist(present, use.names = FALSE)
-  ok <- length(flat) == 0L || switch(base,
-    chr = TRUE,
-    num = all(is.finite(flat)),
-    int = all(is.finite(flat)) && all(flat == round(flat)) &&
-      all(abs(flat) <= .Machine$integer.max),
-    lgl = !anyNA(flat),
-    time = !anyNA(parse_cache_time(flat))
-  )
+  ok <- length(flat) == 0L ||
+    switch(
+      base,
+      chr = TRUE,
+      num = all(is.finite(flat)),
+      int = all(is.finite(flat)) &&
+        all(flat == round(flat)) &&
+        all(abs(flat) <= .Machine$integer.max),
+      lgl = !anyNA(flat),
+      time = !anyNA(parse_cache_time(flat))
+    )
   if (!isTRUE(ok)) {
     json_fail(paste0("Field '", field, "' has an invalid ", base, " value."))
   }
-  out <- switch(base,
+  out <- switch(
+    base,
     chr = rep(NA_character_, length(values)),
     num = rep(NA_real_, length(values)),
     int = rep(NA_integer_, length(values)),
     lgl = rep(NA, length(values)),
-    time = as.POSIXct(rep(NA_real_, length(values)), origin = "1970-01-01", tz = "UTC")
+    time = as.POSIXct(
+      rep(NA_real_, length(values)),
+      origin = "1970-01-01",
+      tz = "UTC"
+    )
   )
   if (length(flat) > 0L) {
-    out[!is_null] <- switch(base,
+    out[!is_null] <- switch(
+      base,
       chr = as.character(flat),
       num = as.numeric(flat),
       int = as.integer(flat),
@@ -266,23 +288,35 @@ json_integers <- function(x, what) {
 #' @keywords internal
 #' @noRd
 CACHE_INDEX_FIELDS <- c(
-  server = "chr", doi = "chr", version = "chr", directory_label = "chr",
-  label = "chr", checksum = "chr", size_bytes = "num", fetched_at = "time"
+  server = "chr",
+  doi = "chr",
+  version = "chr",
+  directory_label = "chr",
+  label = "chr",
+  checksum = "chr",
+  size_bytes = "num",
+  fetched_at = "time"
 )
 
 #' Fields of a file listing row, as returned by `dv_list_files()`
 #' @keywords internal
 #' @noRd
 LISTING_FIELDS <- c(
-  file_id = "int?", label = "chr?", directory_label = "chr?",
-  checksum = "chr?", checksum_type = "chr?", size_bytes = "num?",
+  file_id = "int?",
+  label = "chr?",
+  directory_label = "chr?",
+  checksum = "chr?",
+  checksum_type = "chr?",
+  size_bytes = "num?",
   content_type = "chr?"
 )
 
 #' @keywords internal
 #' @noRd
 json_check_servers <- function(servers) {
-  for (s in unique(servers)) validate_server(s, call = NULL)
+  for (s in unique(servers)) {
+    validate_server(s, call = NULL)
+  }
   invisible(TRUE)
 }
 
@@ -302,7 +336,9 @@ cache_index_schema <- function(x) {
 #' @keywords internal
 #' @noRd
 cache_config_schema <- function(x) {
-  if (!json_is_object(x)) json_fail("The settings file is not an object.")
+  if (!json_is_object(x)) {
+    json_fail("The settings file is not an object.")
+  }
   json_scalar(x$cache_enabled, "lgl", "cache_enabled")
 }
 
@@ -313,7 +349,9 @@ discovery_slot_schema <- function(x, what) {
   if (is.null(x)) {
     return(NULL)
   }
-  if (!json_is_object(x)) json_fail(paste0("'", what, "' is not an object."))
+  if (!json_is_object(x)) {
+    json_fail(paste0("'", what, "' is not an object."))
+  }
   listing <- json_records(x$listing, LISTING_FIELDS, paste0(what, " listing"))
   checksum <- listing$checksum
   if (!all(is.na(checksum) | is_hex_checksum(checksum))) {
@@ -335,7 +373,11 @@ cache_discovery_schema <- function(x) {
     json_fail("The snapshot is not an object.")
   }
   d <- x$discovery
-  year_index <- json_records(d$year_index, c(year = "int", dataset = "chr"), "year_index")
+  year_index <- json_records(
+    d$year_index,
+    c(year = "int", dataset = "chr"),
+    "year_index"
+  )
   if (!all(year_index$dataset %in% c("historical", "current"))) {
     json_fail("The year index names an unknown dataset.")
   }
@@ -366,7 +408,10 @@ discovery_to_json <- function(discovery) {
     list(
       doi = jsonlite::unbox(s$doi),
       version = jsonlite::unbox(s$version),
-      listing = as.data.frame(s$listing)[intersect(names(LISTING_FIELDS), names(s$listing))],
+      listing = as.data.frame(s$listing)[intersect(
+        names(LISTING_FIELDS),
+        names(s$listing)
+      )],
       years = if (is.null(s$years)) NULL else as.integer(s$years)
     )
   }

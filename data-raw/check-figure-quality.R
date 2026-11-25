@@ -57,7 +57,11 @@ render_unoptimised <- function(source, extra = character()) {
   old <- setwd(dest)
   on.exit(setwd(old), add = TRUE)
   knitr::opts_chunk$set(error = FALSE)
-  knitr::knit(basename(source), output = tempfile(fileext = ".md"), quiet = TRUE)
+  knitr::knit(
+    basename(source),
+    output = tempfile(fileext = ".md"),
+    quiet = TRUE
+  )
   dest
 }
 
@@ -66,14 +70,20 @@ compare_dir <- function(rendered, committed, pattern = "\\.png$") {
   rows <- lapply(files, function(f) {
     new <- file.path(rendered, f)
     if (!file.exists(new)) {
-      return(data.frame(file = file.path(committed, f), status = "not re-rendered"))
+      return(data.frame(
+        file = file.path(committed, f),
+        status = "not re-rendered"
+      ))
     }
     a <- magick::image_read(file.path(committed, f))
     b <- magick::image_read(new)
     ia <- magick::image_info(a)
     ib <- magick::image_info(b)
     if (ia$width != ib$width || ia$height != ib$height) {
-      return(data.frame(file = file.path(committed, f), status = "size differs"))
+      return(data.frame(
+        file = file.path(committed, f),
+        status = "size differs"
+      ))
     }
     ae <- attr(magick::image_compare(a, b, metric = "AE"), "distortion")
     data.frame(
@@ -83,15 +93,29 @@ compare_dir <- function(rendered, committed, pattern = "\\.png$") {
       unoptimised_bytes = file.size(new)
     )
   })
-  do.call(rbind, lapply(rows, function(r) {
-    r[setdiff(c("file", "status", "optimised_bytes", "unoptimised_bytes"), names(r))] <- NA
-    r
-  }))
+  do.call(
+    rbind,
+    lapply(rows, function(r) {
+      r[setdiff(
+        c("file", "status", "optimised_bytes", "unoptimised_bytes"),
+        names(r)
+      )] <- NA
+      r
+    })
+  )
 }
 
-vignettes <- list.files("vignettes", pattern = "\\.Rmd\\.orig$", full.names = TRUE)
+vignettes <- list.files(
+  "vignettes",
+  pattern = "\\.Rmd\\.orig$",
+  full.names = TRUE
+)
 vignettes <- vignettes[!startsWith(basename(vignettes), "_")]
-articles <- list.files("vignettes/articles", pattern = "\\.Rmd\\.orig$", full.names = TRUE)
+articles <- list.files(
+  "vignettes/articles",
+  pattern = "\\.Rmd\\.orig$",
+  full.names = TRUE
+)
 
 for (source in vignettes) {
   message("Re-rendering ", source)
@@ -107,9 +131,16 @@ render_unoptimised("README.Rmd")
 result <- rbind(
   compare_dir(file.path(work, "vignettes", "figs"), "vignettes/figs"),
   if (dir.exists("vignettes/articles/figs")) {
-    compare_dir(file.path(work, "vignettes", "articles", "figs"), "vignettes/articles/figs")
+    compare_dir(
+      file.path(work, "vignettes", "articles", "figs"),
+      "vignettes/articles/figs"
+    )
   },
-  compare_dir(file.path(work, "man", "figures"), "man/figures", "^README-.*\\.png$")
+  compare_dir(
+    file.path(work, "man", "figures"),
+    "man/figures",
+    "^README-.*\\.png$"
+  )
 )
 print(result, row.names = FALSE)
 
@@ -118,7 +149,11 @@ if (any(bad)) {
   stop(sum(bad), " figure(s) are not identical to an unoptimised render.")
 }
 message(
-  "All ", nrow(result), " figures are pixel-identical to an unoptimised render (",
-  format(sum(result$unoptimised_bytes), big.mark = ","), " -> ",
-  format(sum(result$optimised_bytes), big.mark = ","), " bytes)."
+  "All ",
+  nrow(result),
+  " figures are pixel-identical to an unoptimised render (",
+  format(sum(result$unoptimised_bytes), big.mark = ","),
+  " -> ",
+  format(sum(result$optimised_bytes), big.mark = ","),
+  " bytes)."
 )

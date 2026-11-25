@@ -43,7 +43,11 @@ test_that("the guardrail and cache clearing share one prompt", {
   dir.create(file.path(dir, "blobs"))
   writeLines("x", file.path(dir, "blobs", paste0(strrep("a", 32L), ".blob")))
   expect_message(gtropic_cache_clear(), "About to delete 1 cached file")
-  expect_true(file.exists(file.path(dir, "blobs", paste0(strrep("a", 32L), ".blob"))))
+  expect_true(file.exists(file.path(
+    dir,
+    "blobs",
+    paste0(strrep("a", 32L), ".blob")
+  )))
 
   expect_identical(answers, rep("Proceed? [y/N] ", 2L))
 })
@@ -69,9 +73,11 @@ test_that("the download estimate reads cleanly with and without cached files", {
   }
   expect_identical(trimws(msg(0L)), "Retrieving 3 files (11.4 MB).")
   expect_identical(
-    trimws(msg(1L)), "Retrieving 3 files (11.4 MB); 1 already cached."
+    trimws(msg(1L)),
+    "Retrieving 3 files (11.4 MB); 1 already cached."
   )
   expect_identical(
-    trimws(msg(5L)), "Retrieving 3 files (11.4 MB); 5 already cached."
+    trimws(msg(5L)),
+    "Retrieving 3 files (11.4 MB); 5 already cached."
   )
 })

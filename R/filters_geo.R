@@ -25,13 +25,15 @@
 #' @return A list with `adm2_ids`, `inconsistent_adm2_ids` and `warnings`.
 #' @keywords internal
 #' @noRd
-resolve_geography <- function(adm2,
-                              pop_by_year = NULL,
-                              filters = list(),
-                              polygon = NULL,
-                              reproject = TRUE,
-                              quiet = FALSE,
-                              call = rlang::caller_env()) {
+resolve_geography <- function(
+  adm2,
+  pop_by_year = NULL,
+  filters = list(),
+  polygon = NULL,
+  reproject = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   filters <- compact(filters)
   warnings <- list()
 
@@ -49,12 +51,15 @@ resolve_geography <- function(adm2,
 
   for (arg in names(spec)) {
     values <- filters[[arg]]
-    if (is.null(values)) next
+    if (is.null(values)) {
+      next
+    }
 
     column <- spec[[arg]]$column
     if (!column %in% names(adm2)) {
       cli::cli_abort(
-        c("Column {.field {column}} is not present in the published
+        c(
+          "Column {.field {column}} is not present in the published
            {.field adm2} table.",
           i = "The dataset schema may have changed."
         ),
@@ -83,7 +88,9 @@ resolve_geography <- function(adm2,
     used_args <- c(used_args, arg)
   }
 
-  if (!any(keep)) abort_empty_intersection(used_args, call = call)
+  if (!any(keep)) {
+    abort_empty_intersection(used_args, call = call)
+  }
 
   adm2_ids <- adm2$ADM2_ID[keep]
 
@@ -132,17 +139,20 @@ resolve_geography <- function(adm2,
 #' @return A list with `adm2_ids`, `inconsistent` and `warnings`.
 #' @keywords internal
 #' @noRd
-resolve_polygon <- function(polygon,
-                            pop_by_year,
-                            candidate_ids,
-                            reproject = TRUE,
-                            quiet = FALSE,
-                            call = rlang::caller_env()) {
+resolve_polygon <- function(
+  polygon,
+  pop_by_year,
+  candidate_ids,
+  reproject = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   check_installed_geo(what = "The {.arg polygon} filter", call = call)
 
   if (!inherits(polygon, c("sf", "sfc"))) {
     cli::cli_abort(
-      c("{.arg polygon} must be an {.cls sf} or {.cls sfc} object.",
+      c(
+        "{.arg polygon} must be an {.cls sf} or {.cls sfc} object.",
         x = "Got {.cls {class(polygon)[1]}}.",
         i = "Read a shapefile or GeoPackage with {.code sf::st_read()}."
       ),
@@ -153,7 +163,8 @@ resolve_polygon <- function(polygon,
   crs <- sf::st_crs(polygon)
   if (is.na(crs)) {
     cli::cli_abort(
-      c("{.arg polygon} has no coordinate reference system.",
+      c(
+        "{.arg polygon} has no coordinate reference system.",
         i = "Set one with {.code sf::st_set_crs()}; without it there is no way
              to know what the coordinates mean.",
         i = "The published centroids are in EPSG:4326 (longitude/latitude)."
@@ -165,7 +176,8 @@ resolve_polygon <- function(polygon,
   if (crs != sf::st_crs(4326)) {
     if (!isTRUE(reproject)) {
       cli::cli_abort(
-        c("{.arg polygon} is not in EPSG:4326 and {.arg reproject} is
+        c(
+          "{.arg polygon} is not in EPSG:4326 and {.arg reproject} is
            {.code FALSE}.",
           i = "Set {.code reproject = TRUE} to transform it automatically, or
                transform it yourself with {.code sf::st_transform(4326)}."
@@ -178,7 +190,8 @@ resolve_polygon <- function(polygon,
 
   if (is.null(pop_by_year) || length(pop_by_year) == 0L) {
     cli::cli_abort(
-      c("Polygon membership needs population centroids, but no {.field pop}
+      c(
+        "Polygon membership needs population centroids, but no {.field pop}
          data was loaded.",
         i = "This is an internal error; please report it."
       ),
@@ -205,8 +218,11 @@ resolve_polygon <- function(polygon,
     if (nrow(pop) == 0L) {
       return(character(0))
     }
-    inside <- dplyr::left_join(pop[coords], points,
-      by = coords, relationship = "many-to-one"
+    inside <- dplyr::left_join(
+      pop[coords],
+      points,
+      by = coords,
+      relationship = "many-to-one"
     )$.inside
     as.character(pop$ADM2_ID[inside])
   })
@@ -223,23 +239,29 @@ resolve_polygon <- function(polygon,
       "Polygon membership was evaluated across {length(years)} years; ",
       "population-weighted centroids move between years."
     )
-    inform_unless_quiet(c(
-      i = "Polygon membership is year-dependent.",
-      " " = "Centroids were evaluated for {length(years)} year{?s}
+    inform_unless_quiet(
+      c(
+        i = "Polygon membership is year-dependent.",
+        " " = "Centroids were evaluated for {length(years)} year{?s}
              ({years[1]}-{years[length(years)]}); an ADM2 unit is included if
              its centroid fell inside the polygon in any of them."
-    ), quiet = quiet)
+      ),
+      quiet = quiet
+    )
   }
 
   if (length(inconsistent) > 0L) {
     warnings$polygon_inconsistent <- inconsistent
-    gtropic_warn(c(
-      "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
+    gtropic_warn(
+      c(
+        "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
        across years.",
-      "!" = "{truncate_display(inconsistent)}",
-      i = "{cli::qty(length(inconsistent))}{?It was/They were} included. The
+        "!" = "{truncate_display(inconsistent)}",
+        i = "{cli::qty(length(inconsistent))}{?It was/They were} included. The
            full vector is available via {.code gtropic_diagnostics()}."
-    ), class = "gtropic_warning_polygon")
+      ),
+      class = "gtropic_warning_polygon"
+    )
   }
 
   list(adm2_ids = all_in, inconsistent = inconsistent, warnings = warnings)

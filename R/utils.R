@@ -31,11 +31,16 @@ as_filter_chr <- function(x, arg, call = rlang::caller_env()) {
   if (is.null(x)) {
     return(NULL)
   }
-  if (is.factor(x)) x <- as.character(x)
-  if (!is.character(x)) x <- as.character(x)
+  if (is.factor(x)) {
+    x <- as.character(x)
+  }
+  if (!is.character(x)) {
+    x <- as.character(x)
+  }
   if (length(x) == 0L) {
     cli::cli_abort(
-      c("{.arg {arg}} was supplied but is empty.",
+      c(
+        "{.arg {arg}} was supplied but is empty.",
         i = "Use {.code NULL} to leave a filter unset."
       ),
       call = call
@@ -75,14 +80,18 @@ truncate_display <- function(x, n = 10L) {
 #' @noRd
 format_bytes <- function(bytes) {
   bytes <- as.numeric(bytes)
-  vapply(bytes, function(b) {
-    if (is.na(b)) {
-      return("unknown size")
-    }
-    units <- c("B", "KB", "MB", "GB", "TB")
-    i <- if (b <= 0) 1L else min(length(units), floor(log(b, 1024)) + 1L)
-    sprintf("%.1f %s", b / 1024^(i - 1L), units[i])
-  }, character(1))
+  vapply(
+    bytes,
+    function(b) {
+      if (is.na(b)) {
+        return("unknown size")
+      }
+      units <- c("B", "KB", "MB", "GB", "TB")
+      i <- if (b <= 0) 1L else min(length(units), floor(log(b, 1024)) + 1L)
+      sprintf("%.1f %s", b / 1024^(i - 1L), units[i])
+    },
+    character(1)
+  )
 }
 
 #' Mark text as literal for a cli template
@@ -112,9 +121,14 @@ cli_escape <- function(x) {
 #' @return Invisibly `NULL`.
 #' @keywords internal
 #' @noRd
-inform_unless_quiet <- function(..., quiet = FALSE,
-                                .envir = rlang::caller_env()) {
-  if (!isTRUE(quiet)) cli::cli_inform(..., .envir = .envir)
+inform_unless_quiet <- function(
+  ...,
+  quiet = FALSE,
+  .envir = rlang::caller_env()
+) {
+  if (!isTRUE(quiet)) {
+    cli::cli_inform(..., .envir = .envir)
+  }
   invisible(NULL)
 }
 
@@ -181,8 +195,12 @@ year_span <- function(...) {
 #' @return `x`, unchanged.
 #' @keywords internal
 #' @noRd
-check_flag <- function(x, arg = rlang::caller_arg(x), allow_null = FALSE,
-                       call = rlang::caller_env()) {
+check_flag <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  allow_null = FALSE,
+  call = rlang::caller_env()
+) {
   if (allow_null && is.null(x)) {
     return(x)
   }

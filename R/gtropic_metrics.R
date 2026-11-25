@@ -22,7 +22,8 @@
 gtropic_metrics <- function() {
   registry <- plot_metric_registry()
   registry <- registry[
-    registry$table %in% c("wind", "precip", "flood") &
+    registry$table %in%
+      c("wind", "precip", "flood") &
       registry$metric != "STORM_DIST_KM",
     c("table", "metric", "label", "unit", "aggregate")
   ]

@@ -20,7 +20,11 @@ test_that("the default tables leave out geometry when sf is missing", {
   expect_setequal(args$tables, setdiff(VALID_TABLES, "geometry"))
 
   expect_no_message(
-    args <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = 2005, quiet = TRUE)
+    args <- gtropic_data(
+      WHO_ENTITY = "Jamaica",
+      date_range = 2005,
+      quiet = TRUE
+    )
   )
   expect_false("geometry" %in% args$tables)
 })
@@ -76,7 +80,11 @@ test_that("confirm defaults to TRUE and FALSE skips the guardrail", {
 
 test_that("a single date_range value is recorded as both endpoints", {
   capture_args()
-  args <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = 2005, tables = "wind")
+  args <- gtropic_data(
+    WHO_ENTITY = "Jamaica",
+    date_range = 2005,
+    tables = "wind"
+  )
   expect_identical(args$date_range, c(2005, 2005))
 })
 

@@ -47,67 +47,80 @@ NULL
 gtropic_default_options <- function() {
   list(
     server = option_spec(
-      "dataverse.harvard.edu", "server",
+      "dataverse.harvard.edu",
+      "server",
       "Dataverse host name (requests always use HTTPS), optionally with a port."
     ),
     doi_historical = option_spec(
-      "doi:10.7910/DVN/EAVWC3", "string",
+      "doi:10.7910/DVN/EAVWC3",
+      "string",
       "DOI of the historical dataset."
     ),
     doi_current = option_spec(
-      "doi:10.7910/DVN/FZBAKO", "string",
+      "doi:10.7910/DVN/FZBAKO",
+      "string",
       "DOI of the current-year dataset. Used only as a fallback if automatic
        discovery fails."
     ),
     collection = option_spec(
-      "gtropic", "string",
+      "gtropic",
+      "string",
       "Dataverse collection (alias) searched during discovery."
     ),
     cache_enabled = option_spec(
-      TRUE, "flag",
+      TRUE,
+      "flag",
       "Whether downloaded files are kept on disk."
     ),
     cache_dir = option_spec(
-      tools::R_user_dir("gtropic", "cache"), "string",
+      tools::R_user_dir("gtropic", "cache"),
+      "string",
       "Where cached files live.",
       shown = 'tools::R_user_dir("gtropic", "cache")'
     ),
     cache_max_age_days = option_spec(
-      180, "positive",
+      180,
+      "positive",
       "Cached files downloaded more than this many days ago are removed
        automatically after a retrieval that adds to the cache. `Inf` keeps
        them."
     ),
     cache_max_gb = option_spec(
-      10, "positive",
+      10,
+      "positive",
       "Size cap, in gigabytes, for the cache: after a retrieval that adds to
        it, the least recently downloaded files are removed until it fits.
        `Inf` disables the cap."
     ),
     confirm_threshold_gb = option_spec(
-      1, "positive",
+      1,
+      "positive",
       "Download size, in gigabytes, above which you are asked to confirm."
     ),
     timeout = option_spec(
-      600, "positive",
+      600,
+      "positive",
       "Seconds to wait for the server. A metadata request that takes longer is
        abandoned (and retried, see `gtropic.max_tries`), and so is a download
        that receives no data for this long; a download that keeps receiving
        data may take longer. `Inf` waits indefinitely."
     ),
     max_tries = option_spec(
-      3L, "count",
+      3L,
+      "count",
       "Maximum attempts per request. Only transient failures are retried: a
        lost or refused connection, a timeout, and HTTP 408, 429 and 5xx
        responses."
     ),
     quiet = option_spec(
-      FALSE, "flag",
+      FALSE,
+      "flag",
       "Session-wide default for `quiet`: `TRUE` suppresses progress and
        informational messages from every call."
     ),
     discovery_ttl = option_spec(
-      600, "nonneg",
+      600,
+      "nonneg",
       "Seconds for which a session reuses what it learned about the
        collection's `\":latest\"` datasets before asking the server again. A
        new weekly release is therefore seen within this time. `0` asks on
@@ -131,8 +144,11 @@ gtropic_default_options <- function() {
 #' @noRd
 option_spec <- function(default, type, doc, shown = NULL) {
   list(
-    default = default, type = type, doc = gsub("\\s+", " ", doc),
-    shown = shown %||% if (is.character(default)) deparse(default) else format(default)
+    default = default,
+    type = type,
+    doc = gsub("\\s+", " ", doc),
+    shown = shown %||%
+      if (is.character(default)) deparse(default) else format(default)
   )
 }
 
@@ -176,16 +192,17 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
     return(validate_server(x, arg = arg, call = call))
   }
   scalar <- length(x) == 1L && !is.na(x)
-  ok <- switch(type,
+  ok <- switch(
+    type,
     string = is.character(x) && scalar,
     flag = is.logical(x) && scalar,
     positive = is.numeric(x) && scalar && x > 0,
     nonneg = is.numeric(x) && scalar && x >= 0,
-    count = is.numeric(x) && scalar && is.finite(x) && x >= 1 &&
-      x == round(x)
+    count = is.numeric(x) && scalar && is.finite(x) && x >= 1 && x == round(x)
   )
   if (!isTRUE(ok)) {
-    expected <- switch(type,
+    expected <- switch(
+      type,
       string = "a single string",
       flag = "TRUE or FALSE",
       positive = "a single number greater than zero",
@@ -204,12 +221,7 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
       call = call
     )
   }
-  switch(type,
-    count = as.integer(x),
-    positive = ,
-    nonneg = as.numeric(x),
-    x
-  )
+  switch(type, count = as.integer(x), positive = , nonneg = as.numeric(x), x)
 }
 
 #' The options table in `?gtropic_options`
@@ -221,11 +233,16 @@ option_check <- function(x, type, arg, call = rlang::caller_env()) {
 #' @noRd
 options_doc_table <- function() {
   specs <- gtropic_default_options()
-  rows <- vapply(names(specs), function(nm) {
-    s <- specs[[nm]]
-    sprintf("| `gtropic.%s` | `%s` | %s |", nm, s$shown, s$doc)
-  }, character(1))
-  paste(c("| Option | Default | Meaning |", "| --- | --- | --- |", rows),
+  rows <- vapply(
+    names(specs),
+    function(nm) {
+      s <- specs[[nm]]
+      sprintf("| `gtropic.%s` | `%s` | %s |", nm, s$shown, s$doc)
+    },
+    character(1)
+  )
+  paste(
+    c("| Option | Default | Meaning |", "| --- | --- | --- |", rows),
     collapse = "\n"
   )
 }
@@ -252,14 +269,17 @@ validate_server <- function(x, arg = "server", call = rlang::caller_env()) {
   ok <- is.character(x) && length(x) == 1L && !is.na(x)
   if (ok) {
     x <- sub("/+$", "", sub("^https?://", "", x, ignore.case = TRUE))
-    ok <- nchar(x) <= 253L && grepl(
-      "^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?$", x
-    )
+    ok <- nchar(x) <= 253L &&
+      grepl(
+        "^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?$",
+        x
+      )
   }
   if (!ok) {
     example <- opt_default("server")
     cli::cli_abort(
-      c("{.code {arg}} must be a Dataverse host name, such as
+      c(
+        "{.code {arg}} must be a Dataverse host name, such as
          {.val {example}}.",
         x = if (is.character(x) && length(x) == 1L) {
           "Got {.val {x}}."
@@ -304,7 +324,8 @@ opt_confirm_threshold_gb <- function() opt("confirm_threshold_gb")
 resolve_versions <- function(version = ":latest", call = rlang::caller_env()) {
   if (!is.character(version) || length(version) == 0L) {
     cli::cli_abort(
-      c("{.arg version} must be a character vector.",
+      c(
+        "{.arg version} must be a character vector.",
         i = 'Use {.val :latest}, a single version string, or
              {.code c(historical = "2.0", current = "1.3")}.'
       ),
@@ -319,7 +340,8 @@ resolve_versions <- function(version = ":latest", call = rlang::caller_env()) {
   nms <- names(version)
   if (is.null(nms) || !all(nms %in% c("historical", "current"))) {
     cli::cli_abort(
-      c("{.arg version} of length > 1 must be named.",
+      c(
+        "{.arg version} of length > 1 must be named.",
         x = "Got name{?s}: {.val {nms %||% 'none'}}.",
         i = 'Expected {.code c(historical = "...", current = "...")}.'
       ),

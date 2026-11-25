@@ -54,7 +54,9 @@ test_that("the suggestion threshold scales with string length", {
 
 test_that("the error message points at the discovery helper", {
   expect_error(
-    match_values("Atlantis", candidates,
+    match_values(
+      "Atlantis",
+      candidates,
       arg = "WHO_ENTITY",
       helper = "gtropic_adm2()"
     ),

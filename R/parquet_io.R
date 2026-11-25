@@ -41,13 +41,19 @@
 #' @return An `arrow::Table`.
 #' @keywords internal
 #' @noRd
-read_parquet_file <- function(path, col_select = NULL, keep = NULL,
-                              label = "file", call = rlang::caller_env()) {
+read_parquet_file <- function(
+  path,
+  col_select = NULL,
+  keep = NULL,
+  label = "file",
+  call = rlang::caller_env()
+) {
   tbl <- tryCatch(
     read_parquet_table(path, col_select = col_select, keep = keep),
     error = function(e) {
       cli::cli_abort(
-        c("Could not read {.path {label}} as parquet.",
+        c(
+          "Could not read {.path {label}} as parquet.",
           x = "{conditionMessage(e)}",
           i = "The download may be corrupt. If a cache is enabled, clearing it
                with {.code gtropic_cache_clear()} will force a fresh copy."
@@ -62,7 +68,8 @@ read_parquet_file <- function(path, col_select = NULL, keep = NULL,
     if (length(missing) > 0L) {
       n <- length(missing)
       cli::cli_warn(
-        c("{cli::qty(n)}Column{?s} {.field {missing}} not found in {.path {label}}.",
+        c(
+          "{cli::qty(n)}Column{?s} {.field {missing}} not found in {.path {label}}.",
           i = "{cli::qty(n)}Continuing without {?it/them}; the published
                schema may have changed."
         )
@@ -91,7 +98,11 @@ read_parquet_table <- function(path, col_select = NULL, keep = NULL) {
   present <- intersect(col_select, columns)
   keep <- compact(keep[intersect(names(keep), columns)])
   # Decode the projection plus the filter columns, and nothing else.
-  read_cols <- if (length(present) > 0L) union(present, names(keep)) else columns
+  read_cols <- if (length(present) > 0L) {
+    union(present, names(keep))
+  } else {
+    columns
+  }
   indices <- match(read_cols, columns) - 1L
 
   if (length(keep) == 0L || reader$num_row_groups == 0L) {
@@ -134,7 +145,9 @@ arrow_keep_mask <- function(tbl, keep) {
       # e.g. a dictionary column: let the kernel cast the plain values.
       error = function(e) arrow::Array$create(values)
     )
-    hit <- arrow::call_function("is_in", tbl[[column]],
+    hit <- arrow::call_function(
+      "is_in",
+      tbl[[column]],
       options = list(value_set = value_set, skip_nulls = FALSE)
     )
     mask <- if (is.null(mask)) hit else arrow::call_function("and", mask, hit)
@@ -156,7 +169,10 @@ read_json_file <- function(path, label = "file", call = rlang::caller_env()) {
     jsonlite::read_json(path, simplifyVector = FALSE),
     error = function(e) {
       cli::cli_abort(
-        c("Could not parse {.path {label}} as JSON.", x = "{conditionMessage(e)}"),
+        c(
+          "Could not parse {.path {label}} as JSON.",
+          x = "{conditionMessage(e)}"
+        ),
         call = call
       )
     }
@@ -183,15 +199,20 @@ read_json_file <- function(path, label = "file", call = rlang::caller_env()) {
 #' @return An `sf` object in EPSG:4326.
 #' @keywords internal
 #' @noRd
-read_geoparquet_file <- function(path, keep = NULL, label = "file",
-                                 call = rlang::caller_env()) {
+read_geoparquet_file <- function(
+  path,
+  keep = NULL,
+  label = "file",
+  call = rlang::caller_env()
+) {
   check_installed_geo(call = call)
 
   geometry <- tryCatch(
     read_geoparquet_sf(path, keep = keep),
     error = function(e) {
       cli::cli_abort(
-        c("Could not read {.path {label}} as GeoParquet.",
+        c(
+          "Could not read {.path {label}} as GeoParquet.",
           x = "{conditionMessage(e)}"
         ),
         call = call
@@ -256,7 +277,8 @@ read_geoparquet_sf <- function(path, keep = NULL) {
 
   out <- as.data.frame(tbl)
   for (column in geom_cols) {
-    out[[column]] <- sf::st_as_sfc(out[[column]],
+    out[[column]] <- sf::st_as_sfc(
+      out[[column]],
       crs = sf::st_crs(geo$columns[[column]]$crs)
     )
   }
@@ -301,8 +323,11 @@ geoparquet_metadata <- function(json) {
 #' @return `x` with recognized date-only columns converted to `Date`.
 #' @keywords internal
 #' @noRd
-normalize_table_types <- function(x, label = "table",
-                                  call = rlang::caller_env()) {
+normalize_table_types <- function(
+  x,
+  label = "table",
+  call = rlang::caller_env()
+) {
   date_cols <- intersect(
     c(
       "STORM_GENESIS_DATE_UTC",
@@ -321,7 +346,9 @@ normalize_table_types <- function(x, label = "table",
   for (column in date_cols) {
     x[[column]] <- parse_published_date(
       x[[column]],
-      column = column, label = label, call = call
+      column = column,
+      label = label,
+      call = call
     )
   }
   x
@@ -337,8 +364,12 @@ normalize_table_types <- function(x, label = "table",
 #' @return A `Date` vector.
 #' @keywords internal
 #' @noRd
-parse_published_date <- function(x, column, label = "table",
-                                 call = rlang::caller_env()) {
+parse_published_date <- function(
+  x,
+  column,
+  label = "table",
+  call = rlang::caller_env()
+) {
   if (inherits(x, "Date")) {
     return(x)
   }
@@ -421,15 +452,18 @@ default_tables <- function(quiet = FALSE) {
 #' @return Invisibly `TRUE`; aborts when the packages are absent.
 #' @keywords internal
 #' @noRd
-check_installed_geo <- function(what = "this feature",
-                                call = rlang::caller_env()) {
+check_installed_geo <- function(
+  what = "this feature",
+  call = rlang::caller_env()
+) {
   missing <- geo_packages_missing()
   if (length(missing) == 0L) {
     return(invisible(TRUE))
   }
 
   cli::cli_abort(
-    c("{what} requires the {.pkg {missing}} package{?s}.",
+    c(
+      "{what} requires the {.pkg {missing}} package{?s}.",
       i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.',
       i = "Omit {.val geometry} from {.arg tables} if you do not need geospatial
            tooling."

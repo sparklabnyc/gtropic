@@ -108,7 +108,9 @@ test_that("shared fixture fields retain compatible types across tables", {
   signatures <- lapply(shared, function(column) {
     unique(vapply(
       tables[vapply(tables, function(x) column %in% names(x), logical(1))],
-      function(x) paste(typeof(x[[column]]), class(x[[column]]), collapse = "/"),
+      function(x) {
+        paste(typeof(x[[column]]), class(x[[column]]), collapse = "/")
+      },
       character(1)
     ))
   })

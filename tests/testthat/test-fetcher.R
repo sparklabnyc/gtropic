@@ -59,11 +59,14 @@ test_that("checksum verification rejects changed bytes", {
   bytes <- charToRaw("published bytes")
 
   expect_invisible(verify_checksum(
-    local_bytes_file(bytes), checksum_raw(bytes), "fixture.bin"
+    local_bytes_file(bytes),
+    checksum_raw(bytes),
+    "fixture.bin"
   ))
   expect_error(
     verify_checksum(
-      local_bytes_file(charToRaw("changed bytes")), checksum_raw(bytes),
+      local_bytes_file(charToRaw("changed bytes")),
+      checksum_raw(bytes),
       "fixture.bin"
     ),
     "Checksum mismatch"
@@ -77,11 +80,16 @@ test_that("checksum verification supports Dataverse SHA-256 digests", {
   expect_identical(checksum_algorithm(checksum), "sha256")
   expect_identical(checksum_algorithm(checksum, "SHA-256"), "sha256")
   expect_invisible(verify_checksum(
-    local_bytes_file(bytes), checksum, "fixture.bin", checksum_type = "SHA-256"
+    local_bytes_file(bytes),
+    checksum,
+    "fixture.bin",
+    checksum_type = "SHA-256"
   ))
   expect_error(
     verify_checksum(
-      local_bytes_file(charToRaw("changed bytes")), checksum, "fixture.bin"
+      local_bytes_file(charToRaw("changed bytes")),
+      checksum,
+      "fixture.bin"
     ),
     "Checksum mismatch"
   )
@@ -197,7 +205,8 @@ test_that("a cached SHA-256 blob is verified using SHA-256", {
   cache_put_bytes(cache, key, bytes, checksum)
 
   expect_identical(
-    read_bytes(cache_get(cache, key, expected_checksum = checksum)$path), bytes
+    read_bytes(cache_get(cache, key, expected_checksum = checksum)$path),
+    bytes
   )
 })
 
@@ -218,7 +227,10 @@ test_that("cold, warm, and overlapping fetches download only missing years", {
     context <- fetch_context(discovery, cache, quiet = TRUE)
     on.exit(cache_manage_ctx(context), add = TRUE)
     fetch_file(
-      "historical", "yearly", paste0(year, ".parquet"), context,
+      "historical",
+      "yearly",
+      paste0(year, ".parquet"),
+      context,
       kind = "json"
     )
   }
@@ -255,7 +267,10 @@ test_that("metadata remains historical when current listing contains a copy", {
     file_id = c(1L, 2L),
     label = c("2001.parquet", "codebook.json"),
     directory_label = c("yearly", "metadata"),
-    checksum = c(checksum_raw(charToRaw("year")), checksum_raw(charToRaw('{"source":"historical"}'))),
+    checksum = c(
+      checksum_raw(charToRaw("year")),
+      checksum_raw(charToRaw('{"source":"historical"}'))
+    ),
     checksum_type = "MD5",
     size_bytes = c(4, 23),
     content_type = c("application/octet-stream", "application/json")
@@ -264,7 +279,10 @@ test_that("metadata remains historical when current listing contains a copy", {
     file_id = c(3L, 4L),
     label = c("2002.parquet", "codebook.json"),
     directory_label = c("yearly", "metadata"),
-    checksum = c(checksum_raw(charToRaw("year")), checksum_raw(charToRaw('{"source":"current"}'))),
+    checksum = c(
+      checksum_raw(charToRaw("year")),
+      checksum_raw(charToRaw('{"source":"current"}'))
+    ),
     checksum_type = "MD5",
     size_bytes = c(4, 20),
     content_type = c("application/octet-stream", "application/json")
@@ -275,17 +293,26 @@ test_that("metadata remains historical when current listing contains a copy", {
       tibble::tibble(doi = c("doi:10.0000/HIST", "doi:10.0000/CURR"))
     },
     dv_list_files = function(doi, ...) {
-      if (identical(doi, "doi:10.0000/HIST")) historical_listing else current_listing
+      if (identical(doi, "doi:10.0000/HIST")) {
+        historical_listing
+      } else {
+        current_listing
+      }
     },
     dv_version_label = function(doi, ...) {
       if (identical(doi, "doi:10.0000/HIST")) "4.0" else "2.0"
     },
     dv_get_file = function(file_id, ..., dest) {
-      serve_bytes(charToRaw(if (identical(file_id, 2L)) {
-        '{"source":"historical"}'
-      } else {
-        '{"source":"current"}'
-      }), dest)
+      serve_bytes(
+        charToRaw(
+          if (identical(file_id, 2L)) {
+            '{"source":"historical"}'
+          } else {
+            '{"source":"current"}'
+          }
+        ),
+        dest
+      )
     }
   )
 
@@ -293,7 +320,9 @@ test_that("metadata remains historical when current listing contains a copy", {
   discovery <- withCallingHandlers(
     discover_datasets_impl(
       list(historical = ":latest", current = ":latest"),
-      "example.invalid", "gtropic", TRUE
+      "example.invalid",
+      "gtropic",
+      TRUE
     ),
     warning = function(condition) {
       warnings <<- c(warnings, conditionMessage(condition))
@@ -307,7 +336,10 @@ test_that("metadata remains historical when current listing contains a copy", {
     quiet = TRUE
   )
   codebook <- fetch_file(
-    "historical", "metadata", "codebook.json", context,
+    "historical",
+    "metadata",
+    "codebook.json",
+    context,
     kind = "json"
   )
   manifest <- ctx_manifest(context)
@@ -341,9 +373,14 @@ discovery_listing <- function(file_ids, years = 2001:2002) {
     file_id = as.integer(file_ids),
     label = labels,
     directory_label = c(rep("yearly", length(years)), "metadata"),
-    checksum = vapply(paste(labels, file_ids), function(x) {
-      checksum_raw(charToRaw(x))
-    }, character(1), USE.NAMES = FALSE),
+    checksum = vapply(
+      paste(labels, file_ids),
+      function(x) {
+        checksum_raw(charToRaw(x))
+      },
+      character(1),
+      USE.NAMES = FALSE
+    ),
     checksum_type = "MD5",
     size_bytes = 10,
     content_type = "application/octet-stream"
@@ -365,8 +402,10 @@ test_that("a pinned version lists the files of that version", {
 
   discovery <- discover_datasets(
     list(historical = "1.0", current = ":latest"),
-    server = "example.invalid", collection = "gtropic",
-    refresh = TRUE, quiet = TRUE
+    server = "example.invalid",
+    collection = "gtropic",
+    refresh = TRUE,
+    quiet = TRUE
   )
 
   expect_identical(discovery$historical$version, "1.0")
@@ -388,7 +427,9 @@ test_that("a pinned version can cover different years than :latest", {
 
   discovery <- discover_datasets_impl(
     list(historical = "1.0", current = ":latest"),
-    "example.invalid", "gtropic", TRUE
+    "example.invalid",
+    "gtropic",
+    TRUE
   )
 
   expect_identical(discovery$historical$years, 2001L)
@@ -415,7 +456,9 @@ test_that(":latest discovery lists each dataset once", {
 
   discover_datasets_impl(
     list(historical = ":latest", current = ":latest"),
-    "example.invalid", "gtropic", TRUE
+    "example.invalid",
+    "gtropic",
+    TRUE
   )
 
   expect_identical(
@@ -441,7 +484,8 @@ test_that("the listed size bounds a download and nothing is cached", {
   )
   expect_identical(nrow(cache_index_read(dir)), 0L)
   expect_length(
-    list.files(file.path(dir, "blobs"), all.files = TRUE, no.. = TRUE), 0L
+    list.files(file.path(dir, "blobs"), all.files = TRUE, no.. = TRUE),
+    0L
   )
 })
 
@@ -460,11 +504,15 @@ local_counted_discovery <- function(env = parent.frame()) {
     .env = env
   )
   withr::local_options(
-    gtropic.server = "ttl.invalid", gtropic.collection = "ttl",
+    gtropic.server = "ttl.invalid",
+    gtropic.collection = "ttl",
     .local_envir = env
   )
   withr::defer(
-    rm(list = ls(.gtropic_session, pattern = "^discovery[|]ttl"), envir = .gtropic_session),
+    rm(
+      list = ls(.gtropic_session, pattern = "^discovery[|]ttl"),
+      envir = .gtropic_session
+    ),
     envir = env
   )
   counter
@@ -520,7 +568,8 @@ test_that("a pinned-version discovery is kept for the session", {
 test_that("a discovery that fell back to the configured DOIs is not reused", {
   withr::local_options(
     gtropic.discovery_ttl = 600,
-    gtropic.server = "ttl.invalid", gtropic.collection = "ttl"
+    gtropic.server = "ttl.invalid",
+    gtropic.collection = "ttl"
   )
   withr::defer(rm(
     list = ls(.gtropic_session, pattern = "^discovery[|]ttl"),

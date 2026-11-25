@@ -19,7 +19,9 @@ skip_if_no_live_tests <- function() {
 # Hash bytes the way the package hashes a downloaded file.
 checksum_raw <- function(raw, checksum = NULL, checksum_type = NA_character_) {
   digest::digest(
-    raw, algo = checksum_algorithm(checksum, checksum_type), serialize = FALSE
+    raw,
+    algo = checksum_algorithm(checksum, checksum_type),
+    serialize = FALSE
   )
 }
 
@@ -112,7 +114,8 @@ local_dataverse_app <- function(app, env = parent.frame()) {
   testthat::skip_if_not_installed("webfakes")
   # Several threads, so a deliberately stalled response does not hold up the
   # next request.
-  web <- webfakes::local_app_process(app,
+  web <- webfakes::local_app_process(
+    app,
     opts = webfakes::server_opts(num_threads = 4),
     .local_envir = env
   )
@@ -155,7 +158,9 @@ dataverse_test_app <- function() {
   # 3 MB sent in chunks, with no Content-Length.
   app$get("/api/access/datafile/99", function(req, res) {
     res$set_type("application/octet-stream")
-    for (i in 1:3) res$send_chunk(as.raw(rep(1L, 1024^2)))
+    for (i in 1:3) {
+      res$send_chunk(as.raw(rep(1L, 1024^2)))
+    }
   })
   # Answers after 3 s.
   app$get("/api/dataverses/slow/contents", function(req, res) {
@@ -180,7 +185,9 @@ dataverse_test_app <- function() {
   app$get("/api/access/datafile/97", function(req, res) {
     n <- res$locals$n
     n <- if (is.null(n)) 0L else n
-    if (n == 0L) res$set_type("application/octet-stream")
+    if (n == 0L) {
+      res$set_type("application/octet-stream")
+    }
     res$send_chunk(as.raw(rep(n + 1L, 100)))
     res$locals$n <- n + 1L
     if (n < 4L) res$delay(0.4)
@@ -192,26 +199,37 @@ dataverse_test_app <- function() {
   app$locals$max_active <- 0L
   # (A regular expression: the path has literal `:persistentId` and
   # `:latest` segments, which webfakes' `:name` parameters do not match.)
-  app$get(webfakes::new_regexp("^/api/datasets/[^/]+/versions/[^/]+/files$"), function(req, res) {
-    doi <- req$query$persistentId
-    if (grepl("MISSING$", doi)) {
-      return(dv_json(res, 404L, '{"status":"ERROR","message":"Dataset not found"}'))
+  app$get(
+    webfakes::new_regexp("^/api/datasets/[^/]+/versions/[^/]+/files$"),
+    function(req, res) {
+      doi <- req$query$persistentId
+      if (grepl("MISSING$", doi)) {
+        return(dv_json(
+          res,
+          404L,
+          '{"status":"ERROR","message":"Dataset not found"}'
+        ))
+      }
+      if (is.null(res$locals$waited)) {
+        res$locals$waited <- TRUE
+        active <- req$app$locals$active + 1L
+        req$app$locals$active <- active
+        req$app$locals$max_active <- max(req$app$locals$max_active, active)
+        req$app$locals$hits$max_active <- req$app$locals$max_active
+        return(res$delay(0.1))
+      }
+      req$app$locals$active <- req$app$locals$active - 1L
+      label <- paste0(sub(".*/", "", doi), ".parquet")
+      dv_json(
+        res,
+        200L,
+        sprintf(
+          '{"status":"OK","data":[{"label":"%s","directoryLabel":"d","dataFile":{"id":1,"filesize":1}}]}',
+          label
+        )
+      )
     }
-    if (is.null(res$locals$waited)) {
-      res$locals$waited <- TRUE
-      active <- req$app$locals$active + 1L
-      req$app$locals$active <- active
-      req$app$locals$max_active <- max(req$app$locals$max_active, active)
-      req$app$locals$hits$max_active <- req$app$locals$max_active
-      return(res$delay(0.1))
-    }
-    req$app$locals$active <- req$app$locals$active - 1L
-    label <- paste0(sub(".*/", "", doi), ".parquet")
-    dv_json(res, 200L, sprintf(
-      '{"status":"OK","data":[{"label":"%s","directoryLabel":"d","dataFile":{"id":1,"filesize":1}}]}',
-      label
-    ))
-  })
+  )
   app$get("/api/dataverses/missing/contents", function(req, res) {
     count(req, "missing")
     dv_json(res, 404L, '{"status":"ERROR","message":"Collection not found"}')
@@ -231,7 +249,9 @@ app_hits <- function(web, name) {
 #' @noRd
 streaming_response <- function(req, bytes, headers = list()) {
   httr2::new_response(
-    "GET", req$url, 200L,
+    "GET",
+    req$url,
+    200L,
     headers = headers,
     body = httr2::StreamingBody$new(rawConnection(bytes))
   )
@@ -251,7 +271,10 @@ local_dv_transport <- function(..., .env = parent.frame()) {
   if (!is.null(list_files)) {
     mocks$dv_list_files_each <- function(dois, version = ":latest", ...) {
       version <- rep_len(version, length(dois))
-      Map(function(d, v) list_files(d, version = v, ...), dois, version,
+      Map(
+        function(d, v) list_files(d, version = v, ...),
+        dois,
+        version,
         USE.NAMES = FALSE
       )
     }
@@ -260,9 +283,13 @@ local_dv_transport <- function(..., .env = parent.frame()) {
   if (!is.null(version_label)) {
     mocks$dv_version_labels <- function(dois, versions = ":latest", ...) {
       versions <- rep_len(versions, length(dois))
-      vapply(seq_along(dois), function(i) {
-        version_label(dois[[i]], version = versions[[i]], ...)
-      }, character(1))
+      vapply(
+        seq_along(dois),
+        function(i) {
+          version_label(dois[[i]], version = versions[[i]], ...)
+        },
+        character(1)
+      )
     }
   }
   do.call(testthat::local_mocked_bindings, c(mocks, list(.env = .env)))

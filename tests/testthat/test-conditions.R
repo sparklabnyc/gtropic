@@ -17,7 +17,9 @@ test_that("transport failures are gtropic_error_network", {
 test_that("checksum mismatches are gtropic_error_checksum", {
   expect_gtropic_error(
     verify_checksum(
-      local_bytes_file(charToRaw("abc")), strrep("0", 32L), label = "x.parquet"
+      local_bytes_file(charToRaw("abc")),
+      strrep("0", 32L),
+      label = "x.parquet"
     ),
     "gtropic_error_checksum"
   )
@@ -25,7 +27,11 @@ test_that("checksum mismatches are gtropic_error_checksum", {
 
 test_that("unmatched filter values are gtropic_error_no_match", {
   expect_gtropic_error(
-    match_values("Atlantis", c("Example Coast", "Example Bay"), arg = "ADM2_NAME"),
+    match_values(
+      "Atlantis",
+      c("Example Coast", "Example Bay"),
+      arg = "ADM2_NAME"
+    ),
     "gtropic_error_no_match"
   )
   expect_gtropic_error(
@@ -74,12 +80,17 @@ test_that("units moving across a polygon boundary are gtropic_warning_polygon", 
   ))
   pop <- function(lat) {
     tibble::tibble(
-      ADM2_ID = "PHL.1.1", POP_CENTROID_LAT = lat, POP_CENTROID_LON = 125
+      ADM2_ID = "PHL.1.1",
+      POP_CENTROID_LAT = lat,
+      POP_CENTROID_LON = 125
     )
   }
   w <- expect_warning(
-    resolve_polygon(polygon, list("2001" = pop(11), "2002" = pop(13)),
-      candidate_ids = "PHL.1.1", quiet = TRUE
+    resolve_polygon(
+      polygon,
+      list("2001" = pop(11), "2002" = pop(13)),
+      candidate_ids = "PHL.1.1",
+      quiet = TRUE
     ),
     class = "gtropic_warning_polygon"
   )
@@ -87,7 +98,12 @@ test_that("units moving across a polygon boundary are gtropic_warning_polygon", 
 })
 
 test_that("accessors reject objects that are not gtropic_data", {
-  for (f in list(gtropic_manifest, gtropic_filters, gtropic_diagnostics, gtropic_availability)) {
+  for (f in list(
+    gtropic_manifest,
+    gtropic_filters,
+    gtropic_diagnostics,
+    gtropic_availability
+  )) {
     expect_error(f(list()), "must be a <gtropic_data> object")
   }
 })
