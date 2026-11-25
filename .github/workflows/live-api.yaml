@@ -84,6 +84,7 @@ jobs:
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     permissions:
+      # Open or comment on the "upstream" issue; nothing else.
       issues: write
     steps:
       - name: Open or update the upstream issue
