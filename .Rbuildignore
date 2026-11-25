@@ -30,3 +30,4 @@
 ^revdep$
 ^\.vscode$
 ^\.gitleaks\.toml$
+^\.git-blame-ignore-revs$
