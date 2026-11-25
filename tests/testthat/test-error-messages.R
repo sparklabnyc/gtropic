@@ -61,6 +61,8 @@ test_that("a rejected manifest says which field is wrong", {
 test_that("common argument errors in exported functions read well", {
   local_reproducible_output(width = 80)
   expect_snapshot(gtropic_manifest(list()), error = TRUE)
-  expect_snapshot(gtropic_data(quiet = "yes"), error = TRUE)
+  # `tables` is named so the result does not depend on whether sf is
+  # installed (without it, the default leaves out "geometry" with a message).
+  expect_snapshot(gtropic_data(tables = "wind", quiet = "yes"), error = TRUE)
   expect_snapshot(gtropic_data(tables = "winds"), error = TRUE)
 })

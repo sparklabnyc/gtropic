@@ -74,7 +74,7 @@
 ---
 
     Code
-      gtropic_data(quiet = "yes")
+      gtropic_data(tables = "wind", quiet = "yes")
     Condition
       Error in `gtropic_data()`:
       ! `quiet` must be a single `TRUE` or `FALSE` value.
