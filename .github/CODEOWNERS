@@ -1,0 +1,11 @@
+# Code owners (Plan 01 INFRA-09, Plan 05 SEC-11). GitHub asks them to review
+# every pull request that touches their files; the ruleset on main can require
+# their approval. An owner needs write access to the repository to count.
+# The last matching pattern wins.
+
+# Everything: the package authors.
+*               @lawrence-chillrud @LincoleJ @MajdAbid @geanders @rmp15
+
+# Workflows, repository configuration and package metadata: the maintainers.
+/.github/       @lawrence-chillrud @rmp15
+/DESCRIPTION    @lawrence-chillrud @rmp15
