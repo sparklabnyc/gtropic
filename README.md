@@ -20,7 +20,17 @@ recomputes nothing.
 
 ## Installation
 
-Install the development version from GitHub:
+Install the development version from R-universe, which provides binary
+packages:
+
+``` r
+install.packages(
+  "gtropic",
+  repos = c("https://sparklabnyc.r-universe.dev", "https://cloud.r-project.org")
+)
+```
+
+or from GitHub:
 
 ``` r
 # install.packages("pak")
