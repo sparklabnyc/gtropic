@@ -1,8 +1,26 @@
 url: https://sparklabnyc.github.io/gtropic/
+# Released documentation at the root and the development version under /dev/
+# once a release exists (Plan 01 INFRA-12, used by Plan 02).
+development:
+  mode: auto
 template:
   bootstrap: 5
   math-rendering: mathjax
   light-switch: yes
+  # The card shown when a link to the site is shared.
+  opengraph:
+    image:
+      src: man/figures/logo.png
+      alt: "The gtropic hexagon logo: the word G-TROPIC over a satellite image of a tropical cyclone."
+news:
+  # Not on CRAN yet: do not look up release dates there.
+  cran_dates: false
+footer:
+  structure:
+    left: [developed_by, funding]
+    right: built_with
+  components:
+    funding: Funded by Calderone Awards for Junior Faculty Development, Columbia EHS P30 Career Development Award.
 authors:
   Lawrence G. Chillrud:
     href: https://lawrence-chillrud.github.io/

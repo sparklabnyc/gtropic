@@ -1,7 +1,8 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # (pkgdown), split into build and deploy jobs per Plan 01 INFRA-03 (c) and
 # Plan 05 SEC-11: only the deploy job, which never runs on pull requests, can
-# write to the repository.
+# write to the repository. The build fails on pkgdown::check_pkgdown()
+# problems and on broken internal links (INFRA-12).
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
@@ -49,6 +50,14 @@ jobs:
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
+
+      # Fails on broken links within the site, #anchors included (Plan 01
+      # INFRA-12 item 4). Offline: links to other sites are not followed.
+      - name: Check internal links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --include-fragments --no-progress 'docs/**/*.html'
+          fail: true
 
       - name: Upload site
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
