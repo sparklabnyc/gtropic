@@ -771,6 +771,10 @@ fetch_hazards <- function(args, ctx, scope, date_spec) {
       flood <- flood[flood$ADM2_ID %in% adm2_ids, , drop = FALSE]
       flood <- select_flood(links, flood, match = args$flood_match)
     }
+    if (!is.null(flood) && nrow(flood) > 0L) {
+      warnings$flood_reports <- FLOOD_REPORTS_NOTE
+      warn_flood_reports()
+    }
   }
 
   list(

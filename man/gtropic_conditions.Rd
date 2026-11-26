@@ -43,6 +43,9 @@ that may still lag or change.
 filter across the years evaluated.
 \item \code{gtropic_warning_precip_all_missing}: some ADM2 units have no
 non-missing precipitation values (see \link{gtropic_known_limitations}).
+\item \code{gtropic_warning_flood_reports}: the result contains flood rows, which
+record places named in news reports about flooding (see
+\link{gtropic_known_limitations}). Shown once per session.
 \item \code{gtropic_warning_ambiguous_storm_name} and
 \code{gtropic_warning_ambiguous_excluded_storm_name}: a \code{STORM_NAME} matches
 more than one \code{STORM_ID}.

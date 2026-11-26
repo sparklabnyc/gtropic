@@ -4,8 +4,10 @@
 \alias{gtropic_known_limitations}
 \title{Known G-TROPIC data limitations}
 \description{
-Documents temporary limitations in the published G-TROPIC source data that
-can affect retrievals and maps.
+Documents limitations in the published G-TROPIC source data that can
+affect retrievals and maps: precipitation gaps for small or coastal units,
+and flood data that record places named in news reports rather than
+mapped flood extent.
 }
 \details{
 \subsection{Precipitation for small or coastal ADM2 units}{
@@ -27,6 +29,72 @@ list of identifiers. It will therefore stop appearing when corrected source
 data provide precipitation for those units. Other temporary source-data gaps
 can also produce the same diagnostic.
 }
+
+\subsection{Flood exposure from news reports}{
+
+G-TROPIC's flood data come from Groundsource (Mayo et al. 2026), a dataset
+of flood events extracted from news articles. An AI model reads each
+article, picks out the place and date of the flooding, and looks up that
+place's boundary on Google Maps. The place can be a street, a
+neighbourhood, a town, a county or a whole province. Each flood polygon is
+therefore the outline of a place named in a news report about flooding,
+not a map of where the water was, and one flood appears once for every
+place its coverage names.
+
+G-TROPIC overlays each polygon on each ADM2 unit and publishes one row per
+polygon and unit. gtropic returns three of its columns under names that say
+what they measure; the files on Harvard Dataverse and the codebook keep the
+published names:
+\itemize{
+\item \code{PROP_AREA_IN_FLOOD_REPORT} (published as \code{PROP_FLOODED_AREA}): the share
+of the unit's area inside the reported place.
+\item \code{PROP_POP_IN_FLOOD_REPORT} (published as \code{PROP_FLOODED_POP}): the share of
+the unit's population inside the reported place.
+\item \code{POP_CENTROID_IN_FLOOD_REPORT} (published as \code{FLOODED_POP_CENTROID}):
+whether the unit's population-weighted centroid lies inside the reported
+place.
+}
+
+These values mostly reflect how precisely a report named a place, not how
+much of a unit flooded:
+\itemize{
+\item A report naming a whole county gives that county a share near 1, even
+when the flooding it describes was local.
+\item A place reported neighbourhood by neighbourhood gives many small shares.
+\item Summarising a unit by its largest share ignores all its other reports.
+\item An outline that crosses a border gives a small share to a neighbouring
+unit where nothing was reported.
+}
+
+For Hurricane Harvey (2017), the largest share is 99\% for Bexar County
+(San Antonio) but 19\% for Harris County (Houston), the centre of the
+catastrophic flooding. The same applies to the population measures.
+
+As noted by Groundsource, flood data is also both spatially and temporally
+biased: flood events in regions and time periods with more accurate
+reporting are over-represented, while those lacking in news coverage are
+under-represented. The record covers 2000-01-01 to 2026-01-22. Care should
+be taken when interpreting and utilizing G-TROPIC flood exposure metrics,
+especially when comparing places, countries or years.
+
+What the rows support most directly is whether a flood was reported in a
+unit during a storm's flood window. The default exposure map of
+\code{\link[=gtropic_plot]{gtropic_plot()}} shows this as "Flood reported" or "No flood reported"
+(see its Details); an outline crossing a border can still mark a
+neighbouring unit. Future G-TROPIC releases are planned to resolve this
+with a new flood exposure metric.
+
+\code{\link[=gtropic_data]{gtropic_data()}} warns once per session when it returns flood rows (class
+\code{gtropic_warning_flood_reports}, see \link{gtropic_conditions}), and every such
+result keeps the note in \code{gtropic_diagnostics(x)$flood_reports}. Maps with
+a flood panel carry a short version of it in their automatic caption.
+}
+}
+\references{
+Mayo, R., Zlydenko, O., Bootbool, M., Fronman, S., Gilon, O., Hassidim, A.,
+Kratzert, F., Loike, G., Matias, Y., Nakar, Y., Nearing, G., Sayag, R.,
+Sicherman, A., Zemach, I. and Cohen, D. (2026). Groundsource: A Dataset of
+Flood Events from News. EarthArXiv preprint. \doi{10.31223/X5RR2K}
 }
 \seealso{
 \code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_plot]{gtropic_plot()}}, \code{\link[=gtropic_diagnostics]{gtropic_diagnostics()}}

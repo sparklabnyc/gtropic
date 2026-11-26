@@ -96,3 +96,59 @@ plot_flood_binary_label <- function(spec) {
     ")"
   )
 }
+
+#' The flood-data note, as kept in the diagnostics of a result
+#' @keywords internal
+#' @noRd
+FLOOD_REPORTS_NOTE <- paste(
+  "The raw flood data from Groundsource consists of polygons of places named",
+  "in news reports about flooding, rather than detailed flood maps. As noted",
+  "by Groundsource, flood data is both spatially and temporally biased, such",
+  "that flood events in regions and time periods with more accurate reporting",
+  "are over-represented while those lacking in news coverage are",
+  "under-represented. As such, care should be taken when interpreting and",
+  "utilizing G-TROPIC flood exposure metrics. See ?gtropic_known_limitations."
+)
+
+#' Warn that flood rows describe news reports, once per session
+#'
+#' @param call Calling environment for warning reporting.
+#' @param id Frequency identifier; tests pass their own.
+#' @return `NULL`, invisibly.
+#' @keywords internal
+#' @noRd
+warn_flood_reports <- function(
+  call = rlang::caller_env(),
+  id = "gtropic_flood_reports"
+) {
+  gtropic_warn(
+    c(
+      "The raw flood data from Groundsource consists of polygons of places
+       named in news reports about flooding, rather than detailed flood
+       maps.",
+      "!" = "As noted by Groundsource, flood data is both spatially and
+             temporally biased, such that flood events in regions and time
+             periods with more accurate reporting are over-represented while
+             those lacking in news coverage are under-represented.",
+      "i" = "As such, care should be taken when interpreting and utilizing
+             G-TROPIC flood exposure metrics. See
+             {.code ?gtropic_known_limitations}."
+    ),
+    class = "gtropic_warning_flood_reports",
+    call = call,
+    .frequency = "once",
+    .frequency_id = id
+  )
+  invisible(NULL)
+}
+
+#' The flood-data note used in plot captions
+#' @keywords internal
+#' @noRd
+plot_flood_reports_caption <- function() {
+  paste0(
+    "Flood data: places named in news reports (Groundsource), not flood maps.",
+    "\nSpatially and temporally biased by news coverage; see ",
+    "?gtropic_known_limitations."
+  )
+}

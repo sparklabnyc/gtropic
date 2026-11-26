@@ -64,6 +64,15 @@
 
 ## New features
 
+* `gtropic_data()` warns, once per session, when it returns flood rows: the
+  Groundsource flood data are polygons of places named in news reports about
+  flooding, not flood maps, and are spatially and temporally biased by news
+  coverage. The warning has class `gtropic_warning_flood_reports`, every such
+  result keeps the note in `gtropic_diagnostics(x)$flood_reports`, and maps
+  with a flood panel carry a short version in their caption.
+  `?gtropic_known_limitations` has a new section on what the flood values
+  measure.
+
 * `citation("gtropic")` cites the package and the G-TROPIC historical
   dataset (with its DOI), and asks that data from the current-year dataset be
   cited with the DOI and version `gtropic_manifest()` reports.

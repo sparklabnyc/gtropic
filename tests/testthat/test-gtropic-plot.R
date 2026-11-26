@@ -232,6 +232,11 @@ test_that("caption provenance and hazard settings come from the supplied data", 
         "?gtropic_known_limitations."
       ),
       "Flood parameters: radius=400 km, window=-2/+1 days, aggregate=max, match=start",
+      "Flood data: places named in news reports (Groundsource), not flood maps.",
+      paste0(
+        "Spatially and temporally biased by news coverage; see ",
+        "?gtropic_known_limitations."
+      ),
       "CRS: EPSG:4326"
     )
   )

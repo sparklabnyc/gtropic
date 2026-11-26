@@ -124,6 +124,7 @@ plot_caption <- function(info, caption = NULL, crs = NULL) {
   metrics <- info$metrics
   pieces <- plot_provenance_caption(info)
   settings <- info$hazard_settings %||% list()
+  flood_noted <- FALSE
   for (i in seq_len(nrow(metrics))) {
     spec <- metrics[i, ]
     hazard <- switch(
@@ -141,6 +142,11 @@ plot_caption <- function(info, caption = NULL, crs = NULL) {
       pieces,
       plot_hazard_caption(hazard, hazard_settings, spec, info)
     )
+    if (hazard == "flood" && !flood_noted) {
+      # Once per map, after the first flood panel's parameters.
+      pieces <- c(pieces, plot_flood_reports_caption())
+      flood_noted <- TRUE
+    }
     if (hazard == "precip") {
       retained <- info$warnings$precip_all_missing_adm2_ids %||% character(0)
       pieces <- c(

@@ -1,3 +1,12 @@
+# The flood note is shown once per session, so whether a query shows it
+# depends on test order; tests that are not about it silence it by class.
+suppress_flood_reports <- function(expr) {
+  withCallingHandlers(
+    expr,
+    gtropic_warning_flood_reports = function(w) invokeRestart("muffleWarning")
+  )
+}
+
 test_that("published flood columns are renamed and other columns kept", {
   published <- tibble::tibble(
     ADM2_ID = "A",
@@ -33,14 +42,14 @@ test_that("published flood columns are renamed and other columns kept", {
 
 test_that("gtropic_data() returns flood columns under the gtropic names", {
   local_golden_collection()
-  res <- gtropic_data(
+  res <- suppress_flood_reports(gtropic_data(
     WHO_ENTITY = "United States",
     date_range = c("2002-01-01", "2003-12-31"),
     tables = c("wind", "flood", "storm_metadata"),
     cache = FALSE,
     quiet = TRUE,
     confirm = FALSE
-  )
+  ))
   expect_gt(nrow(res$flood), 0L)
   expect_true(all(unname(FLOOD_COLUMN_NAMES) %in% names(res$flood)))
   expect_false(any(names(FLOOD_COLUMN_NAMES) %in% names(res$flood)))
@@ -172,4 +181,73 @@ test_that("static and interactive default maps label the flood panel", {
     function(call) call$args[[5L]]
   ))
   expect_true(any(grepl("<b>Flood reported:</b>", popups, fixed = TRUE)))
+})
+
+test_that("gtropic_data() warns about flood rows and keeps the note", {
+  withr::local_options(rlib_warning_verbosity = "verbose")
+  local_golden_collection()
+  query <- function(...) {
+    gtropic_data(
+      WHO_ENTITY = "United States",
+      ...,
+      cache = FALSE,
+      quiet = TRUE,
+      confirm = FALSE
+    )
+  }
+  expect_warning(
+    res <- query(
+      date_range = c("2002-01-01", "2003-12-31"),
+      tables = c("wind", "flood", "storm_metadata")
+    ),
+    "places named in news reports",
+    class = "gtropic_warning_flood_reports"
+  )
+  expect_gt(nrow(res$flood), 0L)
+  expect_identical(gtropic_diagnostics(res)$flood_reports, FLOOD_REPORTS_NOTE)
+
+  # No flood table, no warning and no note.
+  no_flood <- query(
+    date_range = c("2002-01-01", "2003-12-31"),
+    tables = c("wind", "storm_metadata")
+  )
+  expect_null(gtropic_diagnostics(no_flood)$flood_reports)
+})
+
+test_that("the flood warning is shown once per session", {
+  withr::local_options(rlib_warning_verbosity = "default")
+  expect_warning(
+    warn_flood_reports(id = "gtropic_flood_reports_test"),
+    class = "gtropic_warning_flood_reports"
+  )
+  expect_no_warning(warn_flood_reports(id = "gtropic_flood_reports_test"))
+})
+
+test_that("maps with flood panels carry the flood note once", {
+  skip_if_not_installed("ggplot2")
+  skip_if_not_installed("sf")
+  skip_if_not_installed("ggnewscale")
+  x <- gtropic_example()
+  count_lines <- function(p) {
+    lines <- strsplit(p$labels$caption, "\n", fixed = TRUE)[[1L]]
+    sum(startsWith(lines, "Flood data: places named in news reports"))
+  }
+  two_flood_panels <- gtropic_plot(
+    x,
+    metric = c("PROP_AREA_IN_FLOOD_REPORT", "PROP_POP_IN_FLOOD_REPORT"),
+    basemap = "none",
+    track = FALSE
+  )
+  expect_identical(count_lines(two_flood_panels), 1L)
+  expect_match(
+    two_flood_panels$labels$caption,
+    "Flood parameters:[^\n]*\nFlood data: places named in news reports"
+  )
+  wind_only <- gtropic_plot(
+    x,
+    metric = "VMAX_SUST_MS",
+    basemap = "none",
+    track = FALSE
+  )
+  expect_identical(count_lines(wind_only), 0L)
 })

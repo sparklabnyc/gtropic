@@ -36,6 +36,9 @@
 #'   filter across the years evaluated.
 #' * `gtropic_warning_precip_all_missing`: some ADM2 units have no
 #'   non-missing precipitation values (see [gtropic_known_limitations]).
+#' * `gtropic_warning_flood_reports`: the result contains flood rows, which
+#'   record places named in news reports about flooding (see
+#'   [gtropic_known_limitations]). Shown once per session.
 #' * `gtropic_warning_ambiguous_storm_name` and
 #'   `gtropic_warning_ambiguous_excluded_storm_name`: a `STORM_NAME` matches
 #'   more than one `STORM_ID`.
