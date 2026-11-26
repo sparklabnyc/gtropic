@@ -125,6 +125,10 @@
   (`metric = "PROP_AREA_IN_FLOOD_REPORT"`) to map the share. Yes/no keys
   (`binary = TRUE`) now centre each class label under its colour.
 
+* Interactive map popups round values and storm distances to one decimal
+  place. Flood shares keep two significant figures, so a small reported share
+  does not read as 0.
+
 * Queries use much less memory. Rows are filtered to the requested storms and
   ADM2 units, and files are read only for the columns a query uses, before
   anything is converted to R. Each file is filtered one row group at a time,

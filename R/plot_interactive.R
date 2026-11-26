@@ -357,12 +357,27 @@ plot_interactive_legend <- function(
 }
 
 #' Show prepared values and published distances, never track-derived distances
+#'
+#' Values and distances are rounded to one decimal place. Flood shares keep two
+#' significant figures instead, so a small reported share never reads as 0.
 #' @keywords internal
 #' @noRd
 plot_interactive_popup <- function(data, spec, info) {
-  field <- function(column) {
+  one_decimal <- function(x) round(x, 1L)
+  flood_share <- identical(info$type, "exposure") &&
+    !identical(as.character(spec$aggregate), "n") &&
+    as.character(spec$metric) %in% names(FLOOD_REPORT_SHARE_LABELS)
+  value_rounding <- if (flood_share) {
+    function(x) signif(x, 2L)
+  } else {
+    one_decimal
+  }
+  field <- function(column, rounding = NULL) {
     value <- data[[column]] %||% rep(NA_character_, nrow(data))
     if (is.numeric(value)) {
+      if (!is.null(rounding)) {
+        value <- rounding(value)
+      }
       value <- plot_format_number(value)
     }
     plot_interactive_escape(value)
@@ -390,7 +405,7 @@ plot_interactive_popup <- function(data, spec, info) {
     "<br/><b>",
     plot_interactive_escape(spec$metric),
     ":</b> ",
-    field("value"),
+    field("value", value_rounding),
     " ",
     plot_interactive_escape(unit),
     if (isTRUE(spec$binary)) {
@@ -407,7 +422,7 @@ plot_interactive_popup <- function(data, spec, info) {
     "<br/><b>",
     distance_label,
     ":</b> ",
-    field("STORM_DIST_KM"),
+    field("STORM_DIST_KM", one_decimal),
     " km"
   )
 }

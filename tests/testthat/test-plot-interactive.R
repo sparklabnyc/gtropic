@@ -149,3 +149,46 @@ test_that("interactive maps escape HTML in names, category labels and units", {
     "track_map_key"
   )
 })
+
+test_that("interactive popups round values and distances", {
+  rows <- tibble::tibble(
+    ADM2_NAME = c("A", "B"),
+    WHO_ENTITY = "X",
+    STORM_ID = "S1",
+    value = c(28.02502, 0.0337),
+    STORM_DIST_KM = c(312.468, 9.04)
+  )
+  popup <- function(metric, value, type = "exposure", unit = "") {
+    rows$value <- value
+    spec <- tibble::tibble(
+      metric = metric,
+      aggregate = "max",
+      value_unit = unit,
+      binary = FALSE
+    )
+    plot_interactive_popup(rows, spec, list(type = type))
+  }
+
+  wind <- popup("VMAX_SUST_MS", c(28.02502, 0.0337), unit = "m/s")
+  expect_match(wind[1L], "<b>VMAX_SUST_MS:</b> 28 m/s", fixed = TRUE)
+  expect_match(wind[2L], "<b>VMAX_SUST_MS:</b> 0 m/s", fixed = TRUE)
+  expect_match(wind[1L], ":</b> 312.5 km", fixed = TRUE)
+  expect_match(wind[2L], ":</b> 9 km", fixed = TRUE)
+
+  # Flood shares keep two significant figures, so a report never reads as 0.
+  share <- popup("PROP_AREA_IN_FLOOD_REPORT", c(0.0337, 0.000006037))
+  expect_match(
+    share[1L],
+    "<b>PROP_AREA_IN_FLOOD_REPORT:</b> 0.034 ",
+    fixed = TRUE
+  )
+  expect_match(share[2L], ":</b> 0.000006 ", fixed = TRUE)
+
+  # Counts of flood observations are whole numbers, kept as they are.
+  count <- popup("PROP_AREA_IN_FLOOD_REPORT", c(123, 4), type = "count")
+  expect_match(
+    count[1L],
+    "<b>PROP_AREA_IN_FLOOD_REPORT:</b> 123 ",
+    fixed = TRUE
+  )
+})
