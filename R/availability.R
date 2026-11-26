@@ -86,8 +86,8 @@ availability_metadata <- function(
       applies_to = intersect(tables, "precip")
     ),
     groundsource_flood = list(
-      available_from = as.Date("2000-01-01"),
-      available_through = as.Date("2026-01-22"),
+      available_from = GROUNDSOURCE_FLOOD_PERIOD[1L],
+      available_through = GROUNDSOURCE_FLOOD_PERIOD[2L],
       applies_to = intersect(tables, "flood")
     )
   )

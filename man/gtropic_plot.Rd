@@ -49,7 +49,9 @@ maps plot exposure-day or exposure-storm counts that meet exposure-specific
 \item{metric}{A supported published metric name, or a character vector of metric
 names to plot. The \code{metric}s are plotted in the order they are given.
 For \code{type = "exposure"}, \code{NULL} selects every available core metric in this
-order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_AREA_IN_FLOOD_REPORT"}.
+order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_AREA_IN_FLOOD_REPORT"},
+the last drawn as a yes/no flood-report panel (see Details); name it in
+\code{metric} to map the share itself.
 For \code{type = "count"}, it selects the first available count default;
 \code{type = "track"} selects \code{"USA_WIND"}. Track maps require exactly one of
 \code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_metrics]{gtropic_metrics()}} for all available
@@ -86,7 +88,9 @@ threshold is required when no default exists. This argument is ignored when
 
 \item{binary}{Logical; default \code{FALSE}. \code{TRUE} shows exposure and count maps
 as exposed or not exposed, using \code{threshold}, instead of a continuous
-scale. Ignored for track maps.}
+scale; flood panels show "Flood reported" or "No flood reported". The
+default exposure map's flood panel is yes/no even when \code{binary = FALSE}.
+Ignored for track maps.}
 
 \item{wind_categories}{Optional key that classifies aggregated wind values
 into categories instead of a continuous scale: a data frame with
@@ -207,6 +211,15 @@ newline-separated source, retrieval, dataset-provenance, hazard-parameter,
 known source-data limitation, track-interval, and plotting-CRS lines as
 applicable. Hazard radii and windows are derived from rows that contributed
 to the plot.
+
+Flood rows record places named in news reports about flooding, not mapped
+flood extent (\link{gtropic_known_limitations}). A yes/no flood panel therefore
+shows "Flood reported" when at least one report's place covers a share of
+the unit above the threshold (default: more than 0) in a matched storm's
+flood window, and "No flood reported" when the unit was in a storm's flood
+field, its window lies inside the Groundsource record (2000-01-01 to
+2026-01-22) and no report matched. Units whose windows fall outside the
+record have no flood data and are shown as missing.
 
 Track paths are drawn from every supplied observation. By default, constant-
 size points use \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} categories derived from

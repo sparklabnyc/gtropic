@@ -106,6 +106,16 @@
 
 ## Improvements
 
+* The default exposure map (`gtropic_plot(x)`) draws its flood panel as yes
+  or no: "Flood reported" when a flood report's place covers part of the unit
+  in a storm's flood window, and "No flood reported" when the unit was in the
+  flood field, inside the Groundsource record, with no report. It used to map
+  the largest single report's share, which reflects how precisely a news
+  report named a place rather than how much of the unit flooded
+  (`?gtropic_known_limitations`). Name the metric
+  (`metric = "PROP_AREA_IN_FLOOD_REPORT"`) to map the share. Yes/no keys
+  (`binary = TRUE`) now centre each class label under its colour.
+
 * Queries use much less memory. Rows are filtered to the requested storms and
   ADM2 units, and files are read only for the columns a query uses, before
   anything is converted to R. Each file is filtered one row group at a time,

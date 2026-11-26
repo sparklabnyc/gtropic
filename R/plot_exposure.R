@@ -57,7 +57,7 @@ build_exposure_plot <- function(
           na.value = "grey90",
           guide = "none"
         )
-    } else if (info$binary) {
+    } else if (isTRUE(spec$binary)) {
       p <- p +
         ggplot2::geom_sf(
           data = part,
@@ -121,7 +121,11 @@ build_exposure_plot <- function(
       cartography$bbox,
       info$track_legend_position,
       category_config,
-      if (info$type == "count" && !info$binary) count_categories else NULL
+      if (info$type == "count" && !isTRUE(spec$binary)) {
+        count_categories
+      } else {
+        NULL
+      }
     )
   }
   if (isTRUE(info$track) && !is.null(cartography$tracks)) {
@@ -161,7 +165,7 @@ plot_add_metric_key <- function(
   categorical <- !is.null(category_config) || !is.null(category_values)
   values <- if (categorical) {
     category_values %||% category_config$key$category
-  } else if (info$binary) {
+  } else if (isTRUE(spec$binary)) {
     c(FALSE, TRUE)
   } else {
     values <- data$value[is.finite(data$value)]
@@ -195,9 +199,16 @@ plot_add_metric_key <- function(
     labels <- key[c(1L, nrow(key)), , drop = FALSE]
     labels$x <- layout$label_x
     labels$y <- layout$label_y
-    labels$hjust <- layout$label_hjust
-    labels$label <- if (info$binary) {
-      c("Not exposed", "Exposed")
+    # A horizontal yes/no key centres each label under its own tile, so long
+    # class labels ("No flood reported") do not run into each other.
+    horizontal <- length(unique(layout$x)) > 1L
+    labels$hjust <- if (isTRUE(spec$binary) && horizontal) {
+      0.5
+    } else {
+      layout$label_hjust
+    }
+    labels$label <- if (isTRUE(spec$binary)) {
+      plot_binary_labels(spec)
     } else {
       plot_format_key_number(labels$value)
     }

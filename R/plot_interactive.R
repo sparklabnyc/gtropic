@@ -45,25 +45,26 @@ build_interactive_plot <- function(
     spec <- info$metrics[i, ]
     part <- mapped[mapped$metric == spec$metric, , drop = FALSE]
     category_config <- info$wind_categories[[as.character(spec$metric)]]
+    binary <- isTRUE(spec$binary)
     values <- if (!is.null(category_config)) {
       part$wind_category
-    } else if (info$binary) {
+    } else if (binary) {
       part$exposed
     } else {
       part$value
     }
-    if (is.null(category_config) && !info$binary) {
+    if (is.null(category_config) && !binary) {
       values[!is.finite(values)] <- NA_real_
     }
     count_categories <- NULL
-    if (info$type == "count" && !info$binary) {
+    if (info$type == "count" && !binary) {
       count_categories <- plot_count_categories(values)
       values <- plot_count_category(values, count_categories)
     }
     scale <- plot_interactive_scale(
       values,
       spec,
-      info$binary,
+      binary,
       category_config,
       count_categories
     )
@@ -312,29 +313,28 @@ plot_interactive_legend <- function(
   category_config = NULL
 ) {
   title <- plot_interactive_escape(category_config$label %||% spec$legend)
+  binary <- isTRUE(spec$binary)
   observed <- if (!is.null(category_config)) {
     category_config$key$category
-  } else if (info$binary) {
+  } else if (binary) {
     c(FALSE, TRUE)
   } else {
     sort(unique(stats::na.omit(values)))
   }
-  if (identical(info$type, "count") && !info$binary) {
+  if (identical(info$type, "count") && !binary) {
     observed <- levels(values)
-  } else if (
-    is.null(category_config) && !info$binary && length(observed) > 1L
-  ) {
+  } else if (is.null(category_config) && !binary && length(observed) > 1L) {
     limits <- range(observed)
     observed <- pretty(limits, n = 5L)
     observed <- observed[observed >= limits[1] & observed <= limits[2]]
     if (!length(observed)) observed <- limits
   }
   labels <- if (
-    !is.null(category_config) || (identical(info$type, "count") && !info$binary)
+    !is.null(category_config) || (identical(info$type, "count") && !binary)
   ) {
     as.character(observed)
-  } else if (info$binary) {
-    c("Not exposed", "Exposed")
+  } else if (binary) {
+    plot_binary_labels(spec)
   } else {
     plot_format_key_number(observed)
   }
@@ -393,7 +393,14 @@ plot_interactive_popup <- function(data, spec, info) {
     field("value"),
     " ",
     plot_interactive_escape(unit),
-    if (info$binary) paste0("<br/><b>Exposed:</b> ", field("exposed")),
+    if (isTRUE(spec$binary)) {
+      paste0(
+        "<br/><b>",
+        plot_interactive_escape(spec$value_label),
+        ":</b> ",
+        field("exposed")
+      )
+    },
     if (!is.null(info$wind_categories[[as.character(spec$metric)]])) {
       paste0("<br/><b>Category:</b> ", field("wind_category"))
     },

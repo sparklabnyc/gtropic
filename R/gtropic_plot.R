@@ -14,7 +14,9 @@
 #' @param metric A supported published metric name, or a character vector of metric
 #'   names to plot. The `metric`s are plotted in the order they are given.
 #'   For `type = "exposure"`, `NULL` selects every available core metric in this
-#'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_AREA_IN_FLOOD_REPORT"`.
+#'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_AREA_IN_FLOOD_REPORT"`,
+#'   the last drawn as a yes/no flood-report panel (see Details); name it in
+#'   `metric` to map the share itself.
 #'   For `type = "count"`, it selects the first available count default;
 #'   `type = "track"` selects `"USA_WIND"`. Track maps require exactly one of
 #'   `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_metrics()] for all available
@@ -46,7 +48,9 @@
 #'   `binary = FALSE` and `type = "exposure"` or `"track"`.
 #' @param binary Logical; default `FALSE`. `TRUE` shows exposure and count maps
 #'   as exposed or not exposed, using `threshold`, instead of a continuous
-#'   scale. Ignored for track maps.
+#'   scale; flood panels show "Flood reported" or "No flood reported". The
+#'   default exposure map's flood panel is yes/no even when `binary = FALSE`.
+#'   Ignored for track maps.
 #' @param wind_categories Optional key that classifies aggregated wind values
 #'   into categories instead of a continuous scale: a data frame with
 #'   `category`, upper `threshold`, constant `unit` and `color` columns, or a
@@ -147,6 +151,15 @@
 #' known source-data limitation, track-interval, and plotting-CRS lines as
 #' applicable. Hazard radii and windows are derived from rows that contributed
 #' to the plot.
+#'
+#' Flood rows record places named in news reports about flooding, not mapped
+#' flood extent ([gtropic_known_limitations]). A yes/no flood panel therefore
+#' shows "Flood reported" when at least one report's place covers a share of
+#' the unit above the threshold (default: more than 0) in a matched storm's
+#' flood window, and "No flood reported" when the unit was in a storm's flood
+#' field, its window lies inside the Groundsource record (2000-01-01 to
+#' 2026-01-22) and no report matched. Units whose windows fall outside the
+#' record have no flood data and are shown as missing.
 #'
 #' Track paths are drawn from every supplied observation. By default, constant-
 #' size points use [gtropic_saffir_simpson()] categories derived from

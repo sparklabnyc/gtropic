@@ -357,6 +357,9 @@ plot_metric_panel_labels <- function(metrics) {
 #' @keywords internal
 #' @noRd
 plot_metric_display_label <- function(spec) {
+  if (plot_is_flood_binary(spec)) {
+    return(plot_flood_binary_label(spec))
+  }
   aggregate <- as.character(spec$aggregate)
   label <- plot_metric_aggregate_label(spec)
   if (!isTRUE(spec$threshold_active)) {

@@ -112,6 +112,7 @@ resolve_plot_metrics <- function(
   palette = NULL,
   direction = NULL
 ) {
+  default_metrics <- is.null(metric)
   registry <- plot_metric_registry(data$codebook)
   candidates <- if (type == "track") {
     registry[registry$table == "tracks", ]
@@ -221,13 +222,23 @@ resolve_plot_metrics <- function(
       out$threshold[out$metric == nm] <- value
     }
   }
-  out$threshold_active <- type == "count" || binary
+  # The default exposure map shows flood as yes/no: whether a flood report
+  # touches the unit, not the reported place's share of it
+  # (?gtropic_known_limitations).
+  out$binary <- rep(binary, nrow(out)) |
+    ((type == "exposure" && default_metrics) & out$table == "flood")
+  out$threshold_active <- type == "count" | out$binary
   out$value_label <- out$label
   out$value_unit <- out$unit
-  if (binary) {
-    out$value_label <- "Exposed"
-    out$value_unit <- ""
-    out$legend <- "Exposed"
+  if (any(out$binary)) {
+    flood_binary <- out$binary & out$table == "flood"
+    out$value_label[out$binary] <- ifelse(
+      flood_binary[out$binary],
+      "Flood reported",
+      "Exposed"
+    )
+    out$value_unit[out$binary] <- ""
+    out$legend[out$binary] <- out$value_label[out$binary]
   }
   missing <- out$metric[out$threshold_active & is.na(out$threshold)]
   if (length(missing)) {
@@ -648,7 +659,7 @@ prepare_plot_data <- function(
         type = type,
         count_unit = count_unit,
         facet_by = facet_by,
-        binary = binary
+        binary = metrics$binary[i]
       )
     })
     out <- dplyr::bind_rows(parts)

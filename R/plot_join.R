@@ -67,6 +67,13 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
   rows <- dplyr::select(rows, -dplyr::any_of(c(".plot_start", ".plot_end")))
   rows$metric <- rep(spec$metric, nrow(rows))
   rows$value <- as.numeric(rows[[spec$metric]])
+  if (spec$table == "flood") {
+    # An in-field pair whose window lies inside the Groundsource record but
+    # matched no flood row had no flood report; outside the record, nothing
+    # is known. Only yes/no flood panels read this.
+    rows$.no_flood_report <- is.na(rows$.plot_row_id) &
+      flood_window_recorded(rows$FLOOD_WINDOW_START, rows$FLOOD_WINDOW_END)
+  }
   rows
 }
 
@@ -115,7 +122,13 @@ plot_aggregate_metric <- function(
       },
       logical(1)
     )
-    omit <- c("value", "exposed", ".plot_row_id", spec$metric)
+    omit <- c(
+      "value",
+      "exposed",
+      ".plot_row_id",
+      ".no_flood_report",
+      spec$metric
+    )
     columns <- union(keys, setdiff(names(group)[constant], omit))
     out <- group[1L, columns, drop = FALSE]
     if ("STORM_DIST_KM" %in% names(group)) {
@@ -130,6 +143,9 @@ plot_aggregate_metric <- function(
     }
     if (binary) {
       qualified <- plot_threshold_values(group$value, spec)
+      if (".no_flood_report" %in% names(group)) {
+        qualified[group$.no_flood_report %in% TRUE] <- FALSE
+      }
       out$exposed <- if (all(is.na(qualified))) {
         NA
       } else {
