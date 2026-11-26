@@ -178,7 +178,11 @@ storm_rain |>
 
 ## Flood matching
 
-Flood events span an interval, from `FLOOD_START_DATE` to `FLOOD_END_DATE`:
+Each flood row is one place named in a news report about flooding (from
+Groundsource), paired with one unit, so a single flood appears once for every
+place its coverage names. `PROP_AREA_IN_FLOOD_REPORT` is the share of the unit
+inside that place, not the share that flooded (`?gtropic_known_limitations`).
+Each record spans an interval, from `FLOOD_START_DATE` to `FLOOD_END_DATE`:
 
 ```{r}
 india_19$flood

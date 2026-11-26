@@ -48,6 +48,15 @@ usa_25 <- gtropic_data(WHO_ENTITY = "United States", date_range = 2025)
 #>   finer-resolution ERA5 precipitation data.
 #> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
 #>   `gtropic_diagnostics()`.
+#> Warning in fetch_hazards(args, ctx, scope, date_spec): The raw flood data from Groundsource consists of polygons of places named in
+#> news reports about flooding, rather than detailed flood maps.
+#> ! As noted by Groundsource, flood data is both spatially and temporally biased,
+#>   such that flood events in regions and time periods with more accurate
+#>   reporting are over-represented while those lacking in news coverage are
+#>   under-represented.
+#> ℹ As such, care should be taken when interpreting and utilizing G-TROPIC flood
+#>   exposure metrics. See `?gtropic_known_limitations`.
+#> This warning is displayed once per session.
 
 usa_25
 #>
@@ -70,7 +79,7 @@ usa_25
 #> • codebook: 7 entries (list)
 #> • links: 1068 rows x 12 columns
 #>
-#> ℹ Use `summary()` for detail; 1 warning(s) recorded, see gtropic_diagnostics().
+#> ℹ Use `summary()` for detail; 2 warning(s) recorded, see gtropic_diagnostics().
 ```
 
 The printout gives the dataset version, the genesis dates covered, how many
@@ -88,7 +97,7 @@ summary(usa_25)
 #> • Server: "dataverse.harvard.edu"
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
 #> • Files retrieved: 10 (189.1 MB)
-#> • Retrieved at: 2026-11-24 05:12:50 UTC
+#> • Retrieved at: 2026-11-26 17:16:27 UTC
 #>
 #> ── Tables ──
 #>
@@ -118,6 +127,13 @@ summary(usa_25)
 #> • precip_all_missing_adm2_ids: 52423323B10065184809144,
 #> 52423323B18524543454126, 52423323B37020317002794, 52423323B47905601981877,
 #> 52423323B81395860012193, and ... and 2 more
+#> • flood_reports: The raw flood data from Groundsource consists of polygons of
+#> places named in news reports about flooding, rather than detailed flood maps.
+#> As noted by Groundsource, flood data is both spatially and temporally biased,
+#> such that flood events in regions and time periods with more accurate reporting
+#> are over-represented while those lacking in news coverage are
+#> under-represented. As such, care should be taken when interpreting and
+#> utilizing G-TROPIC flood exposure metrics. See ?gtropic_known_limitations.
 ```
 
 Three defaults shape the result:
@@ -173,7 +189,7 @@ usa_25$wind
 | --- | --- |
 | `wind` | unit and storm with nonzero wind, within `wind_radius_km` |
 | `precip` | unit and local date inside a storm's precipitation window |
-| `flood` | flood event matched to a storm's flood window |
+| `flood` | unit and place named in a flood news report, matched to a storm's flood window |
 | `zero_pairs` | unit and storm with no measurable wind |
 | `pop` | unit and year: population and population-weighted centroid |
 | `tracks` | storm-track observation |
@@ -190,6 +206,15 @@ shorter `tables` vector to download and hold less.
 > have no non-missing precipitation values because no ERA5-Land grid cell was
 > assigned. Retrievals and automatic map captions identify affected units; see
 > `?gtropic_known_limitations` for details and the planned dataset correction.
+
+> **Flood data limitation:** The raw flood data from Groundsource consists of
+> polygons of places named in news reports about flooding, rather than
+> detailed flood maps, and is both spatially and temporally biased by news
+> coverage. `PROP_AREA_IN_FLOOD_REPORT` and `PROP_POP_IN_FLOOD_REPORT`
+> (published as `PROP_FLOODED_AREA` and `PROP_FLOODED_POP`) are the share of a
+> unit inside one reported place, not its flooded area or population.
+> `gtropic_data()` warns about this once per session; see
+> `?gtropic_known_limitations`.
 
 ## The links table
 
@@ -238,7 +263,7 @@ gtropic_manifest(usa_25)
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Files recorded: 10
 #> • Total size: 189.1 MB
-#> • Retrieved: 2026-11-24 05:12:50 UTC
+#> • Retrieved: 2026-11-26 17:16:27 UTC
 #> • Package version: "0.0.0.9002"
 #>
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to
@@ -283,6 +308,9 @@ gtropic_diagnostics(usa_25)
 #> [3] "52423323B37020317002794" "52423323B47905601981877"
 #> [5] "52423323B81395860012193" "52423323B84565222808084"
 #> [7] "52423323B95364314409049"
+#>
+#> $flood_reports
+#> [1] "The raw flood data from Groundsource consists of polygons of places named in news reports about flooding, rather than detailed flood maps. As noted by Groundsource, flood data is both spatially and temporally biased, such that flood events in regions and time periods with more accurate reporting are over-represented while those lacking in news coverage are under-represented. As such, care should be taken when interpreting and utilizing G-TROPIC flood exposure metrics. See ?gtropic_known_limitations."
 ```
 
 The manifest replays the same retrieval later, even after the dataset has been

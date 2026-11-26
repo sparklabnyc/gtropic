@@ -277,26 +277,32 @@ storm_rain |>
 
 ## Flood matching
 
-Flood events span an interval, from `FLOOD_START_DATE` to `FLOOD_END_DATE`:
+Each flood row is one place named in a news report about flooding (from
+Groundsource), paired with one unit, so a single flood appears once for every
+place its coverage names. `PROP_AREA_IN_FLOOD_REPORT` is the share of the unit
+inside that place, not the share that flooded (`?gtropic_known_limitations`).
+Each record spans an interval, from `FLOOD_START_DATE` to `FLOOD_END_DATE`:
 
 
 ``` r
 india_19$flood
 #> # A tibble: 340 × 7
-#>    ADM2_ID            FLOOD_ID FLOOD_START_DATE FLOOD_END_DATE PROP_FLOODED_AREA
-#>    <chr>              <chr>    <date>           <date>                     <dbl>
-#>  1 76128533B72541188… 5393f9b… 2019-05-01       2019-05-01             0.00197
-#>  2 76128533B79750857… f76129e… 2019-05-03       2019-05-04             0.00329
-#>  3 76128533B52802748… ec9ea5e… 2019-05-03       2019-05-04             0.0899
-#>  4 76128533B70842759… ec9ea5e… 2019-05-03       2019-05-04             0.0000322
-#>  5 76128533B98951704… e938903… 2019-05-03       2019-05-03             0.0283
-#>  6 76128533B28605354… 8d35cc4… 2019-05-03       2019-05-04             0.0116
-#>  7 76128533B22077262… 8d35cc4… 2019-05-03       2019-05-04             0.00355
-#>  8 76128533B72507508… 8d35cc4… 2019-05-03       2019-05-04             0.944
-#>  9 76128533B93453964… 8d35cc4… 2019-05-03       2019-05-04             0.00338
-#> 10 76128533B77719785… 7f9bde2… 2019-05-03       2019-05-03             0.00233
+#>    ADM2_ID       FLOOD_ID FLOOD_START_DATE FLOOD_END_DATE PROP_AREA_IN_FLOOD_R…¹
+#>    <chr>         <chr>    <date>           <date>                          <dbl>
+#>  1 76128533B725… 5393f9b… 2019-05-01       2019-05-01                  0.00197
+#>  2 76128533B797… f76129e… 2019-05-03       2019-05-04                  0.00329
+#>  3 76128533B528… ec9ea5e… 2019-05-03       2019-05-04                  0.0899
+#>  4 76128533B708… ec9ea5e… 2019-05-03       2019-05-04                  0.0000322
+#>  5 76128533B989… e938903… 2019-05-03       2019-05-03                  0.0283
+#>  6 76128533B286… 8d35cc4… 2019-05-03       2019-05-04                  0.0116
+#>  7 76128533B220… 8d35cc4… 2019-05-03       2019-05-04                  0.00355
+#>  8 76128533B725… 8d35cc4… 2019-05-03       2019-05-04                  0.944
+#>  9 76128533B934… 8d35cc4… 2019-05-03       2019-05-04                  0.00338
+#> 10 76128533B777… 7f9bde2… 2019-05-03       2019-05-03                  0.00233
 #> # ℹ 330 more rows
-#> # ℹ 2 more variables: PROP_FLOODED_POP <dbl>, FLOODED_POP_CENTROID <lgl>
+#> # ℹ abbreviated name: ¹​PROP_AREA_IN_FLOOD_REPORT
+#> # ℹ 2 more variables: PROP_POP_IN_FLOOD_REPORT <dbl>,
+#> #   POP_CENTROID_IN_FLOOD_REPORT <lgl>
 ```
 
 `gtropic_data()`'s `flood_match` argument decides how an interval is matched

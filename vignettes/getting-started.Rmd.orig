@@ -91,7 +91,7 @@ usa_25$wind
 | --- | --- |
 | `wind` | unit and storm with nonzero wind, within `wind_radius_km` |
 | `precip` | unit and local date inside a storm's precipitation window |
-| `flood` | flood event matched to a storm's flood window |
+| `flood` | unit and place named in a flood news report, matched to a storm's flood window |
 | `zero_pairs` | unit and storm with no measurable wind |
 | `pop` | unit and year: population and population-weighted centroid |
 | `tracks` | storm-track observation |
@@ -108,6 +108,15 @@ shorter `tables` vector to download and hold less.
 > have no non-missing precipitation values because no ERA5-Land grid cell was
 > assigned. Retrievals and automatic map captions identify affected units; see
 > `?gtropic_known_limitations` for details and the planned dataset correction.
+
+> **Flood data limitation:** The raw flood data from Groundsource consists of
+> polygons of places named in news reports about flooding, rather than
+> detailed flood maps, and is both spatially and temporally biased by news
+> coverage. `PROP_AREA_IN_FLOOD_REPORT` and `PROP_POP_IN_FLOOD_REPORT`
+> (published as `PROP_FLOODED_AREA` and `PROP_FLOODED_POP`) are the share of a
+> unit inside one reported place, not its flooded area or population.
+> `gtropic_data()` warns about this once per session; see
+> `?gtropic_known_limitations`.
 
 ## The links table
 

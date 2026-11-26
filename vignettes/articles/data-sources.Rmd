@@ -20,7 +20,7 @@ available before you query.
 | --- | --- | --- |
 | IBTrACS | storm tracks, identifiers, names and intensities, from which wind exposure and storm distances are derived | raw data on Sundays, Tuesdays and Thursdays; recent storms are provisional for one to three days, and best tracks are finalised after one to two years |
 | ERA5-Land | daily precipitation per unit | daily, typically about five days behind |
-| Groundsource | flood polygons, from which flood events per unit are derived | covers 2000-01-01 to 2026-01-22 |
+| Groundsource | polygons of places named in news reports about flooding, overlaid on each unit | covers 2000-01-01 to 2026-01-22 |
 | GHSL | population and population-weighted unit centroids | one population file per year |
 | geoBoundaries | ADM2 units, their names and boundaries | one set of units for all years |
 
@@ -29,6 +29,18 @@ published as two Harvard Dataverse datasets: a historical one, covering 1980
 to the previous calendar year and revised about once a year, and a
 current-year one, updated weekly. Both are versioned, so any published version
 can be retrieved again (`vignette("versions-and-caching", package = "gtropic")`).
+
+Groundsource ([Mayo et al., 2026](https://doi.org/10.31223/X5RR2K), a
+preprint) is a dataset of flood events extracted from news articles: an AI
+model reads each article, picks out the place and date of the flooding, and
+looks up that place's boundary on Google Maps. A flood polygon is therefore
+the outline of a place named in a news report, which can be a street or a
+whole province, not a map of where the water was. As noted by Groundsource,
+flood data is both spatially and temporally biased: floods in regions and
+periods with more accurate reporting are over-represented, and those lacking
+news coverage are under-represented. `?gtropic_known_limitations` explains
+what the flood values measure, and why gtropic returns three flood columns
+under names other than the published ones.
 
 Every result records these schedules and the period it covers;
 `gtropic_availability()` returns them. A query that reaches the most recent
@@ -69,7 +81,9 @@ by the unique `STORM_ID` instead.
 ## What the columns mean
 
 The codebook documents every table and column: what it measures, its units,
-and the source and pipeline step that produced it. `gtropic_metrics()` lists
+and the source and pipeline step that produced it. Three flood columns are
+returned under other names than the codebook's (see "Flood columns" in
+`?gtropic_data`). `gtropic_metrics()` lists
 the exposure metrics that `gtropic_plot()` can map, with their units and
 default aggregation.
 
