@@ -6,20 +6,18 @@
 \usage{
 gtropic_storms(
   date_range = NULL,
-  year = NULL,
   STORM_NAME = NULL,
   version = ":latest",
   cache = NULL
 )
 }
 \arguments{
-\item{date_range}{Optional vector of length two defining an inclusive range
-of storm genesis dates. Bare years, year-month values, complete dates, and
-\code{Date} or \code{POSIXct} values are accepted as described in \code{\link[=gtropic_data]{gtropic_data()}}.}
-
-\item{year}{Optional vector of storm genesis calendar years to retrieve.
-Ignored when \code{date_range} is supplied. Years outside the published
-collection are omitted.}
+\item{date_range}{Optional vector of one or two endpoints defining an
+inclusive range of storm genesis dates; a single value is used for both
+endpoints, so \code{date_range = 2005} selects storms that formed in 2005. Bare
+years, year-month values, complete dates, and \code{Date} or \code{POSIXct} values
+are accepted as described in \code{\link[=gtropic_data]{gtropic_data()}}. Years outside the
+published collection are omitted.}
 
 \item{STORM_NAME}{Optional character vector of published convenience labels
 in \code{Name-YYYY} form, such as \code{Katrina-2005}. Labels can duplicate across
@@ -27,13 +25,15 @@ distinct \code{STORM_ID}s. Matching is case-insensitive; every supplied value
 must match a published name. The suffix is the storm season. Because
 Southern Hemisphere storms can form in the preceding calendar year,
 partitions for both \code{YYYY - 1} and \code{YYYY} are considered. This candidate
-set is combined with an explicit genesis \code{year} or \code{date_range} filter using
-AND.}
+set is combined with a \code{date_range} filter using AND.}
 
-\item{version}{Dataset version to use. The default, \code{":latest"}, uses the
-most recent published version. See \code{\link[=gtropic_data]{gtropic_data()}} for version formats.}
+\item{version}{Dataset version specification. Use \code{":latest"} (the default),
+a single version applied to both datasets, or a named character vector such
+as \code{c(historical = "2.0", current = "3.0")}. A pinned version reads the
+files of that version, and the manifest records their file ids and
+checksums.}
 
-\item{cache}{Whether downloaded files may be cached. \code{NULL} uses
+\item{cache}{Whether downloaded source files may be cached. \code{NULL} uses
 \code{getOption("gtropic.cache_enabled")}; \code{TRUE} or \code{FALSE} overrides that
 setting for this call.}
 }
@@ -64,15 +64,20 @@ to identify the intended \code{STORM_ID}, then query \code{\link[=gtropic_data]{
 \code{STORM_ID}, which is unique and preferred.
 }
 \examples{
-\donttest{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # Review storms that formed during calendar year 2005
-gtropic_storms(year = 2005)
+gtropic_storms(date_range = 2005)
 
 # Retrieve the published identifiers and dates for Hurricane Katrina
 gtropic_storms(STORM_NAME = "Katrina-2005")
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}, \code{\link[=gtropic_adm2]{gtropic_adm2()}}, \code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}}
+Other discovery functions:
+\code{\link[=gtropic_adm2]{gtropic_adm2()}},
+\code{\link[=gtropic_codebook]{gtropic_codebook()}},
+\code{\link[=gtropic_excluded_storms]{gtropic_excluded_storms()}},
+\code{\link[=gtropic_metrics]{gtropic_metrics()}},
+\code{\link[=gtropic_years]{gtropic_years()}}
 }
+\concept{discovery functions}

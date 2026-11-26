@@ -1,0 +1,6 @@
+# Commits that only reformat code. GitHub skips them in blame views; locally,
+# run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
+# The hashes stay valid only if the branch is merged with a merge commit.
+
+# INFRA-07 (formatting): format R code with Air
+af7bfc05cddfb756dde94a8087b62130605707ca

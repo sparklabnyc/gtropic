@@ -45,19 +45,23 @@
 #'
 #' @return Invisibly, the output filename, combined with `path` when supplied.
 #'   The path is not normalized. Saver errors are propagated.
-#' @seealso [gtropic_plot()], [ggplot2::ggsave()]
-#' @examples
-#' \donttest{
-#' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
-#'     ggplot2::geom_point()
-#'   output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
-#'   unlink(output)
-#' }
-#' }
+#' @seealso [ggplot2::ggsave()]
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
+#' p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+#'   ggplot2::geom_point()
+#' output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
+#' unlink(output)
+#' @family plotting functions
 #' @export
-gtropic_save <- function(plot, filename, ..., dpi = 300,
-                          width = NULL, height = NULL, units = "in") {
+gtropic_save <- function(
+  plot,
+  filename,
+  ...,
+  dpi = 300,
+  width = NULL,
+  height = NULL,
+  units = "in"
+) {
   plot_save_string(filename, "filename")
   dots <- list(...)
   if (length(dots)) {
@@ -75,27 +79,36 @@ gtropic_save <- function(plot, filename, ..., dpi = 300,
   if (!inherits(plot, "ggplot")) {
     cli::cli_abort("{.arg plot} must be a ggplot or HTML widget.")
   }
-  for (nm in c("dpi", "width", "height")) {
-    value <- get(nm)
-    if (nm != "dpi" && is.null(value)) next
-    if (
-      !is.numeric(value) || length(value) != 1L ||
-        !is.finite(value) || value <= 0
-    ) {
-      cli::cli_abort("{.arg {nm}} must be one positive finite number.")
-    }
+  plot_save_positive(dpi, "dpi")
+  if (!is.null(width)) {
+    plot_save_positive(width, "width")
+  }
+  if (!is.null(height)) {
+    plot_save_positive(height, "height")
   }
   units <- rlang::arg_match(units, c("in", "cm", "mm", "px"))
   path <- dots[["path"]]
-  if (!is.null(path)) plot_save_string(path, "path")
+  if (!is.null(path)) {
+    plot_save_string(path, "path")
+  }
   output <- if (is.null(path)) filename else file.path(path, filename)
   size <- plot_save_dimensions(plot, width, height, units, dpi)
 
   rlang::check_installed("ggplot2", reason = "to save static plots")
-  do.call(ggplot2::ggsave, c(list(
-    filename = filename, plot = plot, dpi = dpi,
-    width = size$width, height = size$height, units = units
-  ), dots))
+  do.call(
+    ggplot2::ggsave,
+    c(
+      list(
+        filename = filename,
+        plot = plot,
+        dpi = dpi,
+        width = size$width,
+        height = size$height,
+        units = units
+      ),
+      dots
+    )
+  )
   invisible(output)
 }
 
@@ -104,16 +117,28 @@ gtropic_save <- function(plot, filename, ..., dpi = 300,
 #' @noRd
 plot_save_widget <- function(widget, filename, dots) {
   if (!identical(tolower(tools::file_ext(filename)), "html")) {
-    cli::cli_abort("{.arg filename} for an HTML widget must end in {.val .html}.")
+    cli::cli_abort(
+      "{.arg filename} for an HTML widget must end in {.val .html}."
+    )
   }
   path <- dots[["path"]]
-  if (!is.null(path)) plot_save_string(path, "path")
+  if (!is.null(path)) {
+    plot_save_string(path, "path")
+  }
   dots[["path"]] <- NULL
   rlang::check_installed("htmlwidgets", reason = "to save HTML widgets")
-  supported <- c("selfcontained", "libdir", "background", "title", "knitrOptions")
+  supported <- c(
+    "selfcontained",
+    "libdir",
+    "background",
+    "title",
+    "knitrOptions"
+  )
   unknown <- setdiff(names(dots), supported)
   if (length(unknown)) {
-    cli::cli_abort("Unsupported HTML widget arguments in {.arg ...}: {.val {unknown}}.")
+    cli::cli_abort(
+      "Unsupported HTML widget arguments in {.arg ...}: {.val {unknown}}."
+    )
   }
   output <- if (is.null(path)) filename else file.path(path, filename)
   arguments <- c(list(widget = widget, file = output), dots)
@@ -129,7 +154,9 @@ plot_save_widget <- function(widget, filename, dots) {
 #' @noRd
 plot_save_string <- function(value, argument) {
   if (
-    !is.character(value) || length(value) != 1L || is.na(value) ||
+    !is.character(value) ||
+      length(value) != 1L ||
+      is.na(value) ||
       !nzchar(trimws(value))
   ) {
     cli::cli_abort("{.arg {argument}} must be one nonempty string.")
@@ -141,12 +168,7 @@ plot_save_string <- function(value, argument) {
 #' @keywords internal
 #' @noRd
 plot_save_dimensions <- function(plot, width, height, units, dpi) {
-  factor <- switch(units,
-    "in" = 1,
-    cm = 2.54,
-    mm = 25.4,
-    px = dpi
-  )
+  factor <- switch(units, "in" = 1, cm = 2.54, mm = 25.4, px = dpi)
   aspect <- plot_save_aspect(attr(plot, "gtropic_bbox", exact = TRUE))
   bound <- function(x) max(3, min(10, x))
   if (is.null(width) && is.null(height)) {
@@ -181,4 +203,14 @@ plot_save_aspect <- function(bbox) {
   }
   aspect <- span[1] * cos(mean(bbox[c(2, 4)]) * pi / 180) / span[2]
   if (!is.finite(aspect) || aspect <= 0) fallback else aspect
+}
+
+#' Validate one positive finite number
+#' @keywords internal
+#' @noRd
+plot_save_positive <- function(x, name) {
+  if (!is.numeric(x) || length(x) != 1L || !is.finite(x) || x <= 0) {
+    cli::cli_abort("{.arg {name}} must be one positive finite number.")
+  }
+  invisible(x)
 }

@@ -15,7 +15,10 @@ test_that("gtropic_filters retains full list values and prints compact previews"
   expect_true(is.list(filters))
   expect_identical(filters$adm2_ids, adm2_ids)
 
-  displayed <- paste(testthat::capture_messages(print(filters)), collapse = "\n")
+  displayed <- paste(
+    testthat::capture_messages(print(filters)),
+    collapse = "\n"
+  )
   expect_match(displayed, "adm2_ids")
   expect_match(displayed, "12 values")
   expect_match(displayed, "ADM2-01", fixed = TRUE)

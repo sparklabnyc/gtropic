@@ -73,15 +73,22 @@ the requested units.
 }
 }
 \examples{
-\donttest{
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
-    ggplot2::geom_point()
-  output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
-  unlink(output)
-}
-}
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+  ggplot2::geom_point()
+output <- gtropic_save(p, tempfile(fileext = ".pdf"), width = 7, height = 5)
+unlink(output)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=gtropic_plot]{gtropic_plot()}}, \code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}
+\code{\link[ggplot2:ggsave]{ggplot2::ggsave()}}
+
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
 }
+\concept{plotting functions}

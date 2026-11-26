@@ -2,29 +2,42 @@
 % Please edit documentation in R/class_gtropic_data.R
 \name{summary.gtropic_data}
 \alias{summary.gtropic_data}
+\alias{print.summary.gtropic_data}
 \title{Summarize a G-TROPIC data result}
 \usage{
 \method{summary}{gtropic_data}(object, ...)
+
+\method{print}{summary.gtropic_data}(x, ...)
 }
 \arguments{
 \item{object}{A \code{gtropic_data} object.}
 
-\item{...}{Additional arguments passed to the summary method. Currently
-ignored.}
+\item{...}{Additional arguments. Currently ignored.}
+
+\item{x}{A \code{summary.gtropic_data} object.}
 }
 \value{
-\code{object}, invisibly.
+\code{summary()} returns an object of class \code{summary.gtropic_data}: a
+list with the result's \code{manifest}, resolved \code{filters}, retained
+\code{diagnostics}, \code{retrieved_at} time and the dimensions of each returned
+table (\code{tables}, a named character vector). Its \code{print()} method displays
+it and returns \code{x} invisibly.
 }
 \description{
-Displays an extended overview of a G-TROPIC retrieval. The output includes
+Builds an extended overview of a G-TROPIC retrieval; printing it shows
 dataset provenance, retrieval time and size, returned table dimensions,
 resolved geographic and storm filters, hazard-specific temporal and spatial
 windows, and any diagnostics retained with the result.
 }
 \examples{
-\donttest{
-res <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-summary(res)
-}
+summary(gtropic_example())
 
 }
+\seealso{
+Other result methods:
+\code{\link[=format.gtropic_data]{format.gtropic_data()}},
+\code{\link[=print.gtropic_data]{print.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=print.gtropic_manifest]{print.gtropic_manifest()}}
+}
+\concept{result methods}

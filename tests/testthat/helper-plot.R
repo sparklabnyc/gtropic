@@ -1,6 +1,9 @@
-#' Read an independent copy of the synthetic, offline plotting fixture
+#' The synthetic, offline plotting fixture
+#'
+#' The same object users get from gtropic_example(), built by
+#' data-raw/make_plot_fixtures.R, so examples and tests share one source.
 #' @keywords internal
 #' @noRd
 plot_fixture <- function() {
-  readRDS(testthat::test_path("fixtures", "plotting.rds"))
+  gtropic_example()
 }

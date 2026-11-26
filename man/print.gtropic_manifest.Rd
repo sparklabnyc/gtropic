@@ -22,12 +22,16 @@ retrieval. A manifest can be supplied to \code{gtropic_data()} to request the sa
 published source files in a subsequent analysis.
 }
 \examples{
-\donttest{
-result <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-gtropic_manifest(result)
-}
+print(gtropic_manifest(gtropic_example()))
 
 }
 \seealso{
-\code{gtropic_manifest()}, \code{gtropic_data()}
+\code{\link[=gtropic_manifest]{gtropic_manifest()}}
+
+Other result methods:
+\code{\link[=format.gtropic_data]{format.gtropic_data()}},
+\code{\link[=print.gtropic_data]{print.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=summary.gtropic_data]{summary.gtropic_data()}}
 }
+\concept{result methods}

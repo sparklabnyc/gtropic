@@ -4,8 +4,17 @@
 # A single `version` argument cannot describe a query, because a query can span
 # two datasets whose version numbers advance independently. The manifest records
 # exactly which file, at which version, with which checksum, went into a result.
-# Handing it back to gtropic_data() reproduces that result byte for byte.
+# Handing it back to gtropic_data() retrieves the same source files and replays
+# the resolved query.
 # ---------------------------------------------------------------------------
+
+#' Format version of `gtropic_manifest` objects
+#'
+#' Bump when the structure changes. Manifests with any other version are
+#' rejected (pre-1.0: no reading of older versions).
+#' @keywords internal
+#' @noRd
+MANIFEST_SCHEMA_VERSION <- 1L
 
 #' Start an empty manifest
 #'
@@ -27,7 +36,7 @@ manifest_new <- function(discovery) {
         checksum = character(0),
         checksum_type = character(0),
         size_bytes = numeric(0),
-        downloaded_at = as.POSIXct(character(0))
+        downloaded_at = as.POSIXct(character(0), tz = "UTC")
       ),
       server = discovery$server,
       datasets = tibble::tibble(
@@ -37,8 +46,8 @@ manifest_new <- function(discovery) {
       ),
       resolved_query = NULL,
       availability = NULL,
-      retrieved_at = as.POSIXct(NA),
-      schema_version = 1L,
+      retrieved_at = as.POSIXct(NA, tz = "UTC"),
+      schema_version = MANIFEST_SCHEMA_VERSION,
       gtropic_version = as.character(utils::packageVersion("gtropic"))
     ),
     class = "gtropic_manifest"
@@ -55,9 +64,36 @@ manifest_new <- function(discovery) {
 #' @return The updated manifest.
 #' @keywords internal
 #' @noRd
-manifest_add <- function(manifest, doi, version, row, downloaded_at,
-                         source_role = NULL) {
-  entry <- tibble::tibble(
+manifest_add <- function(
+  manifest,
+  doi,
+  version,
+  row,
+  downloaded_at,
+  source_role = NULL
+) {
+  entry <- manifest_entry(doi, version, row, downloaded_at, source_role)
+  manifest$files <- manifest_distinct_files(dplyr::bind_rows(
+    manifest$files,
+    entry
+  ))
+  manifest
+}
+
+#' One manifest row for a retrieved file
+#'
+#' @inheritParams manifest_add
+#' @return A one-row tibble shaped like `manifest_new()$files`.
+#' @keywords internal
+#' @noRd
+manifest_entry <- function(
+  doi,
+  version,
+  row,
+  downloaded_at,
+  source_role = NULL
+) {
+  tibble::tibble(
     source_role = manifest_source_role(source_role),
     dataset_doi = doi,
     dataset_version = as.character(version),
@@ -67,17 +103,71 @@ manifest_add <- function(manifest, doi, version, row, downloaded_at,
     checksum = row$checksum,
     checksum_type = row$checksum_type,
     size_bytes = as.numeric(row$size_bytes),
-    downloaded_at = as.POSIXct(downloaded_at, origin = "1970-01-01", tz = "UTC")
+    downloaded_at = manifest_utc(downloaded_at)
   )
+}
 
-  manifest$files <- dplyr::distinct(
-    dplyr::bind_rows(manifest$files, entry),
-    .data$source_role, .data$dataset_doi, .data$dataset_version,
-    .data$directory_label, .data$label,
+#' Keep the first record of each file
+#' @param files A manifest `files` table.
+#' @keywords internal
+#' @noRd
+manifest_distinct_files <- function(files) {
+  dplyr::distinct(
+    files,
+    .data$source_role,
+    .data$dataset_doi,
+    .data$dataset_version,
+    .data$directory_label,
+    .data$label,
     .keep_all = TRUE
   )
+}
 
-  manifest
+#' Record a retrieved file in a fetch context's manifest
+#'
+#' Entries are collected in a list and bound into the manifest once, by
+#' `ctx_manifest()`, rather than re-binding and de-duplicating the whole
+#' `files` table for every file.
+#'
+#' @param ctx A fetch context.
+#' @param entry A `manifest_entry()`.
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+ctx_manifest_add <- function(ctx, entry) {
+  out <- ctx$manifest_out
+  out$entries[[length(out$entries) + 1L]] <- entry
+  invisible(NULL)
+}
+
+#' The manifest a fetch context has accumulated
+#'
+#' @param ctx A fetch context.
+#' @return The (unfinalised) `gtropic_manifest`, with every recorded file.
+#' @keywords internal
+#' @noRd
+ctx_manifest <- function(ctx) {
+  out <- ctx$manifest_out
+  if (length(out$entries) > 0L) {
+    out$value$files <- manifest_distinct_files(
+      dplyr::bind_rows(c(list(out$value$files), out$entries))
+    )
+    out$entries <- list()
+  }
+  out$value
+}
+
+#' A download time as POSIXct in UTC
+#'
+#' `as.POSIXct(<POSIXct>, tz = "UTC")` keeps the input's time zone before
+#' R 4.3.0, so the attribute is set explicitly: manifests then carry the same
+#' times on every supported R version, and a JSON round trip preserves them.
+#' @keywords internal
+#' @noRd
+manifest_utc <- function(x) {
+  x <- as.POSIXct(x, origin = "1970-01-01", tz = "UTC")
+  attr(x, "tzone") <- "UTC"
+  x
 }
 
 #' Stamp a manifest as complete
@@ -86,10 +176,16 @@ manifest_add <- function(manifest, doi, version, row, downloaded_at,
 #' @return The finalised manifest.
 #' @keywords internal
 #' @noRd
-manifest_finalize <- function(manifest, resolved_query = NULL,
-                              availability = NULL) {
+manifest_finalize <- function(
+  manifest,
+  resolved_query = NULL,
+  availability = NULL
+) {
   manifest$datasets <- dplyr::distinct(
-    manifest$files[, c("source_role", "dataset_doi", "dataset_version"), drop = FALSE]
+    manifest$files[,
+      c("source_role", "dataset_doi", "dataset_version"),
+      drop = FALSE
+    ]
   )
   manifest$datasets <- manifest_order_datasets(manifest$datasets)
   manifest$resolved_query <- resolved_query %||% manifest$resolved_query
@@ -99,7 +195,9 @@ manifest_finalize <- function(manifest, resolved_query = NULL,
   # time this result was assembled. It remains stable when a cached result is
   # read again, while still stating when its complete source set was acquired.
   downloaded <- manifest$files$downloaded_at
-  manifest$retrieved_at <- if (length(downloaded) > 0L && any(!is.na(downloaded))) {
+  manifest$retrieved_at <- if (
+    length(downloaded) > 0L && any(!is.na(downloaded))
+  ) {
     max(downloaded, na.rm = TRUE)
   } else {
     as.POSIXct(NA, tz = "UTC")
@@ -113,7 +211,9 @@ manifest_finalize <- function(manifest, resolved_query = NULL,
 #' @keywords internal
 #' @noRd
 manifest_source_role <- function(source_role) {
-  if (is.null(source_role)) return(NA_character_)
+  if (is.null(source_role)) {
+    return(NA_character_)
+  }
   role <- tolower(as.character(source_role))
   out <- rep(NA_character_, length(role))
   out[role == "historical"] <- "Historical"
@@ -129,36 +229,57 @@ manifest_order_datasets <- function(datasets) {
     return(datasets)
   }
   order_key <- match(datasets$source_role, c("Historical", "Current-year"))
-  datasets[order(is.na(order_key), order_key, seq_len(nrow(datasets))), , drop = FALSE]
+  datasets[
+    order(is.na(order_key), order_key, seq_len(nrow(datasets))),
+    ,
+    drop = FALSE
+  ]
 }
 
 #' Validate a user-supplied manifest
 #'
+#' A manifest may come from someone else, so its contents are checked, not
+#' only its shape: the server is a host name, file ids are positive whole
+#' numbers, labels and directories are plain relative names, checksums are
+#' hexadecimal digests, DOIs and versions look like Dataverse ones, and the
+#' resolved query has the types a direct call would produce. Manifests made by
+#' [gtropic_manifest()] always pass.
+#'
 #' @param manifest Object passed to the `manifest` argument.
 #' @param call Calling environment.
 #'
-#' @return The manifest, invisibly.
+#' @return The manifest, with its server name normalised, invisibly.
 #' @keywords internal
 #' @noRd
 manifest_validate <- function(manifest, call = rlang::caller_env()) {
   if (!inherits(manifest, "gtropic_manifest")) {
-    cli::cli_abort(
-      c("{.arg manifest} must be a manifest produced by
+    gtropic_abort(
+      c(
+        "{.arg manifest} must be a manifest produced by
          {.code gtropic_manifest()}.",
         x = "Got {.cls {class(manifest)[1]}}."
       ),
+      class = "gtropic_error_manifest",
       call = call
     )
   }
 
   required <- c(
-    "source_role", "dataset_doi", "dataset_version", "directory_label",
-    "label", "file_id", "checksum", "checksum_type", "size_bytes"
+    "source_role",
+    "dataset_doi",
+    "dataset_version",
+    "directory_label",
+    "label",
+    "file_id",
+    "checksum",
+    "checksum_type",
+    "size_bytes"
   )
   missing <- setdiff(required, names(manifest$files))
   if (length(missing) > 0L) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} is missing required source-file column{?s} {.field {missing}}.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
@@ -166,19 +287,25 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   dataset_required <- c("source_role", "dataset_doi", "dataset_version")
   missing_datasets <- setdiff(dataset_required, names(manifest$datasets))
   if (length(missing_datasets) > 0L) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} is missing required dataset column{?s} {.field {missing_datasets}}.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
 
   if (nrow(manifest$files) == 0L) {
-    cli::cli_abort("{.arg manifest} records no files.", call = call)
+    gtropic_abort(
+      "{.arg manifest} records no files.",
+      class = "gtropic_error_manifest",
+      call = call
+    )
   }
 
   if (is.null(manifest$resolved_query)) {
-    cli::cli_abort(
+    gtropic_abort(
       "{.arg manifest} does not contain a canonical resolved query.",
+      class = "gtropic_error_manifest",
       call = call
     )
   }
@@ -188,18 +315,271 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
   query_required <- setdiff(manifest_query_fields(), "make_valid")
   missing_query <- setdiff(query_required, names(manifest$resolved_query))
   if (length(missing_query) > 0L) {
-    cli::cli_abort(
-      c("{.arg manifest} has an incomplete canonical query.",
+    gtropic_abort(
+      c(
+        "{.arg manifest} has an incomplete canonical query.",
         x = "Missing field{?s}: {.field {missing_query}}."
       ),
+      class = "gtropic_error_manifest",
       call = call
     )
   }
-  if ("make_valid" %in% names(manifest$resolved_query)) {
-    check_make_valid(manifest$resolved_query$make_valid, call = call)
+  schema <- manifest$schema_version
+  if (
+    !is.numeric(schema) ||
+      length(schema) != 1L ||
+      is.na(schema) ||
+      schema != MANIFEST_SCHEMA_VERSION
+  ) {
+    gtropic_abort(
+      c(
+        "{.arg manifest} has an unsupported format version.",
+        x = "Expected {.val {MANIFEST_SCHEMA_VERSION}}, got
+             {.val {format(schema)}}.",
+        i = "Re-create it with this version of gtropic."
+      ),
+      class = "gtropic_error_manifest",
+      call = call
+    )
   }
 
+  manifest$server <- tryCatch(
+    validate_server(manifest$server, arg = "manifest$server", call = NULL),
+    error = function(e) {
+      gtropic_abort(
+        "{.arg manifest} names an invalid server.",
+        parent = e,
+        class = "gtropic_error_manifest",
+        call = call
+      )
+    }
+  )
+
+  files <- manifest$files
+  id <- files$file_id
+  id_ok <- if (is.numeric(id)) {
+    !is.na(id) & id > 0 & id == round(id)
+  } else {
+    rep(FALSE, length(id))
+  }
+  manifest_check_field(id, id_ok, "file_id", call)
+  manifest_check_field(
+    files$label,
+    grepl(paste0("^", MANIFEST_PATH_SEGMENT, "$"), files$label),
+    "label",
+    call
+  )
+  manifest_check_field(
+    files$directory_label,
+    grepl(
+      paste0("^(", MANIFEST_PATH_SEGMENT, "(/", MANIFEST_PATH_SEGMENT, ")*)?$"),
+      files$directory_label
+    ),
+    "directory_label",
+    call
+  )
+  checksum <- files$checksum
+  manifest_check_field(
+    checksum,
+    is.na(checksum) | checksum == "" | is_hex_checksum(checksum),
+    "checksum",
+    call
+  )
+  doi <- c(files$dataset_doi, manifest$datasets$dataset_doi)
+  manifest_check_field(
+    doi,
+    grepl("^doi:10\\.[0-9]{4,9}/[A-Za-z0-9._;()/:-]+$", doi),
+    "dataset_doi",
+    call
+  )
+  version <- c(files$dataset_version, manifest$datasets$dataset_version)
+  manifest_check_field(
+    version,
+    grepl("^[0-9]+(\\.[0-9]+)?$", version) |
+      version %in% c(":latest", ":draft"),
+    "dataset_version",
+    call
+  )
+
+  tryCatch(
+    manifest_validate_query(manifest$resolved_query),
+    error = function(e) {
+      gtropic_abort(
+        "{.arg manifest} has an invalid resolved query.",
+        parent = e,
+        class = "gtropic_error_manifest",
+        call = call
+      )
+    }
+  )
+
   invisible(manifest)
+}
+
+#' One path component of a manifest file: no separators, no leading dot
+#' @keywords internal
+#' @noRd
+MANIFEST_PATH_SEGMENT <- "[A-Za-z0-9][A-Za-z0-9._-]*"
+
+#' Abort unless every value of a manifest field is valid
+#'
+#' @param values Field values.
+#' @param ok Logical vector, `TRUE` where the value is valid.
+#' @param field Field name, for the message.
+#' @param call Calling environment.
+#'
+#' @return Invisibly `TRUE`.
+#' @keywords internal
+#' @noRd
+manifest_check_field <- function(values, ok, field, call) {
+  ok <- !is.na(ok) & ok
+  if (length(ok) == length(values) && all(ok)) {
+    return(invisible(TRUE))
+  }
+  bad <- unique(as.character(values[!ok]))
+  gtropic_abort(
+    c(
+      "{.arg manifest} has an invalid {.field {field}}.",
+      x = "Offending value{?s}: {.val {truncate_display(bad, 5L)}}.",
+      i = "Manifests made by {.code gtropic_manifest()} always pass this
+           check; this one may have been edited."
+    ),
+    class = "gtropic_error_manifest",
+    call = call
+  )
+}
+
+#' Check the types of a manifest's resolved query
+#'
+#' Applies the same validators as a direct call to `gtropic_data()`, so a
+#' replayed query can only contain values a real call could have produced.
+#'
+#' @param q The `resolved_query` list.
+#'
+#' @return Invisibly `TRUE`; errors name the offending field.
+#' @keywords internal
+#' @noRd
+manifest_validate_query <- function(q) {
+  is_chr <- function(x) is.character(x) && !anyNA(x)
+  is_years <- function(x) {
+    is.numeric(x) && !anyNA(x) && all(x == round(x))
+  }
+  is_flag <- function(x) is.logical(x) && length(x) == 1L && !is.na(x)
+  is_filters <- function(x, allowed) {
+    is.list(x) &&
+      all(names(x) %in% allowed) &&
+      all(vapply(x, is_chr, logical(1)))
+  }
+  expect <- function(ok, field) {
+    if (!isTRUE(ok)) {
+      cli::cli_abort(
+        "{.field {field}} has an unexpected type or value.",
+        call = NULL
+      )
+    }
+  }
+
+  expect(
+    is_filters(
+      q$geo_filters,
+      c(
+        "ADM2_ID",
+        "ADM2_NAME",
+        "ADM2_GROUP",
+        "WHO_ENTITY",
+        "WHO_REGION"
+      )
+    ),
+    "geo_filters"
+  )
+  expect(
+    is_filters(q$storm_filters, c("STORM_ID", "STORM_NAME", "USA_ATCF_ID")),
+    "storm_filters"
+  )
+  expect(
+    is.null(q$storm_name_years) || is_years(q$storm_name_years),
+    "storm_name_years"
+  )
+  check_radius_km(q$wind_radius_km, "wind_radius_km", call = NULL)
+  expect(is.null(q$polygon) || inherits(q$polygon, c("sf", "sfc")), "polygon")
+  expect(is_flag(q$reproject), "reproject")
+  expect(
+    is.null(q$date_range) ||
+      (is.atomic(q$date_range) && length(q$date_range) %in% 1:2),
+    "date_range"
+  )
+  expect(is.null(q$date_list) || is.atomic(q$date_list), "date_list")
+  expect(
+    is.null(q$date_format) ||
+      (is.character(q$date_format) && length(q$date_format) == 1L),
+    "date_format"
+  )
+  expect(is_chr(q$tables), "tables")
+  normalize_tables(q$tables, call = NULL)
+  for (field in c(
+    "precip_days_before",
+    "precip_days_after",
+    "flood_days_before",
+    "flood_days_after"
+  )) {
+    check_nonneg_int(q[[field]], field, call = NULL)
+  }
+  check_radius_km(q$precip_radius_km, "precip_radius_km", call = NULL)
+  check_radius_km(q$flood_radius_km, "flood_radius_km", call = NULL)
+  expect(
+    is.character(q$flood_match) &&
+      length(q$flood_match) == 1L &&
+      q$flood_match %in% c("start", "overlap"),
+    "flood_match"
+  )
+  expect(
+    is.character(q$geometry_resolution) &&
+      length(q$geometry_resolution) == 1L &&
+      q$geometry_resolution %in% c("simplified", "full"),
+    "geometry_resolution"
+  )
+  if ("make_valid" %in% names(q)) {
+    check_flag(q$make_valid, "make_valid", call = NULL)
+  }
+  expect(
+    is.null(q$resolved_adm2_ids) || is_chr(q$resolved_adm2_ids),
+    "resolved_adm2_ids"
+  )
+  expect(
+    is.null(q$resolved_storm_ids) || is_chr(q$resolved_storm_ids),
+    "resolved_storm_ids"
+  )
+  expect(
+    is.null(q$storm_metadata_years) || is_years(q$storm_metadata_years),
+    "storm_metadata_years"
+  )
+  invisible(TRUE)
+}
+
+#' Warn when a manifest points at a server other than the configured one
+#'
+#' Replay downloads from the server recorded in the manifest. Say so before any
+#' request is made, naming both hosts.
+#'
+#' @param manifest A validated manifest.
+#'
+#' @return Invisibly `TRUE` if the servers differ.
+#' @keywords internal
+#' @noRd
+manifest_warn_server <- function(manifest) {
+  configured <- opt_server()
+  recorded <- manifest$server
+  differs <- !identical(tolower(recorded), tolower(configured))
+  if (differs) {
+    cli::cli_warn(c(
+      "This manifest was made against {.val {recorded}}, not the configured
+       server {.val {configured}}.",
+      i = "Its files will be downloaded from {.val {recorded}}.",
+      i = "Set {.code options(gtropic.server = \"{recorded}\")} to silence
+           this warning if that is intended."
+    ))
+  }
+  invisible(differs)
 }
 
 #' Fields that define a data-shaped G-TROPIC query
@@ -207,11 +587,27 @@ manifest_validate <- function(manifest, call = rlang::caller_env()) {
 #' @noRd
 manifest_query_fields <- function() {
   c(
-    "geo_filters", "storm_filters", "storm_name_years", "wind_radius_km",
-    "polygon", "reproject", "date_range", "date_list", "date_format",
-    "tables", "precip_days_before", "precip_days_after", "precip_radius_km",
-    "flood_days_before", "flood_days_after", "flood_radius_km", "flood_match",
-    "geometry_resolution", "make_valid", "resolved_adm2_ids", "resolved_storm_ids",
+    "geo_filters",
+    "storm_filters",
+    "storm_name_years",
+    "wind_radius_km",
+    "polygon",
+    "reproject",
+    "date_range",
+    "date_list",
+    "date_format",
+    "tables",
+    "precip_days_before",
+    "precip_days_after",
+    "precip_radius_km",
+    "flood_days_before",
+    "flood_days_after",
+    "flood_radius_km",
+    "flood_match",
+    "geometry_resolution",
+    "make_valid",
+    "resolved_adm2_ids",
+    "resolved_storm_ids",
     "storm_metadata_years"
   )
 }
@@ -233,7 +629,8 @@ manifest_query_fields <- function() {
 manifest_lookup <- function(manifest, directory_label, label) {
   hit <- manifest$files[
     manifest$files$directory_label == directory_label &
-      manifest$files$label == label, ,
+      manifest$files$label == label,
+    ,
     drop = FALSE
   ]
   if (nrow(hit) == 0L) {
@@ -256,24 +653,22 @@ manifest_lookup <- function(manifest, directory_label, label) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' result <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' gtropic_manifest(result)
-#' }
+#' print(gtropic_manifest(gtropic_example()))
 #'
-#' @seealso `gtropic_manifest()`, `gtropic_data()`
+#' @seealso [gtropic_manifest()]
+#' @family result methods
 #' @export
 print.gtropic_manifest <- function(x, ...) {
   cli::cli_h1("gtropic version manifest")
   datasets <- manifest_datasets(x)
-  datasets <- datasets[!is.na(datasets$dataset_doi) & nzchar(datasets$dataset_doi), , drop = FALSE]
+  datasets <- datasets[
+    !is.na(datasets$dataset_doi) & nzchar(datasets$dataset_doi),
+    ,
+    drop = FALSE
+  ]
+  cli::cli_bullets(c("*" = "Server: {.val {x$server}}"))
+  cli_dataset_bullets(datasets)
   cli::cli_bullets(c(
-    "*" = "Server: {.val {x$server}}",
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi, " (version ",
-        datasets$dataset_version, ")"),
-      rep("*", nrow(datasets))
-    ),
     "*" = "Files recorded: {nrow(x$files)}",
     "*" = "Total size: {format_bytes(sum(x$files$size_bytes, na.rm = TRUE))}",
     "*" = "Retrieved: {format(x$retrieved_at, usetz = TRUE)}",

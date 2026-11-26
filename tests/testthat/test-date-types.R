@@ -76,10 +76,10 @@ test_that("wind and links date keys can be joined directly", {
 })
 
 test_that("shared fixture fields retain compatible types across tables", {
+  skip_if_not_installed("withr")
+  fixture_dir <- local_parquet_fixtures()
   fixture <- function(...) {
-    normalize_table_types(arrow::read_parquet(testthat::test_path(
-      "fixtures", ...
-    )))
+    normalize_table_types(arrow::read_parquet(file.path(fixture_dir, ...)))
   }
   wind <- derive_local_date(fixture("02_wind", "exposures", "2002.parquet"))
   zero <- derive_local_date(fixture("02_wind", "zero_pairs", "2002.parquet"))
@@ -108,7 +108,9 @@ test_that("shared fixture fields retain compatible types across tables", {
   signatures <- lapply(shared, function(column) {
     unique(vapply(
       tables[vapply(tables, function(x) column %in% names(x), logical(1))],
-      function(x) paste(typeof(x[[column]]), class(x[[column]]), collapse = "/"),
+      function(x) {
+        paste(typeof(x[[column]]), class(x[[column]]), collapse = "/")
+      },
       character(1)
     ))
   })

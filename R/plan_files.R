@@ -27,20 +27,28 @@ TABLE_SPEC <- list(
   # All metadata/ files live in the historical dataset only, whatever year span
   # the query covers. There is exactly one copy of each and no divergence case.
   adm2 = list(
-    dir = "metadata", label = "adm2.parquet",
-    yearly = FALSE, dataset = "historical"
+    dir = "metadata",
+    label = "adm2.parquet",
+    yearly = FALSE,
+    dataset = "historical"
   ),
   codebook = list(
-    dir = "metadata", label = "codebook.json",
-    yearly = FALSE, dataset = "historical"
+    dir = "metadata",
+    label = "codebook.json",
+    yearly = FALSE,
+    dataset = "historical"
   ),
   geometry_full = list(
-    dir = "metadata", label = "adm2_geometry.parquet",
-    yearly = FALSE, dataset = "historical"
+    dir = "metadata",
+    label = "adm2_geometry.parquet",
+    yearly = FALSE,
+    dataset = "historical"
   ),
   geometry_simplified = list(
-    dir = "metadata", label = "adm2_geometry_simplified.parquet",
-    yearly = FALSE, dataset = "historical"
+    dir = "metadata",
+    label = "adm2_geometry_simplified.parquet",
+    yearly = FALSE,
+    dataset = "historical"
   )
 )
 
@@ -48,8 +56,16 @@ TABLE_SPEC <- list(
 #' @keywords internal
 #' @noRd
 VALID_TABLES <- c(
-  "wind", "precip", "flood", "pop", "adm2", "codebook",
-  "zero_pairs", "tracks", "geometry", "storm_metadata"
+  "wind",
+  "precip",
+  "flood",
+  "pop",
+  "adm2",
+  "codebook",
+  "zero_pairs",
+  "tracks",
+  "geometry",
+  "storm_metadata"
 )
 
 #' Tables whose presence implies storm linkage
@@ -75,15 +91,18 @@ normalize_tables <- function(tables, call = rlang::caller_env()) {
   bad <- setdiff(tables, VALID_TABLES)
   if (length(bad) > 0L) {
     cli::cli_abort(
-      c("Unknown table{?s} in {.arg tables}: {.val {bad}}.",
+      c(
+        "Unknown table{?s} in {.arg tables}: {.val {bad}}.",
         i = "Valid values are {.val {VALID_TABLES}}."
       ),
       call = call
     )
   }
 
-  if (any(tables %in% STORM_LINKED_TABLES) &&
-    !"storm_metadata" %in% tables) {
+  if (
+    any(tables %in% STORM_LINKED_TABLES) &&
+      !"storm_metadata" %in% tables
+  ) {
     tables <- c(tables, "storm_metadata")
   }
 
@@ -122,19 +141,25 @@ needs_zero_pairs <- function(tables) {
 #'   `label`.
 #' @keywords internal
 #' @noRd
-plan_files <- function(years_by_table,
-                       tables,
-                       year_index,
-                       geometry_resolution = "simplified",
-                       call = rlang::caller_env()) {
+plan_files <- function(
+  years_by_table,
+  tables,
+  year_index,
+  geometry_resolution = "simplified",
+  call = rlang::caller_env()
+) {
   rows <- list()
 
   for (tbl in names(years_by_table)) {
     spec <- TABLE_SPEC[[tbl]]
-    if (is.null(spec) || !isTRUE(spec$yearly)) next
+    if (is.null(spec) || !isTRUE(spec$yearly)) {
+      next
+    }
 
     years <- sort(unique(as.integer(years_by_table[[tbl]])))
-    if (length(years) == 0L) next
+    if (length(years) == 0L) {
+      next
+    }
 
     idx <- match(years, year_index$year)
     available <- !is.na(idx)
@@ -150,7 +175,9 @@ plan_files <- function(years_by_table,
     }
 
     years <- years[available]
-    if (length(years) == 0L) next
+    if (length(years) == 0L) {
+      next
+    }
 
     rows[[length(rows) + 1L]] <- tibble::tibble(
       dataset = year_index$dataset[match(years, year_index$year)],
@@ -182,8 +209,11 @@ plan_files <- function(years_by_table,
 
   if (length(rows) == 0L) {
     return(tibble::tibble(
-      dataset = character(0), table = character(0), year = integer(0),
-      directory_label = character(0), label = character(0)
+      dataset = character(0),
+      table = character(0),
+      year = integer(0),
+      directory_label = character(0),
+      label = character(0)
     ))
   }
 
@@ -213,19 +243,27 @@ plan_files <- function(years_by_table,
 #' @return A named list of integer vectors.
 #' @keywords internal
 #' @noRd
-years_for_tables <- function(storm_years,
-                             window_years = NULL,
-                             tables = character(0),
-                             flood_match = "start",
-                             pop_years = NULL) {
+years_for_tables <- function(
+  storm_years,
+  window_years = NULL,
+  tables = character(0),
+  flood_match = "start",
+  pop_years = NULL
+) {
   out <- list()
 
   if ("storm_metadata" %in% tables || any(tables %in% STORM_LINKED_TABLES)) {
     out$storm_metadata <- storm_years
   }
-  if ("wind" %in% tables) out$wind <- storm_years
-  if ("tracks" %in% tables) out$tracks <- storm_years
-  if (needs_zero_pairs(tables)) out$zero_pairs <- storm_years
+  if ("wind" %in% tables) {
+    out$wind <- storm_years
+  }
+  if ("tracks" %in% tables) {
+    out$tracks <- storm_years
+  }
+  if (needs_zero_pairs(tables)) {
+    out$zero_pairs <- storm_years
+  }
 
   if ("precip" %in% tables && !is.null(window_years)) {
     out$precip <- window_years$precip
@@ -239,7 +277,9 @@ years_for_tables <- function(storm_years,
     out$flood <- flood_years
   }
 
-  if ("pop" %in% tables && !is.null(pop_years)) out$pop <- pop_years
+  if ("pop" %in% tables && !is.null(pop_years)) {
+    out$pop <- pop_years
+  }
 
   lapply(compact(out), function(y) sort(unique(as.integer(y))))
 }

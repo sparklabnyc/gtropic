@@ -22,8 +22,14 @@ dimensions of each returned table. Printing does not modify or materialize
 the result.
 }
 \examples{
-\donttest{
-gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-}
+print(gtropic_example())
 
 }
+\seealso{
+Other result methods:
+\code{\link[=format.gtropic_data]{format.gtropic_data()}},
+\code{\link[=print.gtropic_filters]{print.gtropic_filters()}},
+\code{\link[=print.gtropic_manifest]{print.gtropic_manifest()}},
+\code{\link[=summary.gtropic_data]{summary.gtropic_data()}}
+}
+\concept{result methods}

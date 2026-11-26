@@ -12,7 +12,8 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
   rows$.plot_row_id <- seq_len(nrow(rows))
   if ("LOCAL_DATE_STORM_CLOSEST" %in% names(rows)) {
     rows$LOCAL_DATE_STORM_CLOSEST <- plot_join_date(
-      rows$LOCAL_DATE_STORM_CLOSEST, "LOCAL_DATE_STORM_CLOSEST"
+      rows$LOCAL_DATE_STORM_CLOSEST,
+      "LOCAL_DATE_STORM_CLOSEST"
     )
   }
   if (spec$table == "wind") {
@@ -33,11 +34,13 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
   if (spec$table == "precip") {
     rows$date <- plot_join_date(rows$LOCAL_DATE, "LOCAL_DATE")
     by <- dplyr::join_by(
-      ADM2_ID, dplyr::between(date, PRECIP_WINDOW_START, PRECIP_WINDOW_END)
+      ADM2_ID,
+      dplyr::between(date, PRECIP_WINDOW_START, PRECIP_WINDOW_END)
     )
   } else {
     rows$.plot_start <- plot_join_date(
-      rows$FLOOD_START_DATE, "FLOOD_START_DATE"
+      rows$FLOOD_START_DATE,
+      "FLOOD_START_DATE"
     )
     rows$.plot_end <- plot_join_date(rows$FLOOD_END_DATE, "FLOOD_END_DATE")
     by <- if (flood_match == "start") {
@@ -48,17 +51,29 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
     } else {
       dplyr::join_by(
         ADM2_ID,
-        ".plot_start" <= FLOOD_WINDOW_END, ".plot_end" >= FLOOD_WINDOW_START
+        ".plot_start" <= FLOOD_WINDOW_END,
+        ".plot_end" >= FLOOD_WINDOW_START
       )
     }
   }
-  rows <- dplyr::right_join(rows, field,
-    by = by, relationship = "many-to-many", na_matches = "never",
+  rows <- dplyr::right_join(
+    rows,
+    field,
+    by = by,
+    relationship = "many-to-many",
+    na_matches = "never",
     suffix = c("", ".link")
   )
   rows <- dplyr::select(rows, -dplyr::any_of(c(".plot_start", ".plot_end")))
   rows$metric <- rep(spec$metric, nrow(rows))
   rows$value <- as.numeric(rows[[spec$metric]])
+  if (spec$table == "flood" && isTRUE(spec$binary)) {
+    # A yes/no flood panel: an in-field pair whose window lies inside the
+    # Groundsource record but matched no flood row had no flood report;
+    # outside the record, nothing is known.
+    rows$.no_flood_report <- is.na(rows$.plot_row_id) &
+      flood_window_recorded(rows$FLOOD_WINDOW_START, rows$FLOOD_WINDOW_END)
+  }
   rows
 }
 
@@ -68,8 +83,10 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
 plot_join_date <- function(x, column) {
   out <- tryCatch(as.Date(x), error = function(e) NULL)
   if (is.null(out) || any(!is.na(x) & is.na(out))) {
-    cli::cli_abort("Column {.field {column}} must contain valid
-                    calendar dates.")
+    cli::cli_abort(
+      "Column {.field {column}} must contain valid
+                    calendar dates."
+    )
   }
   out
 }
@@ -77,23 +94,41 @@ plot_join_date <- function(x, column) {
 #' Summarize each ADM2, metric, and requested facet at its own source grain
 #' @keywords internal
 #' @noRd
-plot_aggregate_metric <- function(rows, spec, type, count_unit = "storms",
-                                  facet_by = NULL, binary = FALSE) {
+plot_aggregate_metric <- function(
+  rows,
+  spec,
+  type,
+  count_unit = "storms",
+  facet_by = NULL,
+  binary = FALSE
+) {
   keys <- unique(c("ADM2_ID", "metric", facet_by))
   if (!nrow(rows)) {
     out <- rows[, keys, drop = FALSE]
     out$value <- numeric()
-    if (binary) out$exposed <- logical()
+    if (binary) {
+      out$exposed <- logical()
+    }
     return(out)
   }
   groups <- dplyr::group_by(rows, !!!rlang::syms(keys))
   parts <- lapply(dplyr::group_split(groups, .keep = TRUE), function(group) {
     # Keep labels and other unambiguous published metadata. A combined-storm
     # summary must not arbitrarily claim the first storm's name or timestamp.
-    constant <- vapply(group, function(x) {
-      dplyr::n_distinct(x) == 1L
-    }, logical(1))
-    omit <- c("value", "exposed", ".plot_row_id", spec$metric)
+    constant <- vapply(
+      group,
+      function(x) {
+        dplyr::n_distinct(x) == 1L
+      },
+      logical(1)
+    )
+    omit <- c(
+      "value",
+      "exposed",
+      ".plot_row_id",
+      ".no_flood_report",
+      spec$metric
+    )
     columns <- union(keys, setdiff(names(group)[constant], omit))
     out <- group[1L, columns, drop = FALSE]
     if ("STORM_DIST_KM" %in% names(group)) {
@@ -108,6 +143,9 @@ plot_aggregate_metric <- function(rows, spec, type, count_unit = "storms",
     }
     if (binary) {
       qualified <- plot_threshold_values(group$value, spec)
+      if (".no_flood_report" %in% names(group)) {
+        qualified[group$.no_flood_report %in% TRUE] <- FALSE
+      }
       out$exposed <- if (all(is.na(qualified))) {
         NA
       } else {
@@ -127,7 +165,8 @@ plot_summary_value <- function(value, aggregate) {
   if (!length(value)) {
     return(NA_real_)
   }
-  as.numeric(switch(aggregate,
+  as.numeric(switch(
+    aggregate,
     max = max(value),
     min = min(value),
     sum = sum(value),
@@ -141,7 +180,8 @@ plot_summary_value <- function(value, aggregate) {
 #' @keywords internal
 #' @noRd
 plot_threshold_values <- function(value, spec) {
-  switch(spec$operator,
+  switch(
+    spec$operator,
     `>=` = value >= spec$threshold,
     `>` = value > spec$threshold,
     `<=` = value <= spec$threshold,
@@ -174,7 +214,8 @@ plot_count_values <- function(rows, spec, count_unit) {
     selected$date
   } else {
     plot_join_date(
-      selected$LOCAL_DATE_STORM_CLOSEST, "LOCAL_DATE_STORM_CLOSEST"
+      selected$LOCAL_DATE_STORM_CLOSEST,
+      "LOCAL_DATE_STORM_CLOSEST"
     )
   }
   if (all(is.na(dates))) {

@@ -3,34 +3,38 @@
 #' Countries use the locally installed Natural Earth data package. First use of
 #' an administrative-level-1 layer requires the optional, non-CRAN
 #' `rnaturalearthhires` package. No layer is downloaded by this function.
+#' @param what One of `"countries"` (the default), `"admin1"`, or `"none"`.
 #' @param scale Country resolution: `"small"` (110) or `"medium"` (50).
 #'   Large (10) country layers are deliberately unsupported. Ignored for admin1,
 #'   which uses the resolution supplied by `rnaturalearth::ne_states()`.
-#' @param what One of `"countries"`, `"admin1"`, or `"none"`.
 #' @return An sf object, or NULL for `what = "none"`. Layers are cached by
 #'   resolution and type until the R session ends.
 #' @examples
-#' \donttest{
 #' gtropic_basemap(what = "none")
-#' if (requireNamespace("rnaturalearth", quietly = TRUE) &&
-#'   requireNamespace("rnaturalearthdata", quietly = TRUE)) {
-#'   gtropic_basemap()
-#' }
-#' }
+#'
+#' @examplesIf rlang::is_installed(c("sf", "rnaturalearth", "rnaturalearthdata"))
+#' countries <- gtropic_basemap()
+#' nrow(countries)
+#' @family plotting functions
 #' @export
-gtropic_basemap <- function(scale = "medium",
-                            what = c("countries", "admin1", "none")) {
+gtropic_basemap <- function(
+  what = c("countries", "admin1", "none"),
+  scale = "medium"
+) {
   what <- match.arg(what)
   if (what == "none") {
     return(NULL)
   }
   if (what == "countries") {
     if (
-      length(scale) != 1L || is.na(scale) ||
+      length(scale) != 1L ||
+        is.na(scale) ||
         !as.character(scale) %in% c("small", "medium", "110", "50")
     ) {
-      cli::cli_abort("Country {.arg scale} must be 'small' (110) or
-                      'medium' (50); large (10) countries are not supported.")
+      cli::cli_abort(
+        "Country {.arg scale} must be 'small' (110) or
+                      'medium' (50); large (10) countries are not supported."
+      )
     }
     scale <- if (as.character(scale) %in% c("small", "110")) 110 else 50
   } else {
@@ -42,16 +46,20 @@ gtropic_basemap <- function(scale = "medium",
   }
   rlang::check_installed(c("sf", "rnaturalearth"), reason = "to use basemaps")
   if (what == "countries") {
-    rlang::check_installed("rnaturalearthdata",
+    rlang::check_installed(
+      "rnaturalearthdata",
       reason = "to use country basemaps"
     )
   } else {
     # Gate by name only: this non-CRAN package is not an imported dependency.
-    rlang::check_installed("rnaturalearthhires", reason = paste0(
-      "to use admin1 basemaps. Install it with ",
-      "install.packages('rnaturalearthhires', repos = c(",
-      "'https://ropensci.r-universe.dev', 'https://cloud.r-project.org'))"
-    ))
+    rlang::check_installed(
+      "rnaturalearthhires",
+      reason = paste0(
+        "to use admin1 basemaps. Install it with ",
+        "install.packages('rnaturalearthhires', repos = c(",
+        "'https://ropensci.r-universe.dev', 'https://cloud.r-project.org'))"
+      )
+    )
   }
   layer <- plot_fetch_basemap(scale, what)
   .plot_basemap_cache[[key]] <- layer
@@ -120,7 +128,8 @@ plot_wrap_longitude <- function(x, centre) {
   x <- plot_geometry_longitudes(x, function(lon) {
     (lon - centre + 180) %% 360 - 180
   })
-  x <- sf::st_wrap_dateline(x,
+  x <- sf::st_wrap_dateline(
+    x,
     options = c("WRAPDATELINE=YES", "DATELINEOFFSET=180")
   )
   plot_geometry_longitudes(x, function(lon) {
@@ -157,7 +166,9 @@ plot_shift_tracks <- function(tracks, shifted) {
   if (is.null(tracks)) {
     return(NULL)
   }
-  if (!"original_LON" %in% names(tracks)) tracks$original_LON <- tracks$LON
+  if (!"original_LON" %in% names(tracks)) {
+    tracks$original_LON <- tracks$LON
+  }
   if (shifted) {
     tracks$LON <- ifelse(tracks$LON < 0, tracks$LON + 360, tracks$LON)
   }
@@ -170,7 +181,9 @@ plot_shift_tracks <- function(tracks, shifted) {
 plot_frame_bbox <- function(data, tracks = NULL, shifted = FALSE) {
   x <- y <- numeric()
   if (inherits(data, "sf") || inherits(data, "sfc")) {
-    if (shifted) data <- plot_seam_geometry(data, shifted = TRUE)
+    if (shifted) {
+      data <- plot_seam_geometry(data, shifted = TRUE)
+    }
     bounds <- sf::st_bbox(data)
     x <- unname(bounds[c("xmin", "xmax")])
     y <- unname(bounds[c("ymin", "ymax")])
@@ -188,8 +201,10 @@ plot_frame_bbox <- function(data, tracks = NULL, shifted = FALSE) {
   }
   stats::setNames(
     c(
-      min(x[is.finite(x)]), min(y[is.finite(y)]),
-      max(x[is.finite(x)]), max(y[is.finite(y)])
+      min(x[is.finite(x)]),
+      min(y[is.finite(y)]),
+      max(x[is.finite(x)]),
+      max(y[is.finite(y)])
     ),
     c("xmin", "ymin", "xmax", "ymax")
   )
@@ -207,27 +222,38 @@ plot_numeric_bbox <- function(bbox) {
     bbox <- sf::st_transform(bbox, 4326)
   }
   if (!is.numeric(bbox) || length(bbox) != 4L || any(!is.finite(bbox))) {
-    cli::cli_abort("{.arg bbox} must be sf, sfc, bbox, or four finite numbers
-                    in order c(xmin, ymin, xmax, ymax).")
+    cli::cli_abort(
+      "{.arg bbox} must be sf, sfc, bbox, or four finite numbers
+                    in order c(xmin, ymin, xmax, ymax)."
+    )
   }
   if (!is.null(names(bbox))) {
     if (!setequal(names(bbox), order)) {
-      cli::cli_abort("Named {.arg bbox} must have
-                      xmin, ymin, xmax, ymax names.")
+      cli::cli_abort(
+        "Named {.arg bbox} must have
+                      xmin, ymin, xmax, ymax names."
+      )
     }
     bbox <- bbox[order]
   }
   bbox <- stats::setNames(as.numeric(bbox), order)
   if (bbox[1] > bbox[3] || bbox[2] > bbox[4]) {
-    cli::cli_abort("{.arg bbox} minima must not exceed maxima;
-                    use longitudes such as 170, 190 to cross the dateline.")
+    cli::cli_abort(
+      "{.arg bbox} minima must not exceed maxima;
+                    use longitudes such as 170, 190 to cross the dateline."
+    )
   }
   if (
-    bbox[1] < -180 || bbox[3] > 360 || diff(bbox[c(1, 3)]) > 360 ||
-      bbox[2] < -90 || bbox[4] > 90
+    bbox[1] < -180 ||
+      bbox[3] > 360 ||
+      diff(bbox[c(1, 3)]) > 360 ||
+      bbox[2] < -90 ||
+      bbox[4] > 90
   ) {
-    cli::cli_abort("{.arg bbox} must contain geographic longitude/latitude
-                    bounds, with latitude between -90 and 90.")
+    cli::cli_abort(
+      "{.arg bbox} must contain geographic longitude/latitude
+                    bounds, with latitude between -90 and 90."
+    )
   }
   bbox
 }
@@ -241,13 +267,20 @@ plot_numeric_bbox <- function(bbox) {
 #' maps use EPSG:8857. An explicit CRS always wins, with geometry split at its seam.
 #' @keywords internal
 #' @noRd
-plot_cartography <- function(data, basemap = "countries", bbox = NULL,
-                             expand = 2, crs = NULL) {
+plot_cartography <- function(
+  data,
+  basemap = "countries",
+  bbox = NULL,
+  expand = 2,
+  crs = NULL
+) {
   rlang::check_installed("sf", reason = "to prepare map cartography")
   basemap <- rlang::arg_match(basemap, c("countries", "admin1", "none"))
   if (
-    !is.numeric(expand) || length(expand) != 1L ||
-      !is.finite(expand) || expand < 0
+    !is.numeric(expand) ||
+      length(expand) != 1L ||
+      !is.finite(expand) ||
+      expand < 0
   ) {
     cli::cli_abort("{.arg expand} must be one nonnegative finite number.")
   }
@@ -271,12 +304,16 @@ plot_cartography <- function(data, basemap = "countries", bbox = NULL,
     }
     extent_tracks <- if (is.null(bbox)) tracks else NULL
     bounds <- plot_frame_bbox(extent_data, extent_tracks)
-    shifted_bounds <- plot_frame_bbox(extent_data, extent_tracks,
+    shifted_bounds <- plot_frame_bbox(
+      extent_data,
+      extent_tracks,
       shifted = TRUE
     )
     shifted <- diff(bounds[c(1, 3)]) > 180 &&
       diff(shifted_bounds[c(1, 3)]) < diff(bounds[c(1, 3)])
-    if (shifted) bounds <- shifted_bounds
+    if (shifted) {
+      bounds <- shifted_bounds
+    }
     # Already-shifted inputs also define a 0-360 plotting frame.
     shifted <- shifted || bounds[3] > 180
     bounds <- plot_numeric_bbox(bounds)
@@ -291,22 +328,29 @@ plot_cartography <- function(data, basemap = "countries", bbox = NULL,
   )
   bounds[c(2, 4)] <- pmax(-90, pmin(90, bounds[c(2, 4)]))
   projection <- if (is.null(crs)) {
-    sf::st_crs(if (diff(bounds[c(1, 3)]) < 40) {
-      4326
-    } else if (shifted) {
-      "+proj=eqearth +lon_0=180 +datum=WGS84 +units=m +no_defs"
-    } else {
-      8857
-    })
+    sf::st_crs(
+      if (diff(bounds[c(1, 3)]) < 40) {
+        4326
+      } else if (shifted) {
+        "+proj=eqearth +lon_0=180 +datum=WGS84 +units=m +no_defs"
+      } else {
+        8857
+      }
+    )
   } else {
     tryCatch(sf::st_crs(crs), error = function(e) {
-      cli::cli_abort("{.arg crs} must identify a valid coordinate reference
-                      system.", parent = e)
+      cli::cli_abort(
+        "{.arg crs} must identify a valid coordinate reference
+                      system.",
+        parent = e
+      )
     })
   }
   if (is.na(projection)) {
-    cli::cli_abort("{.arg crs} must identify a valid
-                    coordinate reference system.")
+    cli::cli_abort(
+      "{.arg crs} must identify a valid
+                    coordinate reference system."
+    )
   }
   if (inherits(data, "sf")) {
     data <- plot_seam_geometry(data, shifted, projection)
@@ -322,8 +366,12 @@ plot_cartography <- function(data, basemap = "countries", bbox = NULL,
     layer <- plot_seam_geometry(layer, shifted, projection)
   }
   list(
-    data = data, tracks = tracks, basemap = layer, bbox = bounds,
-    crs = projection, shifted = unname(shifted)
+    data = data,
+    tracks = tracks,
+    basemap = layer,
+    bbox = bounds,
+    crs = projection,
+    shifted = unname(shifted)
   )
 }
 
@@ -334,10 +382,14 @@ plot_map_base <- function(data, cartography) {
   rlang::check_installed("ggplot2", reason = "to build maps")
   p <- ggplot2::ggplot(data)
   if (!is.null(cartography$basemap)) {
-    p <- p + ggplot2::geom_sf(
-      data = cartography$basemap, inherit.aes = FALSE,
-      fill = "grey95", colour = "grey75", linewidth = 0.25
-    )
+    p <- p +
+      ggplot2::geom_sf(
+        data = cartography$basemap,
+        inherit.aes = FALSE,
+        fill = "grey95",
+        colour = "grey75",
+        linewidth = 0.25
+      )
   }
   p
 }
@@ -345,8 +397,15 @@ plot_map_base <- function(data, cartography) {
 #' Apply shared map coordinates, facets, labels, and publication defaults
 #' @keywords internal
 #' @noRd
-plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
-                            caption = NULL, gridlines = TRUE) {
+plot_map_finish <- function(
+  p,
+  data,
+  cartography,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  gridlines = TRUE
+) {
   rlang::check_installed(c("ggplot2", "sf"), reason = "to finish maps")
   info <- attr(data, "plot_info", exact = TRUE)
   facets <- unique(c(if (length(info$metric) > 1L) "metric", info$facet_by))
@@ -356,16 +415,18 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
     } else {
       ggplot2::label_value
     }
-    p <- p + ggplot2::facet_wrap(
-      ggplot2::vars(!!!rlang::syms(facets)),
-      labeller = labels
-    )
+    p <- p +
+      ggplot2::facet_wrap(
+        ggplot2::vars(!!!rlang::syms(facets)),
+        labeller = labels
+      )
   }
   default_title <- plot_default_title(info)
   default_subtitle <- plot_date_subtitle(info)
   projected <- !isTRUE(sf::st_is_longlat(cartography$crs))
-  key_band <- if (info$type %in% c("exposure", "count") &&
-    is.null(info$track_legend_position)) {
+  key_band <- if (
+    info$type %in% c("exposure", "count") && is.null(info$track_legend_position)
+  ) {
     diff(cartography$bbox[c(2, 4)]) * 0.14
   } else {
     0
@@ -375,41 +436,65 @@ plot_map_finish <- function(p, data, cartography, title = NULL, subtitle = NULL,
     cartography$bbox[4]
   )
   latitude_limits <- pmax(-90, pmin(90, latitude_limits))
-  p <- p + ggplot2::coord_sf(
-    crs = cartography$crs, default_crs = sf::st_crs(4326),
-    xlim = cartography$bbox[c(1, 3)],
-    ylim = latitude_limits,
-    # Curved projected bbox edges need a small panel margin to avoid clipping
-    # observations exactly on the requested geographic boundary.
-    expand = if (projected) c(FALSE, TRUE, FALSE, FALSE) else FALSE
-  ) + theme_gtropic() + ggplot2::theme(
-    axis.title = ggplot2::element_blank(),
-    axis.text = if (gridlines) ggplot2::element_text() else ggplot2::element_blank(),
-    axis.ticks = if (gridlines) ggplot2::element_line() else ggplot2::element_blank(),
-    panel.grid = if (gridlines) {
-      ggplot2::element_line(
-        colour = "grey90", linewidth = 0.25
-      )
-    } else {
-      ggplot2::element_blank()
-    },
-    legend.position = if (isTRUE(info$track)) "bottom" else "none",
-    legend.box = "horizontal",
-    legend.direction = "horizontal"
-  ) + ggplot2::labs(
-    title = title %||% default_title,
-    subtitle = subtitle %||% default_subtitle,
-    caption = plot_map_caption(info, caption, cartography$crs)
-  )
+  p <- p +
+    ggplot2::coord_sf(
+      crs = cartography$crs,
+      default_crs = sf::st_crs(4326),
+      xlim = cartography$bbox[c(1, 3)],
+      ylim = latitude_limits,
+      # Curved projected bbox edges need a small panel margin to avoid clipping
+      # observations exactly on the requested geographic boundary.
+      expand = if (projected) c(FALSE, TRUE, FALSE, FALSE) else FALSE
+    ) +
+    theme_gtropic() +
+    ggplot2::theme(
+      axis.title = ggplot2::element_blank(),
+      axis.text = if (gridlines) {
+        ggplot2::element_text()
+      } else {
+        ggplot2::element_blank()
+      },
+      axis.ticks = if (gridlines) {
+        ggplot2::element_line()
+      } else {
+        ggplot2::element_blank()
+      },
+      panel.grid = if (gridlines) {
+        ggplot2::element_line(
+          colour = "grey90",
+          linewidth = 0.25
+        )
+      } else {
+        ggplot2::element_blank()
+      },
+      legend.position = if (isTRUE(info$track)) "bottom" else "none",
+      legend.box = "horizontal",
+      legend.direction = "horizontal"
+    ) +
+    ggplot2::labs(
+      title = title %||% default_title,
+      subtitle = subtitle %||% default_subtitle,
+      caption = plot_map_caption(info, caption, cartography$crs)
+    )
   attr(p, "gtropic_bbox") <- cartography$bbox
   p
 }
 
 #' Insert stable line breaks before long captions reach the plot boundary
+#'
+#' Lines hold at most `width` characters. `strwrap()` keeps lines shorter
+#' than its own `width`, hence `width + 1`.
 #' @keywords internal
 #' @noRd
 plot_wrap_caption <- function(caption, width = 80L) {
-  stringr::str_wrap(caption, width = width)
+  vapply(
+    caption,
+    function(x) {
+      paste(strwrap(x, width = width + 1L), collapse = "\n")
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
 }
 
 #' Preserve automatic caption lines for static maps
@@ -417,7 +502,9 @@ plot_wrap_caption <- function(caption, width = 80L) {
 #' @noRd
 plot_map_caption <- function(info, caption = NULL, crs = NULL) {
   text <- plot_caption(info, caption, crs)
-  if (!is.null(caption)) return(plot_wrap_caption(text))
+  if (!is.null(caption)) {
+    return(plot_wrap_caption(text))
+  }
   text
 }
 
@@ -445,9 +532,13 @@ plot_date_subtitle <- function(info) {
   if (is.null(dates) || length(dates) != 2L || anyNA(dates)) {
     return(NULL)
   }
-  paste0("Aggregated across ", paste(
-    format(as.Date(dates), "%m/%d/%Y"), collapse = " - "
-  ))
+  paste0(
+    "Aggregated across ",
+    paste(
+      format(as.Date(dates), "%m/%d/%Y"),
+      collapse = " - "
+    )
+  )
 }
 
 #' Create an automatic title from the plotted storm set
@@ -471,7 +562,11 @@ plot_default_title <- function(info) {
     }
   } else if (info$type == "count") {
     spec <- info$metrics[1L, ]
-    unit <- if (identical(info$count_unit, "days")) "Exposure-days" else "Storm-exposures"
+    unit <- if (identical(info$count_unit, "days")) {
+      "Exposure-days"
+    } else {
+      "Storm-exposures"
+    }
     paste0(unit, " (n): ", plot_metric_display_label(spec))
   } else {
     plot_metric_display_label(info$metrics[1L, ])

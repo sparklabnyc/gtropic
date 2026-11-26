@@ -15,9 +15,13 @@
 #' warn rather than pick silently, because a wrong assignment sends every
 #' subsequent request to the wrong DOI.
 #'
-#' Explicit versions are memoised for the session. `":latest"` is deliberately
-#' rediscovered on every call so a long-lived R session does not silently miss a
-#' newly published Dataverse version.
+#' Explicit versions are memoised for the session. A `":latest"` discovery is
+#' reused for `getOption("gtropic.discovery_ttl")` seconds (default 600), so
+#' `gtropic_storms()` followed by `gtropic_data()` asks the server once, while
+#' a long-lived R session still sees a newly published Dataverse version within
+#' that time. `0` rediscovers on every call. A result that came from the
+#' configured-DOI fallback is not reused, so the next call tries discovery
+#' again.
 #'
 #' @param versions List with `historical` and `current` version strings.
 #' @param server Dataverse host.
@@ -32,16 +36,18 @@
 #'   `listing`, `years`), plus `year_index`, a tibble of `year` and `dataset`.
 #' @keywords internal
 #' @noRd
-discover_datasets <- function(versions = list(
-                                historical = ":latest",
-                                current = ":latest"
-                              ),
-                               server = opt_server(),
-                               collection = opt_collection(),
-                               refresh = FALSE,
-                               quiet = FALSE,
-                               offline = FALSE,
-                               cache_dir = NULL) {
+discover_datasets <- function(
+  versions = list(
+    historical = ":latest",
+    current = ":latest"
+  ),
+  server = opt_server(),
+  collection = opt_collection(),
+  refresh = FALSE,
+  quiet = FALSE,
+  offline = FALSE,
+  cache_dir = NULL
+) {
   if (isTRUE(offline)) {
     if (is.null(cache_dir)) {
       cli::cli_abort("{.code offline = TRUE} requires an enabled cache.")
@@ -49,39 +55,63 @@ discover_datasets <- function(versions = list(
     snapshot <- cache_discovery_read(cache_dir, server, collection, versions)
     age <- difftime(Sys.time(), snapshot$saved_at, units = "days")
     cli::cli_warn(c(
-      "Using an offline G-TROPIC discovery snapshot saved {format(snapshot$saved_at, usetz = TRUE)}.",
-      i = "The snapshot is {format(round(as.numeric(age), 1), nsmall = 1)} day{?s} old; no Dataverse update check was made."
+      "Using an offline G-TROPIC discovery snapshot saved {format(snapshot$saved_at, usetz = TRUE)}.", # nolint: line_length_linter.
+      i = "The snapshot is {format(round(as.numeric(age), 1), nsmall = 1)} day{?s} old; no Dataverse update check was made." # nolint: line_length_linter.
     ))
     return(snapshot$discovery)
   }
 
-  key <- paste(server, collection, versions$historical, versions$current,
+  key <- paste(
+    "discovery",
+    server,
+    collection,
+    versions$historical,
+    versions$current,
     sep = "|"
   )
   latest_requested <- any(unlist(versions, use.names = FALSE) == ":latest")
-  if (!refresh && !latest_requested && !is.null(.gtropic_session[[key]])) {
-    return(.gtropic_session[[key]])
+  if (!refresh) {
+    saved <- .gtropic_session[[key]]
+    ttl <- if (latest_requested) opt("discovery_ttl") else Inf
+    age <- if (is.null(saved)) {
+      Inf
+    } else {
+      as.numeric(difftime(Sys.time(), saved$at, units = "secs"))
+    }
+    if (age < ttl) {
+      return(saved$result)
+    }
   }
 
+  fell_back <- FALSE
   result <- tryCatch(
     discover_datasets_impl(versions, server, collection, quiet),
     error = function(e) {
       # Fall back to the configured DOIs so a discovery outage degrades to the
-      # previous behaviour rather than to a hard failure.
+      # previous behaviour rather than to a hard failure. If the fallback
+      # fails too (typically: no connection at all), its error is the one
+      # report; a warning about the first attempt would only repeat it.
+      fallback <- discovery_from_options(versions, server, quiet)
+      fell_back <<- TRUE
       cli::cli_warn(
-        c("Automatic dataset discovery failed; falling back to the configured
+        c(
+          "Automatic dataset discovery failed; fell back to the configured
            DOI options.",
           x = "{conditionMessage(e)}",
           i = "If the current-year DOI has rolled over, set
                {.code options(gtropic.doi_current = )} explicitly."
         )
       )
-      discovery_from_options(versions, server, quiet)
+      fallback
     }
   )
 
-  if (!latest_requested) .gtropic_session[[key]] <- result
-  if (!is.null(cache_dir)) cache_discovery_write(cache_dir, result, collection)
+  if (!(latest_requested && fell_back)) {
+    .gtropic_session[[key]] <- list(result = result, at = Sys.time())
+  }
+  if (!is.null(cache_dir)) {
+    cache_discovery_write(cache_dir, result, collection)
+  }
   result
 }
 
@@ -102,26 +132,49 @@ discovery_from_manifest <- function(manifest) {
   routing <- routing[!duplicated(routing$year), , drop = FALSE]
   if (nrow(routing) == 0L) {
     routing <- tibble::tibble(
-      dataset_doi = character(0), dataset_version = character(0), year = integer(0)
+      dataset_doi = character(0),
+      dataset_version = character(0),
+      year = integer(0)
     )
   }
   sources <- manifest_datasets(manifest)
   make_slot <- function(role) {
     source <- sources[sources$source_role == role, , drop = FALSE]
-    if (nrow(source) == 0L) return(NULL)
+    if (nrow(source) == 0L) {
+      return(NULL)
+    }
     source <- source[1L, , drop = FALSE]
-    list(doi = source$dataset_doi, version = source$dataset_version,
-      listing = files[files$dataset_doi == source$dataset_doi &
-        files$dataset_version == source$dataset_version, , drop = FALSE], years = integer(0))
+    list(
+      doi = source$dataset_doi,
+      version = source$dataset_version,
+      listing = files[
+        files$dataset_doi == source$dataset_doi &
+          files$dataset_version == source$dataset_version,
+        ,
+        drop = FALSE
+      ],
+      years = integer(0)
+    )
   }
   historical <- make_slot("Historical")
   current <- make_slot("Current-year")
-  year_dataset <- if (nrow(routing) == 0L) character(0) else {
-    ifelse(!is.null(historical) & routing$dataset_doi == historical$doi &
-      routing$dataset_version == historical$version, "historical", "current")
+  year_dataset <- if (nrow(routing) == 0L) {
+    character(0)
+  } else {
+    ifelse(
+      !is.null(historical) &
+        routing$dataset_doi == historical$doi &
+        routing$dataset_version == historical$version,
+      "historical",
+      "current"
+    )
   }
-  if (!is.null(historical)) historical$years <- routing$year[year_dataset == "historical"]
-  if (!is.null(current)) current$years <- routing$year[year_dataset == "current"]
+  if (!is.null(historical)) {
+    historical$years <- routing$year[year_dataset == "historical"]
+  }
+  if (!is.null(current)) {
+    current$years <- routing$year[year_dataset == "current"]
+  }
   list(
     server = manifest$server,
     historical = historical,
@@ -133,33 +186,43 @@ discovery_from_manifest <- function(manifest) {
 #' @keywords internal
 #' @noRd
 discover_datasets_impl <- function(versions, server, collection, quiet) {
-  inform_unless_quiet("Discovering datasets in collection {.val {collection}}.",
+  inform_unless_quiet(
+    "Discovering datasets in collection {.val {collection}}.",
     quiet = quiet
   )
 
   dois <- dv_list_datasets(
-    collection = collection, server = server,
+    collection = collection,
+    server = server,
     quiet = quiet
   )
   if (nrow(dois) < 1L) {
     cli::cli_abort("Collection {.val {collection}} contains no datasets.")
   }
 
-  # One listing per dataset. We ask for :latest here regardless of the requested
-  # version, because identification is about which dataset is which, not about
-  # which snapshot of it we will end up reading.
-  profiles <- lapply(dois$doi, function(d) {
-    listing <- dv_list_files(d,
-      version = ":latest", server = server,
-      quiet = quiet
-    )
-    list(
-      doi = d,
-      listing = listing,
-      years = listing_years(listing),
-      has_metadata = any(startsWith(listing$directory_label, "metadata"))
-    )
-  })
+  # One listing per dataset at :latest. Identification is about which dataset
+  # is which, not about which snapshot of it we will end up reading; a pinned
+  # version is listed separately once the roles are known (see below).
+  # The listings are requested two at a time (PERF-07).
+  listings <- dv_list_files_each(
+    dois$doi,
+    version = ":latest",
+    server = server,
+    quiet = quiet
+  )
+  profiles <- Map(
+    function(d, listing) {
+      list(
+        doi = d,
+        listing = listing,
+        years = listing_years(listing),
+        has_metadata = any(startsWith(listing$directory_label, "metadata"))
+      )
+    },
+    dois$doi,
+    listings,
+    USE.NAMES = FALSE
+  )
 
   by_years <- vapply(profiles, function(p) min(c(p$years, Inf)), numeric(1))
   n_years <- vapply(profiles, function(p) length(p$years), integer(1))
@@ -171,7 +234,8 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
 
   if (length(meta_idx) != 1L || !identical(meta_idx, hist_idx)) {
     cli::cli_warn(
-      c("Dataset identification signals disagree.",
+      c(
+        "Dataset identification signals disagree.",
         i = "Year coverage points at {.val {profiles[[hist_idx]]$doi}} as the
              historical dataset; {length(meta_idx)} dataset{?s} carry a
              {.path metadata/} directory.",
@@ -187,9 +251,13 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
   # dataset does not have. If several qualify, take the one with the newest year.
   current <- NULL
   if (length(others) > 0L) {
-    extra <- vapply(others, function(p) {
-      max(c(setdiff(p$years, hist$years), -Inf))
-    }, numeric(1))
+    extra <- vapply(
+      others,
+      function(p) {
+        max(c(setdiff(p$years, hist$years), -Inf))
+      },
+      numeric(1)
+    )
     if (any(is.finite(extra))) current <- others[[which.max(extra)]]
   }
 
@@ -203,12 +271,16 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
     )
   }
 
-  if (!is.null(current) && any(startsWith(
-    current$listing$directory_label,
-    "metadata"
-  ))) {
+  if (
+    !is.null(current) &&
+      any(startsWith(
+        current$listing$directory_label,
+        "metadata"
+      ))
+  ) {
     cli::cli_warn(
-      c("The current-year dataset now contains {.path metadata/} files.",
+      c(
+        "The current-year dataset now contains {.path metadata/} files.",
         i = "There should be exactly one copy, in the historical dataset.",
         i = "Continuing to use the historical copy; the publication contract
              may have changed upstream."
@@ -216,7 +288,37 @@ discover_datasets_impl <- function(versions, server, collection, quiet) {
     )
   }
 
+  # File ids and checksums must come from the version that will be read. The
+  # :latest listing only identified the datasets, so a pinned version is
+  # listed again at that version; :latest reuses the listing it already has.
+  hist <- profile_at_version(hist, versions$historical, server, quiet)
+  if (!is.null(current)) {
+    current <- profile_at_version(current, versions$current, server, quiet)
+  }
+
   build_discovery(hist, current, versions, server, quiet)
+}
+
+#' List a dataset at the requested version unless it already is
+#'
+#' @param profile A dataset profile from `discover_datasets_impl()`, listed at
+#'   `":latest"`.
+#' @param version Requested version string.
+#' @return `profile` with `listing` and `years` taken from `version`.
+#' @keywords internal
+#' @noRd
+profile_at_version <- function(profile, version, server, quiet) {
+  if (identical(version, ":latest")) {
+    return(profile)
+  }
+  profile$listing <- dv_list_files(
+    profile$doi,
+    version = version,
+    server = server,
+    quiet = quiet
+  )
+  profile$years <- listing_years(profile$listing)
+  profile
 }
 
 #' @keywords internal
@@ -233,8 +335,9 @@ discovery_from_options <- function(versions, server, quiet) {
   hist$years <- listing_years(hist$listing)
 
   current <- NULL
-  if (!is.null(curr_doi) && nzchar(curr_doi) &&
-    !identical(curr_doi, hist_doi)) {
+  if (
+    !is.null(curr_doi) && nzchar(curr_doi) && !identical(curr_doi, hist_doi)
+  ) {
     current <- tryCatch(
       {
         lst <- dv_list_files(curr_doi, versions$current, server, quiet)
@@ -250,7 +353,14 @@ discovery_from_options <- function(versions, server, quiet) {
 #' @keywords internal
 #' @noRd
 build_discovery <- function(hist, current, versions, server, quiet) {
-  hist_version <- dv_version_label(hist$doi, versions$historical, server, quiet)
+  # Both version labels in one parallel request (PERF-07).
+  labels <- dv_version_labels(
+    c(hist$doi, current$doi),
+    c(versions$historical, if (!is.null(current)) versions$current),
+    server,
+    quiet
+  )
+  hist_version <- labels[[1L]]
 
   out <- list(
     server = server,
@@ -266,7 +376,7 @@ build_discovery <- function(hist, current, versions, server, quiet) {
   if (!is.null(current)) {
     out$current <- list(
       doi = current$doi,
-      version = dv_version_label(current$doi, versions$current, server, quiet),
+      version = labels[[2L]],
       listing = current$listing,
       years = current$years
     )
@@ -332,4 +442,63 @@ discovery_slot <- function(discovery, which) {
     cli::cli_abort("No {which} dataset is available in this collection.")
   }
   slot
+}
+
+#' Every listed file of both datasets, in one table
+#'
+#' @param discovery Output of `discover_datasets()`.
+#' @return A tibble with `dataset`, `doi`, `version`, `directory_label`,
+#'   `label`, `checksum` and `size_bytes`; one row per `(dataset,
+#'   directory_label, label)`, the first listed when a path repeats.
+#' @keywords internal
+#' @noRd
+discovery_files <- function(discovery) {
+  parts <- lapply(c("historical", "current"), function(dataset) {
+    slot <- discovery[[dataset]]
+    listing <- slot$listing
+    if (is.null(listing)) {
+      return(NULL)
+    }
+    tibble::tibble(
+      dataset = dataset,
+      doi = slot$doi,
+      version = slot$version,
+      directory_label = listing$directory_label,
+      label = listing$label,
+      checksum = listing$checksum,
+      size_bytes = as.numeric(listing$size_bytes)
+    )
+  })
+  files <- dplyr::bind_rows(parts)
+  if (nrow(files) == 0L) {
+    return(tibble::tibble(
+      dataset = character(0),
+      doi = character(0),
+      version = character(0),
+      directory_label = character(0),
+      label = character(0),
+      checksum = character(0),
+      size_bytes = numeric(0)
+    ))
+  }
+  files[
+    !duplicated(files[c("dataset", "directory_label", "label")]),
+    ,
+    drop = FALSE
+  ]
+}
+
+#' DOIs of the datasets requested at `":latest"`
+#'
+#' @param discovery Output of `discover_datasets()`.
+#' @param versions Output of `resolve_versions()`.
+#' @return Character vector of DOIs.
+#' @keywords internal
+#' @noRd
+latest_dois <- function(discovery, versions) {
+  c(
+    if (identical(versions$historical, ":latest")) discovery$historical$doi,
+    if (identical(versions$current, ":latest")) discovery$current$doi
+  ) %||%
+    character(0)
 }

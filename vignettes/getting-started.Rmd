@@ -9,232 +9,35 @@ vignette: >
 
 
 
-This vignette walks through installing the `gtropic` package, retrieving your first
-G-TROPIC dataset, and understanding what comes back.
-
-## What is G-TROPIC?
-
-G-TROPIC is a multi-exposure, live (updated weekly) dataset spanning global
-tropical storms from 1980 onward, combining IBTrACS storm track data, GHSL
-population rasters, geoBoundaries ADM2 administrative units, Groundsource
-flood polygons, and ERA5-Land precipitation. G-TROPIC adheres to FAIR data
-principles and is publicly available via Harvard Dataverse, with versioned
-updates that incorporate recent storm and precipitation data once a week.
-At second-level administrative unit (ADM2) resolution worldwide for compatibility
-with health outcome and other
-data, G-TROPIC provides population totals and population-weighted centroids,
-storm exposure metrics from both best-track and wind-radii methods, flood
-exposure metrics, and daily local precipitation totals, along with ADM2 metadata
-for region and WHO classifications.
-
-For enhanced accessibility, we developed this open-source R package, `gtropic`,
-for easy retrieval, exploration, and mapping of G-TROPIC data directly in R.
-
-## Installation
-
-The development version of `gtropic` can be installed from GitHub with:
-
-
-``` r
-# install.packages("pak")
-pak::pak("sparklabnyc/gtropic")
-```
-
-`gtropic` can then be loaded and attached in your current R session as usual with:
-
 
 ``` r
 library(gtropic)
 ```
 
-## Data availability
+G-TROPIC is a global collection of tropical cyclone exposure data, published
+on Harvard Dataverse and updated weekly. For every storm since 1980 in the
+International Best Track Archive for Climate Stewardship (IBTrACS), it records
+which second-level administrative units (ADM2) the storm came near, and the
+wind, precipitation and flooding each unit experienced. It combines IBTrACS
+tracks with ERA5-Land precipitation, Groundsource flood polygons, GHSL
+population and geoBoundaries ADM2 units. `gtropic` retrieves, filters and maps
+these data. It returns the published values as they are and recomputes nothing.
 
-Let's get oriented by running some of the `gtropic` helper functions that
-let us know what G-TROPIC data is available in the first place. Doing so will help
-us define the specific query we later send to the G-TROPIC database, so we can
-retrieve only the data we need, and nothing more (to save on memory and disk space).
-
-We can examine the available years of data using:
-
-
-``` r
-gtropic_years()
-#> $historical
-#>  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
-#> [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009
-#> [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024
-#> [46] 2025
-#>
-#> $current
-#> [1] 2026
-#>
-#> $all
-#>  [1] 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
-#> [16] 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009
-#> [31] 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023 2024
-#> [46] 2025 2026
-```
-
-The available administrative units in the dataset with:
-
-
-``` r
-adm2s <- gtropic_adm2()
-adm2s
-#> # A tibble: 49,349 × 5
-#>    ADM2_ID                 ADM2_NAME        ADM2_GROUP WHO_ENTITY  WHO_REGION
-#>    <chr>                   <chr>            <chr>      <chr>       <chr>
-#>  1 17698898B68993560499599 Ab Band          AFG        Afghanistan Eastern Medi…
-#>  2 17698898B73770643817409 Ab Kamari        AFG        Afghanistan Eastern Medi…
-#>  3 17698898B14779938213850 Acheen           AFG        Afghanistan Eastern Medi…
-#>  4 17698898B23166050371692 Adraskan         AFG        Afghanistan Eastern Medi…
-#>  5 17698898B88187802806148 Ahmad Abad       AFG        Afghanistan Eastern Medi…
-#>  6 17698898B56570025970807 Ajristan         AFG        Afghanistan Eastern Medi…
-#>  7 17698898B62190249131225 Alasay           AFG        Afghanistan Eastern Medi…
-#>  8 17698898B14177024461677 Ali Khail (Jaji) AFG        Afghanistan Eastern Medi…
-#>  9 17698898B86734293398191 Aliabad          AFG        Afghanistan Eastern Medi…
-#> 10 17698898B28188212808936 Alingar          AFG        Afghanistan Eastern Medi…
-#> # ℹ 49,339 more rows
-```
-
-For example, let's look at a few available `WHO_ENTITY`s shipped in G-TROPIC:
-
-
-``` r
-head(unique(adm2s$WHO_ENTITY))
-#> [1] "Afghanistan"         "Albania"             "Algeria"
-#> [4] "Andorra"             "Angola"              "Antigua and Barbuda"
-```
-
-Or, for instance, the available administrative units in a specific country:
-
-
-``` r
-gtropic_adm2(WHO_ENTITY = "United States")
-#> # A tibble: 3,231 × 5
-#>    ADM2_ID                 ADM2_NAME ADM2_GROUP WHO_ENTITY    WHO_REGION
-#>    <chr>                   <chr>     <chr>      <chr>         <chr>
-#>  1 52423323B54775259864963 Abbeville USA        United States Americas
-#>  2 52423323B76935168618959 Acadia    USA        United States Americas
-#>  3 52423323B3829311906310  Accomack  USA        United States Americas
-#>  4 52423323B70404616629073 Ada       USA        United States Americas
-#>  5 52423323B5139201807141  Adair     USA        United States Americas
-#>  6 52423323B59110128996331 Adair     USA        United States Americas
-#>  7 52423323B63025537469888 Adair     USA        United States Americas
-#>  8 52423323B87676226812145 Adair     USA        United States Americas
-#>  9 52423323B23495952860942 Adams     USA        United States Americas
-#> 10 52423323B7193910850758  Adams     USA        United States Americas
-#> # ℹ 3,221 more rows
-```
-
-Similarly, we can also get a list of all the available storms in the dataset.
-By default, `gtropic_storms()` returns all storms from 1980 onward,
-but if we pass in a `year`, then
-we can get the list of storms for that given `year`:
-
-
-``` r
-gtropic_storms(year = 2025)
-#> # A tibble: 106 × 4
-#>    STORM_ID      STORM_NAME   USA_ATCF_ID STORM_GENESIS_DATE_UTC
-#>    <chr>         <chr>        <chr>       <date>
-#>  1 2025010S17185 Pita-2025    SH082025    2025-01-10
-#>  2 2025017S18122 Sean-2025    SH102025    2025-01-17
-#>  3 2025024S11082 Faida-2025   SH112025    2025-01-23
-#>  4 2025029S25043 Elvis-2025   SH122025    2025-01-28
-#>  5 2025031S15106 Vince-2025   SH132025    2025-01-31
-#>  6 2025032S14120 Taliah-2025  SH142025    2025-01-31
-#>  7 2025034S19166 Unnamed-2025 SH152025    2025-02-02
-#>  8 2025039S14125 Zelia-2025   SH172025    2025-02-08
-#>  9 2025042S22164 Unnamed-2025 SH162025    2025-02-11
-#> 10 2025050S12125 Bianca-2025  SH202025    2025-02-19
-#> # ℹ 96 more rows
-```
-
-The `STORM_GENESIS_DATE_UTC` column in that last result is the date used by every
-temporal filter in the package. So, for example, if you inquire after storms from
-2025, the package is designed to return storms whose genesis date (UTC) occurs within
-the 2025 calendar year. For more in depth discussion, see the "Selecting storms by date" section below,
-and the `filtering` vignette.
-
-`STORM_ID` uniquely identifies each storm and is the preferred key for queries,
-joins, grouping, and reproducible work. `STORM_NAME` is a convenience lookup and
-display label whose complete value can repeat, including across basins. It has
-`Name-YYYY` form, but `YYYY` is the published `SEASON` year and need not equal
-the genesis calendar year. A good workflow is to call
-`gtropic_storms(STORM_NAME = ...)`, inspect the matches, and then use the
-intended `STORM_ID` in `gtropic_data()` and downstream code.
-
-One of the most important pieces of metadata is the G-TROPIC codebook, which can be
-obtained with:
-
-
-``` r
-cb <- gtropic_codebook()
-names(cb)
-#> [1] "codebook_version" "format"           "created_for"      "read_in_r"
-#> [5] "notes"            "raw_sources"      "datasets"
-```
-
-The returned codebook object contains all the information needed to understand
-the retrieved datasets, including but not limited to their columns,
-what those columns measure, and the original provenance of the data,
-both in terms of the raw data sources, as well as the G-TROPIC backend
-pipeline scripts that generated that data.
-
-Related to the codebook is the `gtropic_exposures()` function, which lists
-the variable names associated with exposures available in G-TROPIC,
-their units of measurement, their default aggregation methods (for plotting
-exposure maps), and whether or not the `gtropic_plot()` function supports
-plotting the exposure.
-
-
-``` r
-gtropic_exposures()
-#> $wind
-#> # A tibble: 6 × 5
-#>   metric                      label               unit  aggregate plot_supported
-#>   <chr>                       <chr>               <chr> <chr>     <lgl>
-#> 1 VMAX_SUST_MS                Maximum sustained … m/s   max       TRUE
-#> 2 VMAX_GUST_MS                Maximum wind gust … m/s   max       TRUE
-#> 3 SUST_DUR_MINUTES            Sustained wind dur… minu… max       TRUE
-#> 4 GUST_DUR_MINUTES            Wind gust duration… minu… max       TRUE
-#> 5 WIND_RADII_VMAX_SUST_MS     Wind radii sustain… m/s   max       TRUE
-#> 6 WIND_RADII_SUST_DUR_MINUTES Wind radii duratio… minu… max       TRUE
-#>
-#> $precip
-#> # A tibble: 1 × 5
-#>   metric    label              unit  aggregate plot_supported
-#>   <chr>     <chr>              <chr> <chr>     <lgl>
-#> 1 PRECIP_MM Precipitation (mm) mm    sum       TRUE
-#>
-#> $flood
-#> # A tibble: 3 × 5
-#>   metric               label                      unit  aggregate plot_supported
-#>   <chr>                <chr>                      <chr> <chr>     <lgl>
-#> 1 PROP_FLOODED_POP     Flooded population (propo… prop… max       TRUE
-#> 2 PROP_FLOODED_AREA    Flooded area (proportion,… prop… max       TRUE
-#> 3 FLOODED_POP_CENTROID Flooded population centro… logi… any       FALSE
-```
+This vignette runs a first query and explains what comes back. The
+[data sources](https://sparklabnyc.github.io/gtropic/articles/data-sources.html)
+article on the package website describes the sources, their update schedules
+and the helpers that list the available years, places and storms.
 
 ## A first query
 
-The cornerstone function of the `gtropic` package is the `gtropic_data()` function.
-Let's start by using it to retrieve all available G-TROPIC data impacting ADM2s inside the United
-States, for those storms forming in calendar year 2025:
+`gtropic_data()` is the main function. This call retrieves every table for the
+storms that formed in 2025 and came near the United States:
 
 
 ``` r
-usa_25 <- gtropic_data(
-  WHO_ENTITY = "United States",
-  date_range = c(2025, 2025)
-)
-#> Discovering datasets in collection "gtropic".
-#> Retrieving 7 files (188.3 MB) ; 3 already cached.
-#> Downloading '02_wind/exposures/2025.parquet'.
-#> Downloading '02_wind/zero_pairs/2025.parquet'.
-#> Downloading '04_precip/2025.parquet'.
-#> Warning in assemble_gtropic_data(args, call = call): No non-missing precipitation values were returned for 7 selected ADM2 units.
+usa_25 <- gtropic_data(WHO_ENTITY = "United States", date_range = 2025)
+#> Retrieving 0 files (0.0 B); 10 already cached.
+#> Warning in fetch_hazards(args, ctx, scope, date_spec): No non-missing precipitation values were returned for 7 selected ADM2 units.
 #> ! "52423323B10065184809144", "52423323B18524543454126",
 #>   "52423323B37020317002794", "52423323B47905601981877",
 #>   "52423323B81395860012193", "52423323B84565222808084", and
@@ -244,11 +47,16 @@ usa_25 <- gtropic_data(
 #> ℹ A future G-TROPIC dataset release is planned to fill these gaps using
 #>   finer-resolution ERA5 precipitation data.
 #> ℹ See `?gtropic_known_limitations`; complete identifiers are available from
-#>   `gtropic_warnings()`.
-#> Downloading '03_flood/2025.parquet'.
-#> Downloading '01_pop/2025.parquet'.
-#> Downloading '02_wind/storm_tracks/2025.parquet'.
-#> Downloading 'metadata/adm2_geometry_simplified.parquet'.
+#>   `gtropic_diagnostics()`.
+#> Warning in fetch_hazards(args, ctx, scope, date_spec): The raw flood data from Groundsource consists of polygons of places named in
+#> news reports about flooding, rather than detailed flood maps.
+#> ! As noted by Groundsource, flood data is both spatially and temporally biased,
+#>   such that flood events in regions and time periods with more accurate
+#>   reporting are over-represented while those lacking in news coverage are
+#>   under-represented.
+#> ℹ As such, care should be taken when interpreting and utilizing G-TROPIC flood
+#>   exposure metrics. See `?gtropic_known_limitations`.
+#> This warning is displayed once per session.
 
 usa_25
 #>
@@ -271,15 +79,12 @@ usa_25
 #> • codebook: 7 entries (list)
 #> • links: 1068 rows x 12 columns
 #>
-#> ℹ Use `summary()` for detail; 1 warning(s) recorded, see gtropic_warnings().
+#> ℹ Use `summary()` for detail; 2 warning(s) recorded, see gtropic_diagnostics().
 ```
 
-Printing the result gives a compact summary: which version of the data you
-retrieved, the span of storm genesis dates, how many storms and administrative
-units were selected based on your filters, and the size of each table returned.
-
-But, for more detail, including resolved filter settings and any warnings raised,
-we can use:
+The printout gives the dataset version, the genesis dates covered, how many
+storms and units were selected, and the size of each table. `summary()` adds
+the resolved filters and any diagnostics:
 
 
 ``` r
@@ -292,7 +97,7 @@ summary(usa_25)
 #> • Server: "dataverse.harvard.edu"
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 v1.0
 #> • Files retrieved: 10 (189.1 MB)
-#> • Retrieved at: 2026-11-20 00:54:25 UTC
+#> • Retrieved at: 2026-11-26 17:16:27 UTC
 #>
 #> ── Tables ──
 #>
@@ -322,39 +127,32 @@ summary(usa_25)
 #> • precip_all_missing_adm2_ids: 52423323B10065184809144,
 #> 52423323B18524543454126, 52423323B37020317002794, 52423323B47905601981877,
 #> 52423323B81395860012193, and ... and 2 more
+#> • flood_reports: The raw flood data from Groundsource consists of polygons of
+#> places named in news reports about flooding, rather than detailed flood maps.
+#> As noted by Groundsource, flood data is both spatially and temporally biased,
+#> such that flood events in regions and time periods with more accurate reporting
+#> are over-represented while those lacking in news coverage are
+#> under-represented. As such, care should be taken when interpreting and
+#> utilizing G-TROPIC flood exposure metrics. See ?gtropic_known_limitations.
 ```
 
-The `summary()` function here shows the important resolved filters used by the
-data query we just sent, revealing some default argument values used by the
-`gtropic_data()` function:
+Three defaults shape the result:
 
-1. The `wind_radius_km` argument, which by default is 500km, defining a spatial
-wind field of interest. This restricts
-the function to return wind exposure data associated with storm tracks
-that come within 500km of any ADM2. Combined with our passed in values for
-`WHO_ENTITY` and `date_range`, this means we are asking for wind exposure data
-for storms formed in the calendar year 2025 that come within 500km of any
-ADM2 in the United States.
+- `wind_radius_km = 500` keeps wind records for unit-storm pairs whose storm
+  track passed within 500 km of the unit's population-weighted centroid.
+- `precip_radius_km` and `flood_radius_km`, also 500 km, do the same for
+  precipitation and floods.
+- `precip_days_before = 2` and `precip_days_after = 1`, and their flood
+  equivalents, keep rainfall and floods from two days before to one day after
+  the storm's closest approach to each unit.
 
-2. Similarly, separate `precip_radius_km` and `flood_radius_km` arguments
-define *spatial* precipitation and flood fields, in order to link precipitation
-and flood data to storm tracks. By default, these are both also 500km.
+These values do not define "exposure"; choose them for your study. `Inf` or
+`NULL` removes a radius. `vignette("filtering")` and `vignette("linkage")`
+cover them in detail.
 
-3. The `precip_days_before` and `precip_days_after` arguments (along with `flood_days_before`
-and `flood_days_after`) define the *temporal* windows linking precipitation
-and flood data to storm tracks. By default, G-TROPIC will assume you want daily precipitation
-and flood data starting 2 days before and ending up to 1 day after a storm track makes its closest approach with
-an ADM2.
+## The returned object
 
-Note that the `radius_km` arguments can be any integer in the range (0, "Inf"], or `NULL`.
-Passing in "Inf" or `NULL` does not impose a spatial field on any storm track, and returns all
-available wind/precip/flood data.
-
-The `precip/flood_days_before/after` arguments can be any whole number in the range [0, "Inf").
-
-## The `gtropic_data` object
-
-A `gtropic_data` object is just a named list of data frames, behaving like any other named list:
+A `gtropic_data` object is a named list of tibbles:
 
 
 ``` r
@@ -387,36 +185,40 @@ usa_25$wind
 #> #   WIND_RADII_SUST_DUR_MINUTES <dbl>, LOCAL_DATE_STORM_CLOSEST <date>
 ```
 
-By default, the `gtropic_data()` function returns:
+| Table | One row per |
+| --- | --- |
+| `wind` | unit and storm with nonzero wind, within `wind_radius_km` |
+| `precip` | unit and local date inside a storm's precipitation window |
+| `flood` | unit and place named in a flood news report, matched to a storm's flood window |
+| `zero_pairs` | unit and storm with no measurable wind |
+| `pop` | unit and year: population and population-weighted centroid |
+| `tracks` | storm-track observation |
+| `storm_metadata` | storm: identifiers, name and genesis date |
+| `adm2` | unit: names and country and WHO classifications |
+| `geometry` | unit boundary, as an `sf` object (needs the `sf` package) |
+| `codebook` | the dataset's own documentation, as a nested list |
+| `links` | unit and storm; see below |
 
-- **`wind`**: one row per ADM2 per storm, for those ADM2s within the specified `wind_radius_km` of a storm track,
-  for those ADM2-storm pairs where wind exposure was non-zero. This is the core exposure table.
-- **`precip`** -- one row per ADM2 per local calendar date, for those ADM2s within the specified `precip_radius_km` of a storm track,
-  and for dates falling within `precip_days_before` and `precip_days_after` the local date of a storm
-  track's closest approach to that ADM2 (i.e., for the temporal window defined by
-  `LOCAL_DATETIME_STORM_CLOSEST` - `precip_days_before` through `LOCAL_DATETIME_STORM_CLOSEST` + `precip_days_after`).
-- **`flood`** -- one row per observed flood event, for flood events whose `FLOOD_START_DATE` falls within
-  `flood_days_before` and `flood_days_after` the `LOCAL_DATETIME_STORM_CLOSEST`, for those ADM2s within
-  `flood_radius_km` of a storm track.
-- **`pop`** -- population and population-weighted centroid data, per ADM2 per year.
-- **`adm2`** -- the lookup table of ADM2s.
-- **`codebook`** -- the dataset's own documentation, as a nested list.
-- **`zero_pairs`** -- ADM2-storm pairs with no measurable wind.
-- **`tracks`** -- raw storm-track observations for those storms coming within
-    `max(c(wind_radius_km, precip_radius_km, flood_radius_km))` of any of the requested ADM2s.
-- **`geometry`** -- ADM2 boundaries, as an `sf` object.
-- **`storm_metadata`** -- storm names, identifiers, and genesis dates.
-- **`links`** -- see below.
+The codebook describes every column, its units and its provenance. Pass a
+shorter `tables` vector to download and hold less.
 
-If you are on a tighter computational budget and would like to reduce file transfer
-and storage requirements, pass only the tables required for
-your analysis through the `tables` argument.
+> **Current precipitation limitation:** Some small or coastal ADM2 units may
+> have no non-missing precipitation values because no ERA5-Land grid cell was
+> assigned. Retrievals and automatic map captions identify affected units; see
+> `?gtropic_known_limitations` for details and the planned dataset correction.
+
+> **Flood data limitation:** The raw flood data from Groundsource consists of
+> polygons of places named in news reports about flooding, rather than
+> detailed flood maps, and is both spatially and temporally biased by news
+> coverage. `PROP_AREA_IN_FLOOD_REPORT` and `PROP_POP_IN_FLOOD_REPORT`
+> (published as `PROP_FLOODED_AREA` and `PROP_FLOODED_POP`) are the share of a
+> unit inside one reported place, not its flooded area or population.
+> `gtropic_data()` warns about this once per session; see
+> `?gtropic_known_limitations`.
 
 ## The links table
 
-`links` is returned whenever any storm-linked table is. It has one row per
-ADM2-storm pair retained by the union of the fields for the requested hazard
-tables (or all selected pairs when every requested field is unbounded):
+`links` has one row per unit-storm pair inside the largest requested radius:
 
 
 ``` r
@@ -441,31 +243,19 @@ usa_25$links
 #> #   FLOOD_WINDOW_START <date>, FLOOD_WINDOW_END <date>
 ```
 
-A few important columns include:
+It gives the local date of closest approach (`LOCAL_DATE_STORM_CLOSEST`), the
+distance (`STORM_DIST_KM`), whether the pair lies inside each hazard's radius
+(`WIND_IN_FIELD`, `PRECIP_IN_FIELD`, `FLOOD_IN_FIELD`), and each precipitation
+and flood window. Precipitation and flood records are returned once each, even
+when a day or an event falls inside two storms' windows, so assign them to
+storms by joining through `links`: `vignette("linkage")` shows how to do that
+without double counting.
 
-- `LOCAL_DATE_STORM_CLOSEST`: the local calendar date on which the storm passed
-  closest to that unit. This is used to anchor both precipitation and flooding windows (e.g.
-  if you request precipitation data for an ADM2 on the 2 days before and 2 days after a given storm,
-  then the temporal window is calculated with respect to this date).
-- `STORM_DIST_KM`: how close the corresponding storm came to the corresponding ADM2 (in kilometers).
-- `WIND_EXPOSURE`: whether the pair had measurable wind (`TRUE`) or not
-  (`FALSE`).
-- `WIND_IN_FIELD`, `PRECIP_IN_FIELD`, and `FLOOD_IN_FIELD`: whether the ADM2 was close enough to
-  the storm track to be considered for wind, precipitation and flooding data inclusion, respectively.
-
-The `links` table helps avoid duplicating precipitation/flooding rows for every storm returned in a query.
-For instance, a single rainy day in one ADM2 may land inside two storms' spatio-temporal windows;
-returning that day twice would cause problems if the `PRECIP_MM` exposure were to be summed later in an analysis.
-Instead, tidy tables are returned along with the `links` table, and we leave the join operations necessary for your analysis
-to you, the user. The `linkage` vignette details this in full.
-
-## How to inspect your query's metadata
-
-Three functions provide access to the metadata pertaining to your `gtropic_data` object:
+## Query metadata
 
 
 ``` r
-# Exactly which files were retrieved, at which version
+# The published files used, at which dataset versions
 gtropic_manifest(usa_25)
 #>
 #> ── gtropic version manifest ────────────────────────────────────────────────────
@@ -473,7 +263,7 @@ gtropic_manifest(usa_25)
 #> • Historical dataset: doi:10.7910/DVN/EAVWC3 (version 1.0)
 #> • Files recorded: 10
 #> • Total size: 189.1 MB
-#> • Retrieved: 2026-11-20 00:54:25 UTC
+#> • Retrieved: 2026-11-26 17:16:27 UTC
 #> • Package version: "0.0.0.9002"
 #>
 #> ℹ Pass this object as `manifest` to `gtropic_data()` to
@@ -511,78 +301,42 @@ gtropic_filters(usa_25)
 
 
 ``` r
-# Anything the query warned about
-gtropic_warnings(usa_25)
+# What the query warned about
+gtropic_diagnostics(usa_25)
 #> $precip_all_missing_adm2_ids
 #> [1] "52423323B10065184809144" "52423323B18524543454126"
 #> [3] "52423323B37020317002794" "52423323B47905601981877"
 #> [5] "52423323B81395860012193" "52423323B84565222808084"
 #> [7] "52423323B95364314409049"
+#>
+#> $flood_reports
+#> [1] "The raw flood data from Groundsource consists of polygons of places named in news reports about flooding, rather than detailed flood maps. As noted by Groundsource, flood data is both spatially and temporally biased, such that flood events in regions and time periods with more accurate reporting are over-represented while those lacking in news coverage are under-represented. As such, care should be taken when interpreting and utilizing G-TROPIC flood exposure metrics. See ?gtropic_known_limitations."
 ```
 
+The manifest replays the same retrieval later, even after the dataset has been
+revised (`vignette("versions-and-caching")`). `gtropic_availability()` records
+the sources' update schedules and known coverage. These drive the warnings a
+query may give, for example about provisional IBTrACS data for recent storms,
+the few days' lag of ERA5-Land precipitation, or the end of the flood record on
+2026-01-22.
 
-``` r
-# Structured schedules, known source coverage, and the assessed request period
-gtropic_availability(usa_25)
-```
+## Larger queries
 
-The **manifest** records the published files actually used, including paths,
-concrete dataset versions, checksums, and each file's original download time.
-Saving it lets you reproduce the same retrieval with
-`gtropic_data(manifest = mf)`, even if `:latest` has since changed. The
-`versions-and-caching` vignette explains canonical replay and cache behavior.
+Downloads are kept in a cache between sessions, and a query estimated to need
+more than 1 GB of new downloads asks before it starts; in a script it stops
+instead, unless you pass `confirm = FALSE`. `vignette("versions-and-caching")`
+covers both.
 
-`gtropic_availability()` records source update schedules, known coverage, and
-the requested period used for diagnostics. Availability warnings are
-conditional: for example, a recent wind request can warn about provisional
-IBTrACS data, a recent precipitation request about the typical ERA5-Land lag,
-and a flood request reaching or extending beyond **2026-01-22** about the known
-Groundsource flood endpoint. Inspect `gtropic_warnings()` to retain these diagnostics with
-an analysis; availability is metadata, not a guarantee that every record exists.
-
-## Larger queries, caching, and size guardrails
-
-Before scaling up your queries or relaxing your filters to download larger
-portions of the G-TROPIC dataset, it's worth getting to know how file caching and
-size guardrails work in `gtropic`:
-
-*The file cache*: To save repeated downloads of the same queried data,
-downloads are kept between sessions using the file cache by default. You can
-disable caching for the current R session using:
-
-
-``` r
-gtropic_cache_disable()
-```
-
-Or bypass it for one query by passing `cache = FALSE`. To retain a disabled
-choice across R sessions, use `gtropic_cache_disable(persist = TRUE)`.
-
-*The size guardrail*: Calling `gtropic_data()` with no arguments requests all
-available tables for the full global record. This can require a substantial
-download. Before downloading anything estimated to be larger than 1GB,
-`gtropic_data()` will prompt you to confirm going ahead with the download.
-In a non-interactive session, for instance a scheduled/scripted job, it will raise an
-error instead, unless you pass the `confirm = FALSE` argument.
-
-Both topics are covered extensively in `vignette("versions-and-caching")`.
-
-## Summary
-
-- Use the discovery helpers to identify available years, places, storms, and
-  exposure metrics before making a query.
-- Look up candidate storms by `STORM_NAME`, then use the unique `STORM_ID` for
-  retrieval and downstream work.
-- `gtropic_data()` returns a named collection of exposure tables plus metadata
-  that documents the selected records and source files.
-- Use the `links` table to connect precipitation and flooding records to storms
-  without duplicating observations, and retain the manifest for reproducibility.
 
 ## Where to go next
 
-- `vignette("filtering")` covers how all the spatio-temporal/storm filters in `gtropic_data()`
-combine.
-- `vignette("linkage")` documents how to link precipitation/flood data to storm data and
-  using the `links` table to perform joins without double-counting exposure rows.
-- `vignette("versions-and-caching")` walks through reproducibility and download management best practices in `gtropic`.
-- `vignette("plotting")` examines how to quickly visualize exposure maps of G-TROPIC data using the `gtropic_plot()` plotting function.
+- `vignette("getting-started")`: a first query and what it returns.
+- `vignette("filtering")`: how place, date and storm filters combine.
+- `vignette("linkage")`: joining precipitation and flood records to storms
+  without double counting.
+- `vignette("plotting")`: exposure, count and track maps.
+- `vignette("versions-and-caching")`: manifests, dataset versions and the
+  download cache.
+- [Data sources](https://sparklabnyc.github.io/gtropic/articles/data-sources.html)
+  and the [plot gallery](https://sparklabnyc.github.io/gtropic/articles/plot-gallery.html)
+  on the package website.

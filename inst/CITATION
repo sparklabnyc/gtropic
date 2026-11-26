@@ -1,0 +1,42 @@
+# Plan 01 INFRA-14; curated before release by Plan 06 CRAN-14. CITATION.cff is
+# generated from this file and DESCRIPTION (see .github/workflows/citation-cff.yaml).
+citHeader(
+  "To cite gtropic in publications, please cite both the package and the",
+  "G-TROPIC data. gtropic_manifest() lists the datasets and versions behind",
+  "a result; data from the current-year dataset should be cited with the DOI",
+  "and version it gives."
+)
+
+bibentry(
+  bibtype = "Manual",
+  key = "gtropic",
+  title = paste0("gtropic: ", gsub("\\s+", " ", meta$Title)),
+  author = c(
+    person("Lawrence G.", "Chillrud", comment = c(ORCID = "0000-0003-0727-0161")),
+    person("Lingke", "Jiang"),
+    person("Majd", "Abid"),
+    person("G. Brooke", "Anderson"),
+    person("Robbie M.", "Parks", comment = c(ORCID = "0000-0002-7916-1717"))
+  ),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/sparklabnyc/gtropic"
+)
+
+bibentry(
+  bibtype = "Misc",
+  key = "gtropic-historical-data",
+  title = "G-TROPIC: Historical Data (1980-present)",
+  author = c(
+    person("SPARK Lab NYC"),
+    person("Lawrence", "Chillrud"),
+    person("Lingke", "Jiang"),
+    person("Majd", "Abid"),
+    person("G. Brooke", "Anderson"),
+    person("Robbie", "Parks")
+  ),
+  year = "2026",
+  howpublished = "Harvard Dataverse",
+  doi = "10.7910/DVN/EAVWC3",
+  note = "Dataset, updated weekly"
+)

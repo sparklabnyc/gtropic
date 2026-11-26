@@ -4,6 +4,5 @@
 .Ruserdata
 *.DS_Store
 /tests/testthat/fixtures/*
-!/tests/testthat/fixtures/plotting.rds
-/tests/testthat/http-mocks/
 docs
+Rplots.pdf

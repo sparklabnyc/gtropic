@@ -18,42 +18,37 @@
 #' exposure data. Filters that do not match a published value produce an error
 #' rather than an empty result.
 #'
-#' @param ADM2_NAME,ADM2_GROUP,WHO_ENTITY,WHO_REGION Optional character vectors
-#'   used to restrict the lookup table. Values are matched case-insensitively
-#'   after normalizing whitespace. Multiple values within an argument are
-#'   combined with OR; filters supplied through different arguments are
-#'   combined with AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble containing the published ADM2 lookup. Each row represents an
 #'   administrative unit and includes its stable `ADM2_ID` and available name,
 #'   country or territory, and WHO regional classifications.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review all available administrative units
 #' gtropic_adm2()
 #'
 #' # Find the identifiers used for units in the Philippines
 #' gtropic_adm2(WHO_ENTITY = "Philippines")
-#' }
 #'
-#' @seealso [gtropic_data()], [gtropic_storms()]
+#' @family discovery functions
 #' @export
-gtropic_adm2 <- function(ADM2_NAME = NULL,
-                         ADM2_GROUP = NULL,
-                         WHO_ENTITY = NULL,
-                         WHO_REGION = NULL,
-                         version = ":latest",
-                         cache = NULL) {
+gtropic_adm2 <- function(
+  ADM2_NAME = NULL,
+  ADM2_GROUP = NULL,
+  WHO_ENTITY = NULL,
+  WHO_REGION = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   adm2 <- tibble::as_tibble(dplyr::collect(fetch_file(
-    "historical", "metadata", "adm2.parquet", ctx
+    "historical",
+    "metadata",
+    "adm2.parquet",
+    ctx
   )))
 
   filters <- compact(list(
@@ -93,97 +88,75 @@ gtropic_adm2 <- function(ADM2_NAME = NULL,
 #' to identify the intended `STORM_ID`, then query [gtropic_data()] with
 #' `STORM_ID`, which is unique and preferred.
 #'
-#' @param date_range Optional vector of length two defining an inclusive range
-#'   of storm genesis dates. Bare years, year-month values, complete dates, and
-#'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of storm genesis calendar years to retrieve.
-#'   Ignored when `date_range` is supplied. Years outside the published
-#'   collection are omitted.
+#' @param date_range Optional vector of one or two endpoints defining an
+#'   inclusive range of storm genesis dates; a single value is used for both
+#'   endpoints, so `date_range = 2005` selects storms that formed in 2005. Bare
+#'   years, year-month values, complete dates, and `Date` or `POSIXct` values
+#'   are accepted as described in [gtropic_data()]. Years outside the
+#'   published collection are omitted.
 #' @param STORM_NAME Optional character vector of published convenience labels
 #'   in `Name-YYYY` form, such as `Katrina-2005`. Labels can duplicate across
 #'   distinct `STORM_ID`s. Matching is case-insensitive; every supplied value
 #'   must match a published name. The suffix is the storm season. Because
 #'   Southern Hemisphere storms can form in the preceding calendar year,
 #'   partitions for both `YYYY - 1` and `YYYY` are considered. This candidate
-#'   set is combined with an explicit genesis `year` or `date_range` filter using
-#'   AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#'   set is combined with a `date_range` filter using AND.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble containing the published metadata records for storms that
 #'   satisfy the requested genesis period and name filters. If no metadata files
 #'   are available for the selected years, a warning is issued and an empty
 #'   tibble is returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review storms that formed during calendar year 2005
-#' gtropic_storms(year = 2005)
+#' gtropic_storms(date_range = 2005)
 #'
 #' # Retrieve the published identifiers and dates for Hurricane Katrina
 #' gtropic_storms(STORM_NAME = "Katrina-2005")
-#' }
 #'
-#' @seealso [gtropic_data()], [gtropic_adm2()], [gtropic_excluded_storms()]
+#' @family discovery functions
 #' @export
-gtropic_storms <- function(date_range = NULL,
-                            year = NULL,
-                            STORM_NAME = NULL,
-                            version = ":latest",
-                            cache = NULL) {
+gtropic_storms <- function(
+  date_range = NULL,
+  STORM_NAME = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
-
-  years <- if (!identical(date_spec$type, "none")) {
-    year_span(date_spec$start, date_spec$end)
-  } else if (!is.null(year)) {
-    as_year_int(year)
-  } else {
-    ctx$discovery$year_index$year
-  }
-  if (!is.null(storm_name_year)) {
-    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
-      intersect(years, storm_genesis_year)
-    } else {
-      storm_genesis_year
-    }
-  }
-  years <- intersect(years, ctx$discovery$year_index$year)
+  years <- resolve_helper_years(date_spec, storm_name_year, ctx)
 
   meta <- fetch_yearly("storm_metadata", years, ctx)
   if (is.null(meta)) {
     cli::cli_warn("No storm metadata found for the years requested.")
     return(tibble::tibble())
   }
-
-  if (!identical(date_spec$type, "none")) {
-    genesis <- as.Date(meta$STORM_GENESIS_DATE_UTC)
-    meta <- meta[
-      !is.na(genesis) &
-        genesis >= date_spec$start & genesis <= date_spec$end, ,
-      drop = FALSE
-    ]
-  }
+  meta <- filter_genesis_dates(meta, date_spec)
 
   if (!is.null(storm_name)) {
-    canonical <- match_storm_values(storm_name, meta$STORM_NAME,
+    canonical <- match_storm_values(
+      storm_name,
+      meta$STORM_NAME,
       arg = "STORM_NAME",
-      exact = FALSE, helper = "gtropic_storms()",
+      exact = FALSE,
+      helper = "gtropic_storms()",
       what = "storm",
       excluded_lookup = function() {
-        fetch_excluded_storms(years, ctx,
+        fetch_excluded_storms(
+          years,
+          ctx,
           col_select = c("STORM_ID", "STORM_NAME")
         )
       }
     )
-    meta <- meta[norm_key(meta$STORM_NAME) %in% norm_key(canonical), ,
+    meta <- meta[
+      norm_key(meta$STORM_NAME) %in% norm_key(canonical),
+      ,
       drop = FALSE
     ]
     warn_ambiguous_storm_names(meta, canonical)
@@ -204,23 +177,19 @@ gtropic_storms <- function(date_range = NULL,
 #' first best-track observation. They do not select storms by landfall, closest
 #' approach, or date of exposure.
 #'
-#' @param date_range Optional vector of length two defining an inclusive range
-#'   of storm genesis dates. Bare years, year-month values, complete dates, and
-#'   `Date` or `POSIXct` values are accepted as described in [gtropic_data()].
-#' @param year Optional vector of storm genesis calendar years to retrieve.
-#'   Ignored when `date_range` is supplied. Years outside the published
-#'   collection are omitted.
+#' @param date_range Optional vector of one or two endpoints defining an
+#'   inclusive range of storm genesis dates; a single value is used for both
+#'   endpoints, so `date_range = 2005` selects storms that formed in 2005. Bare
+#'   years, year-month values, complete dates, and `Date` or `POSIXct` values
+#'   are accepted as described in [gtropic_data()]. Years outside the
+#'   published collection are omitted.
 #' @param STORM_NAME Optional character vector of published convenience labels
 #'   in `Name-YYYY` form. Labels can duplicate across distinct `STORM_ID`s.
 #'   Matching is case-insensitive; every supplied value must match an
 #'   excluded-storm record. The suffix is the storm season; partitions for
-#'   genesis years `YYYY - 1` and `YYYY` are considered and combined with an
-#'   explicit genesis `year` or `date_range` filter using AND.
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#'   genesis years `YYYY - 1` and `YYYY` are considered and combined with a
+#'   `date_range` filter using AND.
+#' @inheritParams gtropic_data
 #'
 #' @return A tibble with `STORM_ID`, `STORM_NAME`, and
 #'   `STORM_GENESIS_DATE_UTC` for published excluded storms satisfying the
@@ -228,70 +197,102 @@ gtropic_storms <- function(date_range = NULL,
 #'   available for the selected years, a warning is issued and an empty tibble is
 #'   returned. `STORM_GENESIS_DATE_UTC` is returned as a `Date`.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' # Review exclusion records for storms that formed during calendar year 2005
-#' gtropic_excluded_storms(year = 2005)
-#' }
+#' gtropic_excluded_storms(date_range = 2005)
 #'
-#' @seealso [gtropic_storms()], [gtropic_data()]
+#' @family discovery functions
 #' @export
-gtropic_excluded_storms <- function(date_range = NULL,
-                                     year = NULL,
-                                     STORM_NAME = NULL,
-                                     version = ":latest",
-                                     cache = NULL) {
+gtropic_excluded_storms <- function(
+  date_range = NULL,
+  STORM_NAME = NULL,
+  version = ":latest",
+  cache = NULL
+) {
   storm_name <- as_filter_chr(STORM_NAME, "STORM_NAME")
   storm_name_year <- storm_name_years(storm_name)
   ctx <- helper_context(version, cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
 
   date_spec <- parse_date_input(date_range = date_range)
-  years <- if (!identical(date_spec$type, "none")) {
-    year_span(date_spec$start, date_spec$end)
-  } else if (!is.null(year)) {
-    as_year_int(year)
-  } else {
-    ctx$discovery$year_index$year
-  }
-  if (!is.null(storm_name_year)) {
-    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
-    years <- if (!identical(date_spec$type, "none") || !is.null(year)) {
-      intersect(years, storm_genesis_year)
-    } else {
-      storm_genesis_year
-    }
-  }
-  years <- intersect(years, ctx$discovery$year_index$year)
+  years <- resolve_helper_years(date_spec, storm_name_year, ctx)
 
   excluded <- fetch_excluded_storms(years, ctx)
   if (nrow(excluded) == 0L) {
     cli::cli_warn("No excluded-storm records found for the years requested.")
     return(tibble::tibble())
   }
-
-  if (!identical(date_spec$type, "none")) {
-    genesis <- as.Date(excluded$STORM_GENESIS_DATE_UTC)
-    excluded <- excluded[
-      !is.na(genesis) &
-        genesis >= date_spec$start & genesis <= date_spec$end, ,
-      drop = FALSE
-    ]
-  }
+  excluded <- filter_genesis_dates(excluded, date_spec)
 
   if (!is.null(storm_name)) {
-    canonical <- match_values(storm_name, excluded$STORM_NAME,
+    canonical <- match_values(
+      storm_name,
+      excluded$STORM_NAME,
       arg = "STORM_NAME",
-      exact = FALSE, helper = "gtropic_excluded_storms()",
+      exact = FALSE,
+      helper = "gtropic_excluded_storms()",
       what = "excluded storm"
     )
     excluded <- excluded[
-      norm_key(excluded$STORM_NAME) %in% norm_key(canonical), ,
+      norm_key(excluded$STORM_NAME) %in% norm_key(canonical),
+      ,
       drop = FALSE
     ]
     warn_ambiguous_storm_names(excluded, canonical, excluded = TRUE)
   }
 
   excluded
+}
+
+#' Genesis-year partitions a discovery helper reads
+#'
+#' Years come from the date filter (or every published year), narrowed to the
+#' genesis years a `Name-YYYY` season suffix allows, then to what is published.
+#'
+#' @param date_spec Output of `parse_date_input()`.
+#' @param storm_name_year Season years from `storm_name_years()`, or `NULL`.
+#' @param ctx Fetch context.
+#'
+#' @return Integer years.
+#' @keywords internal
+#' @noRd
+resolve_helper_years <- function(date_spec, storm_name_year, ctx) {
+  published <- ctx$discovery$year_index$year
+  has_dates <- !identical(date_spec$type, "none")
+  years <- if (has_dates) {
+    year_span(date_spec$start, date_spec$end)
+  } else {
+    published
+  }
+  if (!is.null(storm_name_year)) {
+    storm_genesis_year <- storm_name_genesis_years(storm_name_year)
+    years <- if (has_dates) {
+      intersect(years, storm_genesis_year)
+    } else {
+      storm_genesis_year
+    }
+  }
+  intersect(years, published)
+}
+
+#' Keep rows whose genesis date lies in the requested range
+#'
+#' @param x A tibble with `STORM_GENESIS_DATE_UTC`.
+#' @param date_spec Output of `parse_date_input()`.
+#'
+#' @return `x`, filtered when a date range was given.
+#' @keywords internal
+#' @noRd
+filter_genesis_dates <- function(x, date_spec) {
+  if (identical(date_spec$type, "none")) {
+    return(x)
+  }
+  genesis <- as.Date(x$STORM_GENESIS_DATE_UTC)
+  x[
+    !is.na(genesis) & genesis >= date_spec$start & genesis <= date_spec$end,
+    ,
+    drop = FALSE
+  ]
 }
 
 #' Fetch excluded-storm records for selected years
@@ -304,7 +305,10 @@ gtropic_excluded_storms <- function(date_range = NULL,
 #' @keywords internal
 #' @noRd
 fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
-  excluded <- fetch_yearly("excluded_storms", years, ctx,
+  excluded <- fetch_yearly(
+    "excluded_storms",
+    years,
+    ctx,
     col_select = col_select
   )
   if (!is.null(excluded)) {
@@ -327,21 +331,17 @@ fetch_excluded_storms <- function(years, ctx, col_select = NULL) {
 #' genesis dates in the current calendar year are published, so coverage for
 #' that calendar year may be provisional.
 #'
-#' @param version Dataset version or versions to inspect. The default,
-#'   `":latest"`, uses the most recent published versions. See [gtropic_data()]
-#'   for supported version formats.
+#' @inheritParams gtropic_data
 #'
 #' @return A list of integer vectors with components `historical`, `current`,
 #'   and `all`. `all` is the sorted union of the two collections; `current` is
 #'   empty when no separate current-year dataset is available.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' coverage <- gtropic_years()
 #' range(coverage$all)
-#' }
 #'
-#' @seealso [gtropic_data()]
+#' @family discovery functions
 #' @export
 gtropic_years <- function(version = ":latest") {
   discovery <- discover_datasets(resolve_versions(version), quiet = TRUE)
@@ -361,25 +361,20 @@ gtropic_years <- function(version = ":latest") {
 #' precipitation, flood, population, and storm metadata in an exposure
 #' analysis.
 #'
-#' @param version Dataset version to use. The default, `":latest"`, uses the
-#'   most recent published version. See [gtropic_data()] for version formats.
-#' @param cache Whether downloaded source files may be cached. `NULL` uses
-#'   `getOption("gtropic.cache_enabled")`; `TRUE` or `FALSE` overrides that
-#'   setting for this call.
+#' @inheritParams gtropic_data
 #'
 #' @return A nested list preserving the structure of the published JSON
 #'   codebook.
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf interactive()
 #' codebook <- gtropic_codebook()
 #' names(codebook)
-#' }
 #'
-#' @seealso [gtropic_data()]
+#' @family discovery functions
 #' @export
 gtropic_codebook <- function(version = ":latest", cache = NULL) {
   ctx <- helper_context(version, cache = cache)
+  on.exit(cache_manage_ctx(ctx), add = TRUE)
   fetch_file("historical", "metadata", "codebook.json", ctx, kind = "json")
 }
 
@@ -397,5 +392,11 @@ gtropic_codebook <- function(version = ":latest", cache = NULL) {
 helper_context <- function(version = ":latest", cache = NULL) {
   versions <- resolve_versions(version)
   discovery <- discover_datasets(versions, quiet = TRUE)
-  fetch_context(discovery, cache_resolve(cache, quiet = TRUE), quiet = TRUE)
+  fetch_context(
+    discovery,
+    cache_resolve(cache, quiet = TRUE),
+    quiet = TRUE,
+    latest_dois = latest_dois(discovery, versions),
+    notice_quiet = opt("quiet")
+  )
 }

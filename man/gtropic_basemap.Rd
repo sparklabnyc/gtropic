@@ -4,14 +4,14 @@
 \alias{gtropic_basemap}
 \title{Natural Earth basemaps cached for the current R session}
 \usage{
-gtropic_basemap(scale = "medium", what = c("countries", "admin1", "none"))
+gtropic_basemap(what = c("countries", "admin1", "none"), scale = "medium")
 }
 \arguments{
+\item{what}{One of \code{"countries"} (the default), \code{"admin1"}, or \code{"none"}.}
+
 \item{scale}{Country resolution: \code{"small"} (110) or \code{"medium"} (50).
 Large (10) country layers are deliberately unsupported. Ignored for admin1,
 which uses the resolution supplied by \code{rnaturalearth::ne_states()}.}
-
-\item{what}{One of \code{"countries"}, \code{"admin1"}, or \code{"none"}.}
 }
 \value{
 An sf object, or NULL for \code{what = "none"}. Layers are cached by
@@ -23,11 +23,20 @@ an administrative-level-1 layer requires the optional, non-CRAN
 \code{rnaturalearthhires} package. No layer is downloaded by this function.
 }
 \examples{
-\donttest{
 gtropic_basemap(what = "none")
-if (requireNamespace("rnaturalearth", quietly = TRUE) &&
-  requireNamespace("rnaturalearthdata", quietly = TRUE)) {
-  gtropic_basemap()
+
+\dontshow{if (rlang::is_installed(c("sf", "rnaturalearth", "rnaturalearthdata"))) withAutoprint(\{ # examplesIf}
+countries <- gtropic_basemap()
+nrow(countries)
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
 }
-}
+\concept{plotting functions}

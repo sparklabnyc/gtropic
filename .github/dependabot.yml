@@ -1,0 +1,18 @@
+# Keep the SHA-pinned GitHub Actions current (Plan 01 INFRA-09, Plan 05 SEC-11).
+# Dependabot updates the commit SHA and the trailing version comment together.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Wait a week before proposing a new release, so a compromised or broken
+    # release has time to be noticed and pulled first.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"

@@ -44,8 +44,18 @@ Native ggplot2 viridis scales: inferno for wind, mako for precipitation,
 and viridis for flooding when a metric is supplied. Missing values are gray.
 }
 \examples{
-\donttest{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 scale_fill_gtropic_c(metric = "VMAX_SUST_MS")
 scale_fill_gtropic_d(name = "Exposed")
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
 }
+\concept{plotting functions}

@@ -27,10 +27,30 @@ arguments, nothing is removed.
 
 If identical file content is referenced by multiple dataset versions, the
 physical file is retained until no remaining cache entry references it.
+
+The cache is also pruned automatically after retrievals; see
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} and \link{gtropic_options}.
 }
 \examples{
-\donttest{
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
+gtropic_cache_enable()
 gtropic_cache_prune(max_size_gb = 5, older_than_days = 90)
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
 }
 
 }
+\seealso{
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}},
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}},
+\code{\link[=gtropic_cache_list]{gtropic_cache_list()}}
+}
+\concept{cache functions}

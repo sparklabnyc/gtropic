@@ -1,0 +1,12 @@
+## Where to go next
+
+- `vignette("getting-started")`: a first query and what it returns.
+- `vignette("filtering")`: how place, date and storm filters combine.
+- `vignette("linkage")`: joining precipitation and flood records to storms
+  without double counting.
+- `vignette("plotting")`: exposure, count and track maps.
+- `vignette("versions-and-caching")`: manifests, dataset versions and the
+  download cache.
+- [Data sources](https://sparklabnyc.github.io/gtropic/articles/data-sources.html)
+  and the [plot gallery](https://sparklabnyc.github.io/gtropic/articles/plot-gallery.html)
+  on the package website.

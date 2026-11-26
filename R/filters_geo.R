@@ -19,17 +19,21 @@
 #' @param filters Named list of the named geographic filter arguments.
 #' @param polygon An `sf`/`sfc` object, or `NULL`.
 #' @param reproject Whether to transform `polygon` to EPSG:4326.
+#' @param quiet Suppress informational messages.
 #' @param call Calling environment for error reporting.
 #'
 #' @return A list with `adm2_ids`, `inconsistent_adm2_ids` and `warnings`.
 #' @keywords internal
 #' @noRd
-resolve_geography <- function(adm2,
-                              pop_by_year = NULL,
-                              filters = list(),
-                              polygon = NULL,
-                              reproject = TRUE,
-                              call = rlang::caller_env()) {
+resolve_geography <- function(
+  adm2,
+  pop_by_year = NULL,
+  filters = list(),
+  polygon = NULL,
+  reproject = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   filters <- compact(filters)
   warnings <- list()
 
@@ -47,12 +51,15 @@ resolve_geography <- function(adm2,
 
   for (arg in names(spec)) {
     values <- filters[[arg]]
-    if (is.null(values)) next
+    if (is.null(values)) {
+      next
+    }
 
     column <- spec[[arg]]$column
     if (!column %in% names(adm2)) {
       cli::cli_abort(
-        c("Column {.field {column}} is not present in the published
+        c(
+          "Column {.field {column}} is not present in the published
            {.field adm2} table.",
           i = "The dataset schema may have changed."
         ),
@@ -81,7 +88,9 @@ resolve_geography <- function(adm2,
     used_args <- c(used_args, arg)
   }
 
-  if (!any(keep)) abort_empty_intersection(used_args, call = call)
+  if (!any(keep)) {
+    abort_empty_intersection(used_args, call = call)
+  }
 
   adm2_ids <- adm2$ADM2_ID[keep]
 
@@ -94,6 +103,7 @@ resolve_geography <- function(adm2,
       pop_by_year = pop_by_year,
       candidate_ids = adm2_ids,
       reproject = reproject,
+      quiet = quiet,
       call = call
     )
     inconsistent <- poly_result$inconsistent
@@ -123,21 +133,26 @@ resolve_geography <- function(adm2,
 #' @param pop_by_year Named list of yearly `pop` tables.
 #' @param candidate_ids ADM2 ids surviving the named filters.
 #' @param reproject Whether to transform to EPSG:4326.
+#' @param quiet Suppress the informational message.
 #' @param call Calling environment.
 #'
 #' @return A list with `adm2_ids`, `inconsistent` and `warnings`.
 #' @keywords internal
 #' @noRd
-resolve_polygon <- function(polygon,
-                            pop_by_year,
-                            candidate_ids,
-                            reproject = TRUE,
-                            call = rlang::caller_env()) {
+resolve_polygon <- function(
+  polygon,
+  pop_by_year,
+  candidate_ids,
+  reproject = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
   check_installed_geo(what = "The {.arg polygon} filter", call = call)
 
   if (!inherits(polygon, c("sf", "sfc"))) {
     cli::cli_abort(
-      c("{.arg polygon} must be an {.cls sf} or {.cls sfc} object.",
+      c(
+        "{.arg polygon} must be an {.cls sf} or {.cls sfc} object.",
         x = "Got {.cls {class(polygon)[1]}}.",
         i = "Read a shapefile or GeoPackage with {.code sf::st_read()}."
       ),
@@ -148,7 +163,8 @@ resolve_polygon <- function(polygon,
   crs <- sf::st_crs(polygon)
   if (is.na(crs)) {
     cli::cli_abort(
-      c("{.arg polygon} has no coordinate reference system.",
+      c(
+        "{.arg polygon} has no coordinate reference system.",
         i = "Set one with {.code sf::st_set_crs()}; without it there is no way
              to know what the coordinates mean.",
         i = "The published centroids are in EPSG:4326 (longitude/latitude)."
@@ -160,7 +176,8 @@ resolve_polygon <- function(polygon,
   if (crs != sf::st_crs(4326)) {
     if (!isTRUE(reproject)) {
       cli::cli_abort(
-        c("{.arg polygon} is not in EPSG:4326 and {.arg reproject} is
+        c(
+          "{.arg polygon} is not in EPSG:4326 and {.arg reproject} is
            {.code FALSE}.",
           i = "Set {.code reproject = TRUE} to transform it automatically, or
                transform it yourself with {.code sf::st_transform(4326)}."
@@ -173,7 +190,8 @@ resolve_polygon <- function(polygon,
 
   if (is.null(pop_by_year) || length(pop_by_year) == 0L) {
     cli::cli_abort(
-      c("Polygon membership needs population centroids, but no {.field pop}
+      c(
+        "Polygon membership needs population centroids, but no {.field pop}
          data was loaded.",
         i = "This is an internal error; please report it."
       ),
@@ -184,20 +202,28 @@ resolve_polygon <- function(polygon,
   years <- names(pop_by_year)
   warnings <- list()
 
-  membership <- lapply(years, function(y) {
-    pop <- pop_by_year[[y]]
-    pop <- pop[pop$ADM2_ID %in% candidate_ids, , drop = FALSE]
+  coords <- c("POP_CENTROID_LON", "POP_CENTROID_LAT")
+  pops <- lapply(pop_by_year, function(pop) {
+    pop[pop$ADM2_ID %in% candidate_ids, , drop = FALSE]
+  })
+  # Many centroids are the same in several years, so each distinct point is
+  # tested against the polygon once, and the answer looked up for every year.
+  points <- dplyr::distinct(dplyr::bind_rows(lapply(pops, `[`, coords)))
+  if (nrow(points) > 0L) {
+    pts <- sf::st_as_sf(points, coords = coords, crs = 4326, remove = FALSE)
+    points$.inside <- lengths(sf::st_intersects(pts, polygon)) > 0L
+  }
+
+  membership <- lapply(pops, function(pop) {
     if (nrow(pop) == 0L) {
       return(character(0))
     }
-
-    pts <- sf::st_as_sf(
-      pop,
-      coords = c("POP_CENTROID_LON", "POP_CENTROID_LAT"),
-      crs = 4326,
-      remove = FALSE
-    )
-    inside <- lengths(sf::st_intersects(pts, polygon)) > 0L
+    inside <- dplyr::left_join(
+      pop[coords],
+      points,
+      by = coords,
+      relationship = "many-to-one"
+    )$.inside
     as.character(pop$ADM2_ID[inside])
   })
   names(membership) <- years
@@ -207,29 +233,35 @@ resolve_polygon <- function(polygon,
   inconsistent <- setdiff(all_in, always_in %||% character(0))
 
   if (length(years) > 1L) {
-    # Warn on every multi-year polygon query, not only when membership actually
-    # varies, so users understand that the possibility exists at all.
+    # Say so on every multi-year polygon query, so users know the possibility
+    # exists; only an actual change in membership (below) is a warning.
     warnings$polygon_multiyear <- glue::glue(
       "Polygon membership was evaluated across {length(years)} years; ",
       "population-weighted centroids move between years."
     )
-    cli::cli_warn(c(
-      "Polygon membership is year-dependent.",
-      i = "Centroids were evaluated for {length(years)} year{?s}
-           ({years[1]}-{years[length(years)]}); an ADM2 unit is included if its
-           centroid fell inside the polygon in any of them."
-    ))
+    inform_unless_quiet(
+      c(
+        i = "Polygon membership is year-dependent.",
+        " " = "Centroids were evaluated for {length(years)} year{?s}
+             ({years[1]}-{years[length(years)]}); an ADM2 unit is included if
+             its centroid fell inside the polygon in any of them."
+      ),
+      quiet = quiet
+    )
   }
 
   if (length(inconsistent) > 0L) {
     warnings$polygon_inconsistent <- inconsistent
-    cli::cli_warn(c(
-      "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
+    gtropic_warn(
+      c(
+        "{length(inconsistent)} ADM2 unit{?s} moved in or out of the polygon
        across years.",
-      "!" = "{truncate_display(inconsistent)}",
-      i = "{?It was/They were} included. The full vector is available via
-           {.code gtropic_warnings()}."
-    ))
+        "!" = "{truncate_display(inconsistent)}",
+        i = "{cli::qty(length(inconsistent))}{?It was/They were} included. The
+           full vector is available via {.code gtropic_diagnostics()}."
+      ),
+      class = "gtropic_warning_polygon"
+    )
   }
 
   list(adm2_ids = all_in, inconsistent = inconsistent, warnings = warnings)

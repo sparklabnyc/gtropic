@@ -1,0 +1,41 @@
+{
+    "status": "OK",
+    "data": [
+        {
+            "id": 14429873,
+            "identifier": "DVN/EAVWC3",
+            "persistentUrl": "https://doi.org/10.7910/DVN/EAVWC3",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "separator": "/",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2026-11-12",
+            "storageIdentifier": "s3://10.7910/DVN/EAVWC3",
+            "effectiveDatasetFileCountLimit": 1000,
+            "datasetFileUploadsAvailable": 628,
+            "datasetType": "dataset",
+            "locks": [
+
+            ],
+            "type": "dataset"
+        },
+        {
+            "id": 14429893,
+            "identifier": "DVN/FZBAKO",
+            "persistentUrl": "https://doi.org/10.7910/DVN/FZBAKO",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "separator": "/",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2026-11-12",
+            "storageIdentifier": "s3://10.7910/DVN/FZBAKO",
+            "effectiveDatasetFileCountLimit": 1000,
+            "datasetFileUploadsAvailable": 987,
+            "datasetType": "dataset",
+            "locks": [
+
+            ],
+            "type": "dataset"
+        }
+    ]
+}

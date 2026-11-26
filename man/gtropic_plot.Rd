@@ -17,7 +17,7 @@ gtropic_plot(
   count_unit = c("storms", "days"),
   facet_by = NULL,
   track = NULL,
-  track_map_key = saffir_simpson(),
+  track_map_key = gtropic_saffir_simpson(),
   track_labels = TRUE,
   track_interval = 6,
   track_legend_position = NULL,
@@ -33,7 +33,7 @@ gtropic_plot(
   title = NULL,
   subtitle = NULL,
   caption = NULL,
-  quiet = FALSE,
+  quiet = getOption("gtropic.quiet", FALSE),
   ...
 )
 }
@@ -49,10 +49,12 @@ maps plot exposure-day or exposure-storm counts that meet exposure-specific
 \item{metric}{A supported published metric name, or a character vector of metric
 names to plot. The \code{metric}s are plotted in the order they are given.
 For \code{type = "exposure"}, \code{NULL} selects every available core metric in this
-order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_FLOODED_AREA"}.
+order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_AREA_IN_FLOOD_REPORT"},
+the last drawn as a yes/no flood-report panel (see Details); name it in
+\code{metric} to map the share itself.
 For \code{type = "count"}, it selects the first available count default;
 \code{type = "track"} selects \code{"USA_WIND"}. Track maps require exactly one of
-\code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_exposures]{gtropic_exposures()}} for all available
+\code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_metrics]{gtropic_metrics()}} for all available
 \code{metric}s available for plotting.}
 
 \item{storm}{Optional character vector of \code{STORM_ID}s or \code{STORM_NAME}s used
@@ -71,7 +73,7 @@ retains tracks linked to the selected ADM2 units when the \code{links} table is 
 \item{aggregate}{Summary method for exposure maps: one of \code{"max"}, \code{"min"},
 \code{"sum"}, \code{"mean"}, or \code{"n"}. \code{aggregate = NULL} (the default) uses the metric-specific
 published default (see the \code{aggregate} column of the tables returned by
-\code{\link[=gtropic_exposures]{gtropic_exposures()}} for these defaults).
+\code{\link[=gtropic_metrics]{gtropic_metrics()}} for these defaults).
 A single value is recycled over \code{metric}; multiple values
 must either be in \code{metric} order or be named for every selected \code{metric}. Count
 maps always use \code{"n"} and reject another value; this argument is ignored when
@@ -84,23 +86,20 @@ defined. Thresholds determine which observations are counted for
 threshold is required when no default exists. This argument is ignored when
 \code{binary = FALSE} and \code{type = "exposure"} or \code{"track"}.}
 
-\item{binary}{Logical; if \code{TRUE}, show exposure/count maps as exposed or not
-exposed using \code{threshold}, rather than as a continuous value scale. Defaults
-to \code{FALSE}. Ignored when \code{type = "track"}.}
+\item{binary}{Logical; default \code{FALSE}. \code{TRUE} shows exposure and count maps
+as exposed or not exposed, using \code{threshold}, instead of a continuous
+scale; flood panels show "Flood reported" or "No flood reported". The
+default exposure map's flood panel is yes/no even when \code{binary = FALSE}.
+Ignored for track maps.}
 
-\item{wind_categories}{Optional categorical exposure key or named list of
-keys. A key is a data frame with \code{category}, numeric upper \code{threshold},
-constant \code{unit}, and \code{color} columns. It classifies aggregated
-ADM2 values, retaining every key category in the static and interactive
-legends even when unobserved. With multiple selected metrics, supply a
-uniquely named list keyed by selected wind metric; a bare key is allowed
-only for one selected metric. Keys must use the source metric's unit;
-conventional spellings of meters per second, such as \code{"m/s"} and
-\code{"meters per second"}, are treated as compatible. The
-\code{\link[=saffir_simpson]{saffir_simpson()}} key is allowed only for \code{VMAX_SUST_MS} with
-\code{aggregate = "max"}, where it means a local sustained-wind equivalent,
-not a storm status. Other wind metrics or aggregates require an explicitly
-custom key. Applies only to non-binary exposure maps and wind metrics.}
+\item{wind_categories}{Optional key that classifies aggregated wind values
+into categories instead of a continuous scale: a data frame with
+\code{category}, upper \code{threshold}, constant \code{unit} and \code{color} columns, or a
+list of such keys named by wind metric. \code{NULL} (the default) uses the
+continuous scale. Applies only to non-binary exposure maps of wind
+metrics. \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} is allowed only for \code{VMAX_SUST_MS}
+with \code{aggregate = "max"}; see \code{vignette("plotting", package = "gtropic")}
+for the rules a custom key must follow.}
 
 \item{count_unit}{The unit counted when \code{type = "count"}: distinct qualifying
 \code{"storms"} (the default) or \code{"days"}. It applies only when \code{type = "count"}
@@ -117,9 +116,9 @@ default) overlays them when \code{data} contains a \code{tracks} table; \code{TR
 tracks regardless of this value.}
 
 \item{track_map_key}{A data frame defining the discrete color scale used when
-plotting track points. Defaults to the data frame returned by \code{\link[=saffir_simpson]{saffir_simpson()}}.
-The \code{track_map_key} must contain the following four columns: \code{category},
-\code{threshold}, \code{unit}, and \code{color}.
+plotting track points. Defaults to the data frame returned by
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}}. The \code{track_map_key} must contain the following
+four columns: \code{category}, \code{threshold}, \code{unit}, and \code{color}.
 The \code{unit} column must contain a single, constant value, and can be one of:
 \code{"m/s"}, \code{"knots"}, \code{"mph"}, \code{"km/h"}. This key controls
 \code{USA_WIND} track points and exposure/count track overlays, but not a
@@ -130,10 +129,9 @@ supplied key, including categories absent from the plotted observations.}
 storm with more than one valid observation at its first valid position when
 multiple storms are shown. It is ignored for interactive maps.}
 
-\item{track_interval}{Interval in UTC hours at which track intensity points are
-displayed. Can be \code{3} or \code{6} (the default). Paths always retain every observation.
-\code{NULL} displays every point. This argument affects \code{type = "track"} maps
-and enabled track overlays.}
+\item{track_interval}{Hours (UTC) between displayed track intensity points:
+\code{6} (the default), \code{3}, or \code{NULL} for every point. Paths always use every
+observation. Affects track maps and track overlays.}
 
 \item{track_legend_position}{Position of per-panel metric scale strips on static
 exposure/count maps. \code{NULL} (the default) places horizontal strips below the
@@ -141,19 +139,18 @@ panels. Can be one of \code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right
 \code{"top right"}, \code{"bottom left"}, or \code{"bottom right"}.
 This argument is ignored when \code{type = "track"} or \code{interactive = TRUE}.}
 
-\item{basemap}{The Installed Natural Earth layer to use for plotting.
-Must be one of \code{"countries"} (the default), \code{"admin1"}, or \code{"none"}.
-No layers are ever downloaded. \code{basemap = "admin1"} requires the
-optional \code{rnaturalearthhires} package.}
+\item{basemap}{Natural Earth background layer: \code{"countries"} (the
+default), \code{"admin1"} or \code{"none"}. Layers come from installed packages and
+are never downloaded; \code{"admin1"} needs the optional \code{rnaturalearthhires}
+package.}
 
 \item{bbox}{Map extent as an sf/sfc object, an sf bbox with a known CRS, or
 four geographic bounds in \code{\link[sf:st_bbox]{sf::st_bbox()}} order:
 \code{c(xmin, ymin, xmax, ymax)}. \code{NULL} (the default) derives the extent from
 the plotted geometry and any displayed tracks.}
 
-\item{expand}{Nonnegative geographic-degree padding added to each side of the
-map extent after \code{bbox} is resolved. Latitude limits are constrained to
--90--90 degrees. Defaults to 2.}
+\item{expand}{Padding (degrees, 0 or more) added to each side of the map
+extent; default 2. Latitude limits stay within -90 to 90.}
 
 \item{crs}{A coordinate reference system understood by \code{\link[sf:st_crs]{sf::st_crs()}}. \code{NULL}
 (the default) selects EPSG:4326 for longitudinal spans under 40 degrees and
@@ -187,11 +184,12 @@ Repair can change geometry types. This argument is ignored for track maps.}
 an automatic title/subtitle/caption. A supplied caption replaces the automatic
 provenance and method caption.}
 
-\item{quiet}{Logical; if \code{FALSE} (the default), report data-preparation progress.}
+\item{quiet}{Logical; if \code{FALSE}, report data-preparation progress. Defaults
+to \code{getOption("gtropic.quiet", FALSE)}.}
 
-\item{...}{Named arguments passed to \code{\link[ggplot2:geom_sf]{ggplot2::geom_sf()}} for static exposure or
-count polygons, or to \code{\link[leaflet:addPolygons]{leaflet::addPolygons()}} for interactive polygons.
-Track plots accept no additional arguments.}
+\item{...}{For static exposure and count maps, named arguments passed to
+\code{\link[ggplot2:geom_sf]{ggplot2::geom_sf()}} for the ADM2 polygons. For interactive maps, named
+arguments passed to \code{\link[leaflet:addPolygons]{leaflet::addPolygons()}}. Track plots accept none.}
 }
 \value{
 A ggplot for static output or a leaflet widget for interactive output.
@@ -214,8 +212,52 @@ known source-data limitation, track-interval, and plotting-CRS lines as
 applicable. Hazard radii and windows are derived from rows that contributed
 to the plot.
 
+Flood rows record places named in news reports about flooding, not mapped
+flood extent (\link{gtropic_known_limitations}). A yes/no flood panel therefore
+shows "Flood reported" when at least one report's place covers a share of
+the unit above the threshold (default: more than 0) in a matched storm's
+flood window, and "No flood reported" when the unit was in a storm's flood
+field, its window lies inside the Groundsource record (2000-01-01 to
+2026-01-22) and no report matched. Units whose windows fall outside the
+record have no flood data and are shown as missing.
+
 Track paths are drawn from every supplied observation. By default, constant-
-size points use \code{\link[=saffir_simpson]{saffir_simpson()}} categories derived from \code{USA_WIND}, which is
-published in knots and converted to the map key's unit before classification.
+size points use \code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}} categories derived from
+\code{USA_WIND}, which is published in knots and converted to the map key's unit
+before classification.
 An explicit \code{metric = "USA_STATUS"} retains the status-color display.
 }
+\section{Arguments by purpose}{
+
+\itemize{
+\item \strong{What to plot:} \code{data}, \code{type}, \code{metric}, \code{storm}, \code{adm2}, \code{aggregate},
+\code{threshold}, \code{binary}, \code{wind_categories}, \code{count_unit}, \code{facet_by}.
+\item \strong{Tracks:} \code{track}, \code{track_map_key}, \code{track_labels}, \code{track_interval},
+\code{track_legend_position}.
+\item \strong{Map frame:} \code{basemap}, \code{bbox}, \code{expand}, \code{crs}, \code{interactive}.
+\item \strong{Appearance:} \code{palette}, \code{direction}, \code{gridlines}, \code{make_valid},
+\code{title}, \code{subtitle}, \code{caption}, \code{quiet}, \code{...}.
+}
+}
+
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+x <- gtropic_example()
+
+# Exposure map of maximum sustained wind
+gtropic_plot(x, metric = "VMAX_SUST_MS", basemap = "none")
+
+# Track map
+gtropic_plot(x, type = "track", basemap = "none")
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

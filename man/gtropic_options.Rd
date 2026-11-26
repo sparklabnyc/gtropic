@@ -9,41 +9,45 @@ exists for documentation only.
 }
 \description{
 \code{gtropic} is configured entirely through \code{options()}. Setting these is how
-you point the package at a different Dataverse installation -- for example
-moving from the demonstration server to a production repository -- without
-needing a package update.
+you point the package at a different Dataverse installation, or change how
+it caches and confirms downloads, without needing a package update.
 }
 \details{
 \tabular{lll}{
    Option \tab Default \tab Meaning \cr
-   \code{gtropic.server} \tab \code{"dataverse.harvard.edu"} \tab Dataverse host (HTTPS only). \cr
+   \code{gtropic.server} \tab \code{"dataverse.harvard.edu"} \tab Dataverse host name (requests always use HTTPS), optionally with a port. \cr
    \code{gtropic.doi_historical} \tab \code{"doi:10.7910/DVN/EAVWC3"} \tab DOI of the historical dataset. \cr
    \code{gtropic.doi_current} \tab \code{"doi:10.7910/DVN/FZBAKO"} \tab DOI of the current-year dataset. Used only as a fallback if automatic discovery fails. \cr
    \code{gtropic.collection} \tab \code{"gtropic"} \tab Dataverse collection (alias) searched during discovery. \cr
    \code{gtropic.cache_enabled} \tab \code{TRUE} \tab Whether downloaded files are kept on disk. \cr
    \code{gtropic.cache_dir} \tab \code{tools::R_user_dir("gtropic", "cache")} \tab Where cached files live. \cr
+   \code{gtropic.cache_max_age_days} \tab \code{180} \tab Cached files downloaded more than this many days ago are removed automatically after a retrieval that adds to the cache. \code{Inf} keeps them. \cr
+   \code{gtropic.cache_max_gb} \tab \code{10} \tab Size cap, in gigabytes, for the cache: after a retrieval that adds to it, the least recently downloaded files are removed until it fits. \code{Inf} disables the cap. \cr
    \code{gtropic.confirm_threshold_gb} \tab \code{1} \tab Download size, in gigabytes, above which you are asked to confirm. \cr
-   \code{gtropic.timeout} \tab \code{600} \tab Per-request timeout in seconds. \cr
-   \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request before giving up. \cr
+   \code{gtropic.timeout} \tab \code{600} \tab Seconds to wait for the server. A metadata request that takes longer is abandoned (and retried, see \code{gtropic.max_tries}), and so is a download that receives no data for this long; a download that keeps receiving data may take longer. \code{Inf} waits indefinitely. \cr
+   \code{gtropic.max_tries} \tab \code{3} \tab Maximum attempts per request. Only transient failures are retried: a lost or refused connection, a timeout, and HTTP 408, 429 and 5xx responses. \cr
+   \code{gtropic.quiet} \tab \code{FALSE} \tab Session-wide default for \code{quiet}: \code{TRUE} suppresses progress and informational messages from every call. \cr
+   \code{gtropic.discovery_ttl} \tab \code{600} \tab Seconds for which a session reuses what it learned about the collection's \code{":latest"} datasets before asking the server again. A new weekly release is therefore seen within this time. \code{0} asks on every call; a pinned \code{version} is looked up once per session. \cr
 }
 
+
+Each option is checked when it is read, and an invalid value is an error
+that names the option.
 
 A "cache" here means a folder of previously downloaded files on your own
 computer. It is enabled by default and uses a standard per-user location
 chosen by R. Use \code{\link[=gtropic_cache_disable]{gtropic_cache_disable()}} or \code{cache = FALSE} on a retrieval
 to bypass it. See \code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}} to persist an enabled or disabled
-choice across R sessions.
+choice across R sessions; a persisted choice replaces the default of
+\code{gtropic.cache_enabled} when the package is loaded.
 }
 \examples{
-# Point the package at a different installation:
-\dontrun{
-options(
-  gtropic.server = "dataverse.harvard.edu",
-  gtropic.doi_historical = "doi:10.7910/DVN/EXAMPLE"
-)
-}
-
-# Inspect the current settings:
+# Inspect a setting
 getOption("gtropic.server")
+
+# Change one for a while, then restore it
+old <- options(gtropic.confirm_threshold_gb = 2)
+getOption("gtropic.confirm_threshold_gb")
+options(old)
 
 }

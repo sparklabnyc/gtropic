@@ -27,24 +27,15 @@ estimate_download <- function(plan, cache, discovery) {
     return(list(bytes = 0, n_files = 0L, n_cached = 0L))
   }
 
-  cached <- vapply(seq_len(nrow(plan)), function(i) {
-    slot <- discovery[[plan$dataset[i]]]
-    if (is.null(slot)) {
-      return(FALSE)
-    }
-    row <- slot$listing[
-      slot$listing$directory_label == plan$directory_label[i] &
-        slot$listing$label == plan$label[i], ,
-      drop = FALSE
-    ]
-    if (nrow(row) == 0L) {
-      return(FALSE)
-    }
-    cache_has(cache, list(
-      server = discovery$server, doi = slot$doi, version = slot$version,
-      directory_label = plan$directory_label[i], label = plan$label[i]
-    ), expected_checksum = row$checksum[1])
-  }, logical(1))
+  # Planned files the listing does not hold cannot be cached.
+  keys <- dplyr::left_join(
+    plan[c("dataset", "directory_label", "label")],
+    discovery_files(discovery),
+    by = c("dataset", "directory_label", "label"),
+    relationship = "many-to-one"
+  )
+  keys$server <- rep(discovery$server, nrow(keys))
+  cached <- !is.na(keys$doi) & cache_has(cache, keys)
 
   list(
     bytes = sum(plan$size_bytes[!cached], na.rm = TRUE),
@@ -56,16 +47,20 @@ estimate_download <- function(plan, cache, discovery) {
 #' Apply the download confirmation guardrail
 #'
 #' @param estimate Output of `estimate_download()`.
-#' @param confirm `NULL` applies the guardrail; `FALSE` skips it.
+#' @param confirm `TRUE` applies the guardrail; `FALSE` skips it.
 #' @param quiet Suppress informational output.
 #' @param call Calling environment for error reporting.
 #'
 #' @return Invisibly `TRUE` when the download may proceed.
 #' @keywords internal
 #' @noRd
-apply_guardrail <- function(estimate, confirm = NULL, quiet = FALSE,
-                            call = rlang::caller_env()) {
-  if (isFALSE(confirm)) {
+apply_guardrail <- function(
+  estimate,
+  confirm = TRUE,
+  quiet = FALSE,
+  call = rlang::caller_env()
+) {
+  if (!confirm) {
     return(invisible(TRUE))
   }
 
@@ -73,18 +68,23 @@ apply_guardrail <- function(estimate, confirm = NULL, quiet = FALSE,
   gb <- estimate$bytes / 1024^3
 
   if (gb <= threshold_gb) {
+    cached <- if (estimate$n_cached > 0) {
+      paste0("; ", estimate$n_cached, " already cached")
+    } else {
+      ""
+    }
     inform_unless_quiet(
       "Retrieving {estimate$n_files} file{?s}
-       ({format_bytes(estimate$bytes)}){cli::qty(estimate$n_cached)}{?; / ;
-       }{if (estimate$n_cached > 0) glue::glue('{estimate$n_cached} already cached')}.",
+       ({format_bytes(estimate$bytes)}){cached}.",
       quiet = quiet
     )
     return(invisible(TRUE))
   }
 
   if (!is_interactive()) {
-    cli::cli_abort(
-      c("This query would download about {format_bytes(estimate$bytes)} across
+    gtropic_abort(
+      c(
+        "This query would download about {format_bytes(estimate$bytes)} across
          {estimate$n_files} file{?s}, above the
          {threshold_gb} GB confirmation threshold.",
         i = "This session is not interactive, so there is no way to ask you to
@@ -95,25 +95,27 @@ apply_guardrail <- function(estimate, confirm = NULL, quiet = FALSE,
         i = "Narrowing {.arg date_range} or dropping {.val precip} from
              {.arg tables} is usually the better fix."
       ),
+      class = "gtropic_error_download_size",
       call = call
     )
   }
 
-  cli::cli_inform(c(
+  proceed <- confirm_action(c(
     "This query will download about {format_bytes(estimate$bytes)} across
      {estimate$n_files} file{?s}.",
     i = if (estimate$n_cached > 0) {
       "{estimate$n_cached} further file{?s} {?is/are} already cached."
     }
   ))
-  ans <- readline("Proceed? [y/N] ")
 
-  if (!tolower(trimws(ans)) %in% c("y", "yes")) {
-    cli::cli_abort(
-      c("Download cancelled.",
+  if (!proceed) {
+    gtropic_abort(
+      c(
+        "Download cancelled.",
         i = "Narrow the query, or pass {.code confirm = FALSE} to skip this
              check."
       ),
+      class = "gtropic_error_download_size",
       call = call
     )
   }

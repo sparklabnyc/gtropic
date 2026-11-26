@@ -17,7 +17,17 @@ A minimal theme with subdued grid lines, bold titles, and readable captions.
 Map builders remove axis titles and move multi-panel legends to the bottom.
 }
 \examples{
-\donttest{
-theme_gtropic()
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+theme_gtropic(base_size = 11)
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=plot.gtropic_data]{plot.gtropic_data()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}}
 }
+\concept{plotting functions}

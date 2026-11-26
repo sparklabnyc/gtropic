@@ -31,11 +31,16 @@ as_filter_chr <- function(x, arg, call = rlang::caller_env()) {
   if (is.null(x)) {
     return(NULL)
   }
-  if (is.factor(x)) x <- as.character(x)
-  if (!is.character(x)) x <- as.character(x)
+  if (is.factor(x)) {
+    x <- as.character(x)
+  }
+  if (!is.character(x)) {
+    x <- as.character(x)
+  }
   if (length(x) == 0L) {
     cli::cli_abort(
-      c("{.arg {arg}} was supplied but is empty.",
+      c(
+        "{.arg {arg}} was supplied but is empty.",
         i = "Use {.code NULL} to leave a filter unset."
       ),
       call = call
@@ -75,14 +80,34 @@ truncate_display <- function(x, n = 10L) {
 #' @noRd
 format_bytes <- function(bytes) {
   bytes <- as.numeric(bytes)
-  vapply(bytes, function(b) {
-    if (is.na(b)) {
-      return("unknown size")
-    }
-    units <- c("B", "KB", "MB", "GB", "TB")
-    i <- if (b <= 0) 1L else min(length(units), floor(log(b, 1024)) + 1L)
-    sprintf("%.1f %s", b / 1024^(i - 1L), units[i])
-  }, character(1))
+  vapply(
+    bytes,
+    function(b) {
+      if (is.na(b)) {
+        return("unknown size")
+      }
+      units <- c("B", "KB", "MB", "GB", "TB")
+      i <- if (b <= 0) 1L else min(length(units), floor(log(b, 1024)) + 1L)
+      sprintf("%.1f %s", b / 1024^(i - 1L), units[i])
+    },
+    character(1)
+  )
+}
+
+#' Mark text as literal for a cli template
+#'
+#' `cli` evaluates `{...}` in every template it is given as R code. Text that
+#' comes from a server, a manifest or the user and has to be pasted into a
+#' condition message must be escaped first: doubled braces print as single
+#' braces. Prefer interpolating such values as data (`"{.val {x}}"`) where the
+#' message allows it.
+#'
+#' @param x Character vector.
+#' @return `x` with `{` and `}` doubled; names are kept.
+#' @keywords internal
+#' @noRd
+cli_escape <- function(x) {
+  gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
 }
 
 #' Emit an informational message unless quiet
@@ -96,11 +121,40 @@ format_bytes <- function(bytes) {
 #' @return Invisibly `NULL`.
 #' @keywords internal
 #' @noRd
-inform_unless_quiet <- function(..., quiet = FALSE,
-                                .envir = rlang::caller_env()) {
-  if (!isTRUE(quiet)) cli::cli_inform(..., .envir = .envir)
+inform_unless_quiet <- function(
+  ...,
+  quiet = FALSE,
+  .envir = rlang::caller_env()
+) {
+  if (!isTRUE(quiet)) {
+    cli::cli_inform(..., .envir = .envir)
+  }
   invisible(NULL)
 }
+
+#' Ask the user to confirm an action
+#'
+#' The single prompt style used by the download guardrail and
+#' `gtropic_cache_clear()`: the message, then `Proceed? [y/N]`. Callers check
+#' `is_interactive()` first.
+#'
+#' @param ... The message template, passed to [cli::cli_inform()].
+#' @param .envir Environment in which the template is evaluated.
+#' @return `TRUE` if the answer is yes.
+#' @keywords internal
+#' @noRd
+confirm_action <- function(..., .envir = parent.frame()) {
+  cli::cli_inform(..., .envir = .envir)
+  answer <- read_answer("Proceed? [y/N] ")
+  tolower(trimws(answer)) %in% c("y", "yes")
+}
+
+#' Read one line from the console
+#'
+#' Wrapped so tests can stub it.
+#' @keywords internal
+#' @noRd
+read_answer <- function(prompt) readline(prompt)
 
 #' Is this an interactive session?
 #'
@@ -110,14 +164,6 @@ inform_unless_quiet <- function(..., quiet = FALSE,
 #' @keywords internal
 #' @noRd
 is_interactive <- function() interactive()
-
-#' Coerce a year-ish value to integer
-#'
-#' @param x Numeric or character years.
-#' @return Integer vector.
-#' @keywords internal
-#' @noRd
-as_year_int <- function(x) as.integer(as.character(x))
 
 #' Sequence of years spanning a set of dates
 #'
@@ -133,4 +179,47 @@ year_span <- function(...) {
   }
   yrs <- as.integer(format(dates, "%Y"))
   seq.int(min(yrs), max(yrs))
+}
+
+#' Validate a logical flag argument
+#'
+#' One check for every `TRUE`/`FALSE` argument, so `quiet = "yes"` is an error
+#' rather than silently `FALSE`.
+#'
+#' @param x Value supplied.
+#' @param arg Argument name, for the error message.
+#' @param allow_null Whether `NULL` is also accepted (for arguments where it
+#'   means "use the option").
+#' @param call Calling environment for error reporting.
+#'
+#' @return `x`, unchanged.
+#' @keywords internal
+#' @noRd
+check_flag <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  allow_null = FALSE,
+  call = rlang::caller_env()
+) {
+  if (allow_null && is.null(x)) {
+    return(x)
+  }
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    cli::cli_abort(
+      c(
+        if (allow_null) {
+          "{.arg {arg}} must be {.code TRUE}, {.code FALSE} or {.code NULL}."
+        } else {
+          "{.arg {arg}} must be a single {.code TRUE} or {.code FALSE} value."
+        },
+        x = if (length(x) == 1L) {
+          "Got {.val {x}}."
+        } else {
+          "Got an object of class {.cls {class(x)}} and length {length(x)}."
+        }
+      ),
+      call = call
+    )
+  }
+  x
 }

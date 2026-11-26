@@ -3,12 +3,16 @@
 #' @keywords internal
 #' @noRd
 plot_validate_track_map_key <- function(track_map_key) {
-  key <- plot_validate_wind_category_key(track_map_key, "track_map_key")
+  key <- plot_validate_category_key(track_map_key, "track_map_key")
   if (!key$unit[1L] %in% c("m/s", "knots", "mph", "km/h")) {
-    cli::cli_abort("{.arg track_map_key}$unit must be one constant: m/s, knots, mph, or km/h.")
+    cli::cli_abort(
+      "{.arg track_map_key}$unit must be one constant: m/s, knots, mph, or km/h."
+    )
   }
   if (any(key$threshold < 0)) {
-    cli::cli_abort("{.arg track_map_key}$threshold must contain nonnegative ceilings.")
+    cli::cli_abort(
+      "{.arg track_map_key}$threshold must contain nonnegative ceilings."
+    )
   }
   key
 }
@@ -21,12 +25,18 @@ plot_convert_track_wind <- function(wind, unit) {
   if (!is.numeric(wind)) {
     cli::cli_abort("{.arg wind} must be numeric USA_WIND values in knots.")
   }
-  if (!is.character(unit) || length(unit) != 1L || is.na(unit) ||
-    !unit %in% c("m/s", "knots", "mph", "km/h")) {
+  if (
+    !is.character(unit) ||
+      length(unit) != 1L ||
+      is.na(unit) ||
+      !unit %in% c("m/s", "knots", "mph", "km/h")
+  ) {
     cli::cli_abort("{.arg unit} must be one of m/s, knots, mph, or km/h.")
   }
   multiplier <- c(
-    "m/s" = 0.514444444444444, knots = 1, mph = 1.150779448,
+    "m/s" = 0.514444444444444,
+    knots = 1,
+    mph = 1.150779448,
     "km/h" = 1.852
   )[[unit]]
   wind * multiplier
@@ -44,9 +54,13 @@ plot_categorize_track_wind <- function(wind, track_map_key) {
   category <- rep(NA_character_, length(converted))
   present <- !is.na(converted)
   if (any(present)) {
-    category[present] <- key$category[vapply(converted[present], function(value) {
-      which(value <= key$threshold)[1L]
-    }, integer(1))]
+    category[present] <- key$category[vapply(
+      converted[present],
+      function(value) {
+        which(value <= key$threshold)[1L]
+      },
+      integer(1)
+    )]
   }
   factor(category, levels = key$category, ordered = TRUE)
 }
@@ -60,8 +74,10 @@ plot_validate_track_interval <- function(track_interval) {
     return(NULL)
   }
   if (
-    !is.numeric(track_interval) || length(track_interval) != 1L ||
-      is.na(track_interval) || !track_interval %in% c(3, 6)
+    !is.numeric(track_interval) ||
+      length(track_interval) != 1L ||
+      is.na(track_interval) ||
+      !track_interval %in% c(3, 6)
   ) {
     cli::cli_abort("{.arg track_interval} must be NULL, 3, or 6 hours.")
   }
@@ -78,7 +94,9 @@ plot_sample_track_points <- function(tracks, track_interval = NULL) {
     return(tracks)
   }
   if (!inherits(tracks$ISO_TIME, "POSIXt")) {
-    cli::cli_abort("Track point sampling requires POSIXct {.field ISO_TIME} values.")
+    cli::cli_abort(
+      "Track point sampling requires POSIXct {.field ISO_TIME} values."
+    )
   }
   seconds <- as.numeric(tracks$ISO_TIME)
   sampled <- !is.na(seconds) & seconds %% (track_interval * 3600) == 0
@@ -133,7 +151,9 @@ plot_track_display_name <- function(tracks) {
 plot_split_tracks <- function(tracks, facet_by = NULL) {
   keys <- unique(c("STORM_ID", intersect(c("metric", facet_by), names(tracks))))
   tracks <- dplyr::arrange(
-    tibble::as_tibble(tracks), !!!rlang::syms(keys), .data$ISO_TIME
+    tibble::as_tibble(tracks),
+    !!!rlang::syms(keys),
+    .data$ISO_TIME
   )
   if (!nrow(tracks)) {
     tracks$.plot_group <- integer()
@@ -144,12 +164,14 @@ plot_split_tracks <- function(tracks, facet_by = NULL) {
   previous <- seq_len(nrow(tracks) - 1L)
   current <- previous + 1L
   # Missing coordinates must not allow a path to bridge unobserved positions.
-  missing <- !is.finite(longitude) | !is.finite(tracks$LON) |
+  missing <- !is.finite(longitude) |
+    !is.finite(tracks$LON) |
     !is.finite(tracks$LAT)
   breaks <- panels[current] != panels[previous] |
     abs(longitude[current] - longitude[previous]) > 180 |
     abs(tracks$LON[current] - tracks$LON[previous]) > 180 |
-    missing[current] | missing[previous]
+    missing[current] |
+    missing[previous]
   tracks$.plot_group <- cumsum(c(TRUE, breaks))
   tracks
 }
@@ -161,15 +183,26 @@ plot_split_tracks <- function(tracks, facet_by = NULL) {
 #' observations to categorical filled points; paths always retain all rows.
 #' @keywords internal
 #' @noRd
-plot_add_tracks <- function(p, tracks, facet_by = NULL, colour_metric = NULL,
-                            palette = NULL, direction = 1,
-                            track_map_key = NULL, track_interval = NULL,
-                            track_labels = FALSE) {
+plot_add_tracks <- function(
+  p,
+  tracks,
+  facet_by = NULL,
+  colour_metric = NULL,
+  palette = NULL,
+  direction = 1,
+  track_map_key = NULL,
+  track_interval = NULL,
+  track_labels = FALSE
+) {
   rlang::check_installed("ggplot2", reason = "to plot storm tracks")
   if (is.null(tracks) || !nrow(tracks)) {
     return(p)
   }
-  if (!is.logical(track_labels) || length(track_labels) != 1L || is.na(track_labels)) {
+  if (
+    !is.logical(track_labels) ||
+      length(track_labels) != 1L ||
+      is.na(track_labels)
+  ) {
     cli::cli_abort("{.arg track_labels} must be TRUE or FALSE.")
   }
   track_interval <- plot_validate_track_interval(track_interval)
@@ -179,57 +212,101 @@ plot_add_tracks <- function(p, tracks, facet_by = NULL, colour_metric = NULL,
   tracks <- plot_split_tracks(tracks, facet_by)
   paths <- ggplot2::geom_path(
     data = tracks,
-    mapping = ggplot2::aes(x = .data$LON, y = .data$LAT, group = .data$.plot_group),
-    inherit.aes = FALSE, colour = "grey30", linewidth = 0.5, na.rm = TRUE
+    mapping = ggplot2::aes(
+      x = .data$LON,
+      y = .data$LAT,
+      group = .data$.plot_group
+    ),
+    inherit.aes = FALSE,
+    colour = "grey30",
+    linewidth = 0.5,
+    na.rm = TRUE
   )
   if (is.null(colour_metric)) {
     points <- ggplot2::geom_point(
       data = plot_sample_track_points(tracks, track_interval),
       mapping = ggplot2::aes(
-        x = .data$LON, y = .data$LAT, group = .data$.plot_group,
+        x = .data$LON,
+        y = .data$LAT,
+        group = .data$.plot_group,
         size = .data$USA_WIND
       ),
-      inherit.aes = FALSE, colour = "grey30", na.rm = TRUE
+      inherit.aes = FALSE,
+      colour = "grey30",
+      na.rm = TRUE
     )
-    p <- p + paths + points + ggplot2::scale_size_continuous(
-      name = registry$legend[match("USA_WIND", registry$metric)],
-      guide = ggplot2::guide_legend(position = "bottom", nrow = 1L, byrow = TRUE)
-    )
+    p <- p +
+      paths +
+      points +
+      ggplot2::scale_size_continuous(
+        name = registry$legend[match("USA_WIND", registry$metric)],
+        guide = ggplot2::guide_legend(
+          position = "bottom",
+          nrow = 1L,
+          byrow = TRUE
+        )
+      )
   } else {
-    colour_metric <- rlang::arg_match(colour_metric, c("USA_WIND", "USA_STATUS"))
+    colour_metric <- rlang::arg_match(
+      colour_metric,
+      c("USA_WIND", "USA_STATUS")
+    )
     if (colour_metric == "USA_WIND" && !is.null(track_map_key)) {
       key <- plot_validate_track_map_key(track_map_key)
       points_data <- plot_sample_track_points(tracks, track_interval)
       points_data$.track_category <- plot_categorize_track_wind(
-        points_data$USA_WIND, key
+        points_data$USA_WIND,
+        key
       )
       points <- ggplot2::geom_point(
         data = points_data,
-        mapping = ggplot2::aes(x = .data$LON, y = .data$LAT, fill = .data$.track_category),
-        inherit.aes = FALSE, shape = 21, size = 2.5, colour = "grey20",
-        na.rm = TRUE, show.legend = TRUE
-      )
-      p <- p + paths + points + ggplot2::scale_fill_manual(
-        values = stats::setNames(key$colour, key$category),
-        # Explicit limits retain every key category in static track and overlay
-        # legends, even when no plotted observation falls in a category.
-        limits = key$category, breaks = key$category, drop = FALSE,
-        name = paste0(
-          registry$label[match("USA_WIND", registry$metric)],
-          " (", key$unit[1L], ")"
+        mapping = ggplot2::aes(
+          x = .data$LON,
+          y = .data$LAT,
+          fill = .data$.track_category
         ),
-        na.value = "grey90",
-        guide = ggplot2::guide_legend(position = "bottom", nrow = 1L, byrow = TRUE)
+        inherit.aes = FALSE,
+        shape = 21,
+        size = 2.5,
+        colour = "grey20",
+        na.rm = TRUE,
+        show.legend = TRUE
       )
+      p <- p +
+        paths +
+        points +
+        ggplot2::scale_fill_manual(
+          values = stats::setNames(key$colour, key$category),
+          # Explicit limits retain every key category in static track and overlay
+          # legends, even when no plotted observation falls in a category.
+          limits = key$category,
+          breaks = key$category,
+          drop = FALSE,
+          name = paste0(
+            registry$label[match("USA_WIND", registry$metric)],
+            " (",
+            key$unit[1L],
+            ")"
+          ),
+          na.value = "grey90",
+          guide = ggplot2::guide_legend(
+            position = "bottom",
+            nrow = 1L,
+            byrow = TRUE
+          )
+        )
     } else {
       colour_mapping <- ggplot2::aes(colour = .data[[colour_metric]])
       path_mapping <- ggplot2::aes(
-        x = .data$LON, y = .data$LAT,
+        x = .data$LON,
+        y = .data$LAT,
         group = .data$.plot_group
       )
       point_mapping <- ggplot2::aes(
-        x = .data$LON, y = .data$LAT,
-        group = .data$.plot_group, size = .data$USA_WIND
+        x = .data$LON,
+        y = .data$LAT,
+        group = .data$.plot_group,
+        size = .data$USA_WIND
       )
       path_mapping$colour <- point_mapping$colour <- colour_mapping$colour
       defaults <- plot_scale_defaults(colour_metric, palette, NULL, direction)
@@ -238,33 +315,55 @@ plot_add_tracks <- function(p, tracks, facet_by = NULL, colour_metric = NULL,
       } else {
         ggplot2::scale_colour_viridis_c
       }
-      p <- p + ggplot2::geom_path(
-        data = tracks, mapping = path_mapping, inherit.aes = FALSE,
-        linewidth = 0.5, na.rm = TRUE
-      ) + ggplot2::geom_point(
-        data = plot_sample_track_points(tracks, track_interval),
-        mapping = point_mapping, inherit.aes = FALSE, na.rm = TRUE
-      ) + scale(
-        option = defaults$palette, direction = direction,
-        name = registry$legend[match(colour_metric, registry$metric)],
-        na.value = "grey90",
-        guide = if (colour_metric == "USA_STATUS") {
-          ggplot2::guide_legend(position = "bottom", nrow = 1L, byrow = TRUE)
-        } else {
-          ggplot2::guide_colourbar(position = "bottom")
-        }
-      ) + ggplot2::scale_size_continuous(
-        name = registry$legend[match("USA_WIND", registry$metric)],
-        guide = ggplot2::guide_legend(position = "bottom", nrow = 1L, byrow = TRUE)
-      )
+      p <- p +
+        ggplot2::geom_path(
+          data = tracks,
+          mapping = path_mapping,
+          inherit.aes = FALSE,
+          linewidth = 0.5,
+          na.rm = TRUE
+        ) +
+        ggplot2::geom_point(
+          data = plot_sample_track_points(tracks, track_interval),
+          mapping = point_mapping,
+          inherit.aes = FALSE,
+          na.rm = TRUE
+        ) +
+        scale(
+          option = defaults$palette,
+          direction = direction,
+          name = registry$legend[match(colour_metric, registry$metric)],
+          na.value = "grey90",
+          guide = if (colour_metric == "USA_STATUS") {
+            ggplot2::guide_legend(position = "bottom", nrow = 1L, byrow = TRUE)
+          } else {
+            ggplot2::guide_colourbar(position = "bottom")
+          }
+        ) +
+        ggplot2::scale_size_continuous(
+          name = registry$legend[match("USA_WIND", registry$metric)],
+          guide = ggplot2::guide_legend(
+            position = "bottom",
+            nrow = 1L,
+            byrow = TRUE
+          )
+        )
     }
   }
   if (track_labels && dplyr::n_distinct(tracks$STORM_ID) > 1L) {
-    p <- p + ggplot2::geom_text(
-      data = plot_track_label_data(tracks, facet_by),
-      mapping = ggplot2::aes(x = .data$LON, y = .data$LAT, label = .data$.track_label),
-      inherit.aes = FALSE, hjust = -0.1, vjust = -0.4, na.rm = TRUE
-    )
+    p <- p +
+      ggplot2::geom_text(
+        data = plot_track_label_data(tracks, facet_by),
+        mapping = ggplot2::aes(
+          x = .data$LON,
+          y = .data$LAT,
+          label = .data$.track_label
+        ),
+        inherit.aes = FALSE,
+        hjust = -0.1,
+        vjust = -0.4,
+        na.rm = TRUE
+      )
   }
   p
 }
@@ -273,15 +372,26 @@ plot_add_tracks <- function(p, tracks, facet_by = NULL, colour_metric = NULL,
 #'
 #' @keywords internal
 #' @noRd
-build_track_plot <- function(data, cartography,
-                             title = NULL, subtitle = NULL, caption = NULL,
-                             gridlines = TRUE, ...) {
+build_track_plot <- function(
+  data,
+  cartography,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL,
+  gridlines = TRUE,
+  ...
+) {
   info <- attr(data, "plot_info", exact = TRUE)
   p <- plot_map_base(data, cartography)
-  p <- plot_add_tracks(p, cartography$tracks,
-    facet_by = info$facet_by, colour_metric = info$metric,
-    palette = info$metrics$palette, direction = info$metrics$direction,
-    track_map_key = info$track_map_key, track_interval = info$track_interval,
+  p <- plot_add_tracks(
+    p,
+    cartography$tracks,
+    facet_by = info$facet_by,
+    colour_metric = info$metric,
+    palette = info$metrics$palette,
+    direction = info$metrics$direction,
+    track_map_key = info$track_map_key,
+    track_interval = info$track_interval,
     track_labels = info$track_labels
   )
   plot_map_finish(p, data, cartography, title, subtitle, caption, gridlines)

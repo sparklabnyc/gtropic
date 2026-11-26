@@ -1,0 +1,109 @@
+# Weekly live canary against Harvard Dataverse (Plan 01 INFRA-06). G-TROPIC is
+# re-published every Sunday; this runs on Mondays and checks that the
+# collection still has the shape gtropic relies on
+# (tests/testthat/test-live-dataverse.R: a handful of small requests).
+# On failure, a second job opens one issue labelled "upstream", or comments on
+# the open one. Only that job can write issues; the job that runs package code
+# has a read-only token. Hardened per Plan 05 SEC-11.
+on:
+  schedule:
+    - cron: "41 7 * * 1"
+  workflow_dispatch:
+
+name: live-api.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  live-api:
+    runs-on: ubuntu-latest
+    name: live Dataverse tests
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      GTROPIC_LIVE_TESTS: "true"
+      NOT_CRAN: "true"
+      OMP_NUM_THREADS: 2
+      OMP_THREAD_LIMIT: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::testthat
+          needs: check
+
+      # Sandboxed user directories (Plan 06 G3), set only now so that pak's
+      # own package cache is not written there.
+      - name: Sandbox R user directories
+        shell: bash
+        run: |
+          for d in cache config data; do mkdir -p "$RUNNER_TEMP/r-user/$d"; done
+          {
+            echo "R_USER_CACHE_DIR=$RUNNER_TEMP/r-user/cache"
+            echo "R_USER_CONFIG_DIR=$RUNNER_TEMP/r-user/config"
+            echo "R_USER_DATA_DIR=$RUNNER_TEMP/r-user/data"
+          } >> "$GITHUB_ENV"
+
+      # One retry, two minutes later. A skipped test counts as a failure here:
+      # the tests skip themselves when the server cannot be reached.
+      - name: Live tests
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/live.R" <<'RSCRIPT'
+          res <- as.data.frame(testthat::test_local(
+            filter = "live-dataverse",
+            reporter = "summary",
+            stop_on_failure = TRUE
+          ))
+          if (any(res$skipped)) {
+            stop("Live tests were skipped: ", paste(res$test[res$skipped], collapse = "; "))
+          }
+          RSCRIPT
+          for attempt in 1 2; do
+            if Rscript "$RUNNER_TEMP/live.R"; then exit 0; fi
+            if [ "$attempt" = 1 ]; then
+              echo "::warning::Live tests failed; retrying once in two minutes."
+              sleep 120
+            fi
+          done
+          exit 1
+
+  report:
+    needs: live-api
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Open or comment on the "upstream" issue; nothing else.
+      issues: write
+    steps:
+      - name: Open or update the upstream issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Weekly live Dataverse check failed"
+          number=$(gh issue list --repo "$REPO" --label upstream --state open \
+            --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$REPO" --body "Failed again: $RUN_URL"
+          else
+            gh label create upstream --repo "$REPO" --color B60205 \
+              --description "The published G-TROPIC data changed shape or is unreachable" 2>/dev/null || true
+            gh issue create --repo "$REPO" --title "$title" --label upstream --body "$(printf '%s\n\n%s\n\n%s' \
+              "The weekly live check (tests/testthat/test-live-dataverse.R) failed twice in a row: $RUN_URL" \
+              "Triage: if the published data changed (layout, columns, types), report it to the dataset maintainers; if gtropic needs to follow a legitimate change, fix the client." \
+              "Later failures are added here as comments while this issue is open.")"
+          fi

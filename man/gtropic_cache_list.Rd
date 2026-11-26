@@ -27,7 +27,25 @@ dataset version. Consequently, multiple index entries can refer to one file
 on disk.
 }
 \examples{
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
 gtropic_cache_list()
 gtropic_cache_size()
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
+}
 
 }
+\seealso{
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}},
+\code{\link[=gtropic_cache_enable]{gtropic_cache_enable()}},
+\code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
+}
+\concept{cache functions}

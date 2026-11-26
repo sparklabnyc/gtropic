@@ -14,14 +14,24 @@
 #' @return A named list.
 #' @keywords internal
 #' @noRd
-availability_metadata <- function(date_spec,
-                                  tables,
-                                  storm_metadata = NULL,
-                                  links = NULL,
-                                  today = Sys.Date()) {
+availability_metadata <- function(
+  date_spec,
+  tables,
+  storm_metadata = NULL,
+  links = NULL,
+  today = Sys.Date()
+) {
   requested_coverage <- availability_coverage(
-    if (identical(date_spec$type, "none")) as.Date(character(0)) else date_spec$start,
-    if (identical(date_spec$type, "none")) as.Date(character(0)) else date_spec$end
+    if (identical(date_spec$type, "none")) {
+      as.Date(character(0))
+    } else {
+      date_spec$start
+    },
+    if (identical(date_spec$type, "none")) {
+      as.Date(character(0))
+    } else {
+      date_spec$end
+    }
   )
   storm_coverage <- if (is.null(storm_metadata)) {
     # This fallback keeps the helper useful before selection has run. Retrievals
@@ -42,7 +52,11 @@ availability_metadata <- function(date_spec,
   }
 
   requested <- list(
-    start = if (identical(date_spec$type, "none")) as.Date(NA) else date_spec$start,
+    start = if (identical(date_spec$type, "none")) {
+      as.Date(NA)
+    } else {
+      date_spec$start
+    },
     end = if (identical(date_spec$type, "none")) as.Date(NA) else date_spec$end,
     includes_current_period = availability_reaches(storm_coverage, today - 7)
   )
@@ -61,7 +75,10 @@ availability_metadata <- function(date_spec,
       raw_update_schedule = "Sunday, Tuesday, and Thursday",
       provisional_lag_days = c(1L, 3L),
       best_track_finalization_years = c(1L, 2L),
-      applies_to = intersect(tables, c("wind", "zero_pairs", "tracks", "storm_metadata"))
+      applies_to = intersect(
+        tables,
+        c("wind", "zero_pairs", "tracks", "storm_metadata")
+      )
     ),
     era5_land = list(
       frequency = "daily",
@@ -69,8 +86,8 @@ availability_metadata <- function(date_spec,
       applies_to = intersect(tables, "precip")
     ),
     groundsource_flood = list(
-      available_from = as.Date("2000-01-01"),
-      available_through = as.Date("2026-01-22"),
+      available_from = GROUNDSOURCE_FLOOD_PERIOD[1L],
+      available_through = GROUNDSOURCE_FLOOD_PERIOD[2L],
       applies_to = intersect(tables, "flood")
     )
   )
@@ -79,7 +96,7 @@ availability_metadata <- function(date_spec,
 #' Generate targeted availability diagnostics
 #'
 #' @param availability Output of `availability_metadata()`.
-#' @return Named character list suitable for `gtropic_warnings()`.
+#' @return Named character list suitable for `gtropic_diagnostics()`.
 #' @keywords internal
 #' @noRd
 availability_warnings <- function(availability) {
@@ -88,28 +105,37 @@ availability_warnings <- function(availability) {
   coverage <- availability$coverage
   out <- list()
 
-  if (length(availability$ibtracs$applies_to) > 0L &&
-    availability_reaches(coverage$storms, availability$assessed_on - 7)) {
+  if (
+    length(availability$ibtracs$applies_to) > 0L &&
+      availability_reaches(coverage$storms, availability$assessed_on - 7)
+  ) {
     out$ibtracs_provisional <- paste(
       "Requested storm data reaches the current/recent IBTrACS period:",
       "raw updates are published Sunday, Tuesday, and Thursday and can lag",
       "by 1-3 days; best-track values can remain provisional for 1-2 years."
     )
   }
-  if (length(availability$era5_land$applies_to) > 0L &&
-    availability_reaches(coverage$precip, availability$assessed_on - 7)) {
+  if (
+    length(availability$era5_land$applies_to) > 0L &&
+      availability_reaches(coverage$precip, availability$assessed_on - 7)
+  ) {
     out$era5_land_lag <- paste(
       "Requested precipitation reaches the current/recent ERA5-Land period;",
       "daily data are typically available with about a 5-day lag."
     )
   }
   flood_end <- availability$groundsource_flood$available_through
-  if (length(availability$groundsource_flood$applies_to) > 0L &&
-    availability_reaches(coverage$flood, flood_end)) {
+  if (
+    length(availability$groundsource_flood$applies_to) > 0L &&
+      availability_reaches(coverage$flood, flood_end)
+  ) {
     qualifier <- if (coverage$flood$end > flood_end) "exceeds" else "reaches"
     out$groundsource_flood_coverage <- paste0(
-      "Requested flood time ", qualifier,
-      " known Groundsource flood availability, which ends on ", format(flood_end), "."
+      "Requested flood time ",
+      qualifier,
+      " known Groundsource flood availability, which ends on ",
+      format(flood_end),
+      "."
     )
   }
   if (length(out) > 0L && dynamic_end) {
@@ -138,7 +164,9 @@ availability_coverage <- function(...) {
 #' @keywords internal
 #' @noRd
 availability_window_coverage <- function(links, prefix) {
-  if (is.null(links)) return(NULL)
+  if (is.null(links)) {
+    return(NULL)
+  }
 
   cols <- paste0(prefix, c("_IN_FIELD", "_WINDOW_START", "_WINDOW_END"))
   if (!all(cols %in% names(links))) {
@@ -153,4 +181,26 @@ availability_window_coverage <- function(links, prefix) {
 #' @noRd
 availability_reaches <- function(coverage, threshold) {
   !is.null(coverage) && !is.na(coverage$end) && coverage$end >= threshold
+}
+
+#' Emit availability warnings, each kind once per session
+#'
+#' Current-period queries would otherwise repeat the same warnings on every
+#' call. The full detail stays in the result's diagnostics.
+#'
+#' @param messages Output of `availability_warnings()`.
+#' @return `messages`, invisibly.
+#' @keywords internal
+#' @noRd
+warn_availability <- function(messages) {
+  for (nm in names(messages)) {
+    msg <- messages[[nm]]
+    gtropic_warn(
+      "{msg}",
+      class = "gtropic_warning_availability",
+      .frequency = "once",
+      .frequency_id = paste0("gtropic_availability_", nm)
+    )
+  }
+  invisible(messages)
 }

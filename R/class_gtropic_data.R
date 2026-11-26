@@ -15,13 +15,15 @@
 #' @return An object of class `gtropic_data`.
 #' @keywords internal
 #' @noRd
-new_gtropic_data <- function(tables,
-                             manifest,
-                              query = NULL,
-                              filters_resolved = list(),
-                              warnings = list(),
-                              availability = NULL,
-                              retrieved_at = Sys.time()) {
+new_gtropic_data <- function(
+  tables,
+  manifest,
+  query = NULL,
+  filters_resolved = list(),
+  warnings = list(),
+  availability = NULL,
+  retrieved_at = Sys.time()
+) {
   structure(
     tables,
     manifest = manifest,
@@ -46,6 +48,18 @@ new_gtropic_data <- function(tables,
 #' a later [gtropic_data()] call requests those same source files, provided they
 #' remain available.
 #'
+#' Every file is checked against its published checksum when it is downloaded
+#' and again before a cached copy is used; the manifest records each checksum
+#' and its algorithm (`checksum_type`). The checksums are published by the same
+#' server as the files, and are usually MD5, so they detect truncated or
+#' corrupted transfers and silent changes to a published file, but they do not
+#' prove who published it.
+#'
+#' To keep or share a manifest, save it as JSON with
+#' [gtropic_manifest_write()]. A manifest saved with [saveRDS()] works too, but
+#' [readRDS()] can run code hidden in the file, so only read `.rds` files from
+#' people you trust.
+#'
 #' `gtropic_filters()` reports the filters as resolved by the package, including
 #' selected ADM2 and storm identifiers, genesis-date bounds, years represented
 #' by the selected storms, the wind radius, and precipitation and flood window
@@ -53,7 +67,7 @@ new_gtropic_data <- function(tables,
 #' downstream analyses. Resolved storm identifiers are unique `STORM_ID` values,
 #' the preferred keys for reproducible joins and grouping.
 #'
-#' `gtropic_warnings()` returns diagnostic details retained with the result.
+#' `gtropic_diagnostics()` returns diagnostic details retained with the result.
 #' This can include complete values that were abbreviated in a console warning,
 #' such as ADM2 units whose polygon membership varied over time. It is not a log
 #' of every warning that may have been emitted during retrieval.
@@ -67,43 +81,42 @@ new_gtropic_data <- function(tables,
 #'   `gtropic_filters()` returns a named `gtropic_filters` list of resolved
 #'   query settings. List elements retain their complete values; printing shows
 #'   a compact preview.
-#'   `gtropic_warnings()` returns a named list of recorded diagnostics, which is
-#'   empty when none were retained. `gtropic_availability()` returns a named
-#'   list of source availability and coverage metadata.
+#'   `gtropic_diagnostics()` returns a named list of recorded diagnostics,
+#'   which is empty when none were retained. `gtropic_availability()` returns a
+#'   named list of source availability and coverage metadata.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-#' manifest <- gtropic_manifest(res)
-#' filters <- gtropic_filters(res)
-#' diagnostics <- gtropic_warnings(res)
-#' }
+#' x <- gtropic_example()
+#' gtropic_manifest(x)
+#' gtropic_filters(x)
+#' gtropic_diagnostics(x)
+#' names(gtropic_availability(x))
 #'
-#' @seealso [gtropic_data()]
+#' @family retrieval functions
 #' @export
 gtropic_manifest <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   attr(x, "manifest")
 }
 
 #' @rdname gtropic_manifest
 #' @export
 gtropic_filters <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   structure(attr(x, "filters_resolved"), class = c("gtropic_filters", "list"))
 }
 
 #' @rdname gtropic_manifest
 #' @export
-gtropic_warnings <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+gtropic_diagnostics <- function(x) {
+  check_gtropic_data(x)
   attr(x, "warnings")
 }
 
 #' @rdname gtropic_manifest
 #' @export
 gtropic_availability <- function(x) {
-  stopifnot(inherits(x, "gtropic_data"))
+  check_gtropic_data(x)
   attr(x, "availability")
 }
 
@@ -122,15 +135,19 @@ gtropic_availability <- function(x) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-#' print(gtropic_filters(res))
-#' }
+#' print(gtropic_filters(gtropic_example()), n = 3)
 #'
+#' @family result methods
 #' @export
 print.gtropic_filters <- function(x, n = 10L, ...) {
-  if (!is.numeric(n) || length(n) != 1L || is.na(n) || !is.finite(n) ||
-      n < 1L || n != floor(n)) {
+  if (
+    !is.numeric(n) ||
+      length(n) != 1L ||
+      is.na(n) ||
+      !is.finite(n) ||
+      n < 1L ||
+      n != floor(n)
+  ) {
     cli::cli_abort("{.arg n} must be a positive whole number.")
   }
   n <- as.integer(n)
@@ -201,10 +218,9 @@ format_filter_preview <- function(x, n) {
 #' @return `x`, invisibly.
 #'
 #' @examples
-#' \donttest{
-#' gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' }
+#' print(gtropic_example())
 #'
+#' @family result methods
 #' @export
 print.gtropic_data <- function(x, ...) {
   mf <- attr(x, "manifest")
@@ -213,11 +229,8 @@ print.gtropic_data <- function(x, ...) {
 
   cli::cli_h1("G-TROPIC data")
 
+  cli_dataset_bullets(datasets)
   cli::cli_bullets(c(
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi, " (version ",
-        datasets$dataset_version, ")"), rep("*", nrow(datasets))
-    ),
     "*" = if (!is.null(fl$date_start)) {
       "Genesis dates: {.val {format(fl$date_start)}} to
        {.val {format(fl$date_end)}}"
@@ -237,7 +250,7 @@ print.gtropic_data <- function(x, ...) {
   cli::cli_text("")
   cli::cli_alert_info(
     "Use {.code summary()} for detail{if (n_warn > 0)
-     glue::glue('; {n_warn} warning(s) recorded, see gtropic_warnings()')}."
+     glue::glue('; {n_warn} warning(s) recorded, see gtropic_diagnostics()')}."
   )
 
   invisible(x)
@@ -245,48 +258,71 @@ print.gtropic_data <- function(x, ...) {
 
 #' Summarize a G-TROPIC data result
 #'
-#' Displays an extended overview of a G-TROPIC retrieval. The output includes
+#' Builds an extended overview of a G-TROPIC retrieval; printing it shows
 #' dataset provenance, retrieval time and size, returned table dimensions,
 #' resolved geographic and storm filters, hazard-specific temporal and spatial
 #' windows, and any diagnostics retained with the result.
 #'
 #' @param object A `gtropic_data` object.
-#' @param ... Additional arguments passed to the summary method. Currently
-#'   ignored.
+#' @param x A `summary.gtropic_data` object.
+#' @param ... Additional arguments. Currently ignored.
 #'
-#' @return `object`, invisibly.
+#' @return `summary()` returns an object of class `summary.gtropic_data`: a
+#'   list with the result's `manifest`, resolved `filters`, retained
+#'   `diagnostics`, `retrieved_at` time and the dimensions of each returned
+#'   table (`tables`, a named character vector). Its `print()` method displays
+#'   it and returns `x` invisibly.
 #'
 #' @examples
-#' \donttest{
-#' res <- gtropic_data(WHO_ENTITY = "Jamaica", date_range = c(2005, 2005))
-#' summary(res)
-#' }
+#' summary(gtropic_example())
 #'
+#' @family result methods
 #' @export
 summary.gtropic_data <- function(object, ...) {
-  mf <- attr(object, "manifest")
-  fl <- attr(object, "filters_resolved")
-  wn <- attr(object, "warnings")
+  tables <- vapply(
+    names(object),
+    function(nm) {
+      as.character(table_dim_label(object[[nm]]))
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
+  structure(
+    list(
+      manifest = attr(object, "manifest"),
+      filters = attr(object, "filters_resolved"),
+      diagnostics = attr(object, "warnings"),
+      retrieved_at = attr(object, "retrieved_at"),
+      tables = stats::setNames(tables, names(object))
+    ),
+    class = "summary.gtropic_data"
+  )
+}
+
+#' @rdname summary.gtropic_data
+#' @export
+print.summary.gtropic_data <- function(x, ...) {
+  mf <- x$manifest
+  fl <- x$filters
+  wn <- x$diagnostics
   datasets <- manifest_datasets(mf)
 
   cli::cli_h1("G-TROPIC data summary")
 
   cli::cli_h2("Sources")
+  cli::cli_bullets(c("*" = "Server: {.val {mf$server}}"))
+  cli_dataset_bullets(datasets, compact = TRUE)
   cli::cli_bullets(c(
-    "*" = "Server: {.val {mf$server}}",
-    stats::setNames(
-      paste0(datasets$source_role, " dataset: ", datasets$dataset_doi,
-        " v", datasets$dataset_version),
-      rep("*", nrow(datasets))
-    ),
     "*" = "Files retrieved: {nrow(mf$files)}
            ({format_bytes(sum(mf$files$size_bytes, na.rm = TRUE))})",
-    "*" = "Retrieved at: {format(attr(object, 'retrieved_at'), usetz = TRUE)}"
+    "*" = "Retrieved at: {format(x$retrieved_at, usetz = TRUE)}"
   ))
 
   cli::cli_h2("Tables")
-  for (nm in names(object)) {
-    cli::cli_li("{.field {nm}}: {table_dim_label(object[[nm]])}")
+  tables <- x$tables
+  for (nm in names(tables)) {
+    dims <- tables[[nm]]
+    cli::cli_li("{.field {nm}}: {dims}")
   }
 
   cli::cli_h2("Resolved filters")
@@ -312,11 +348,79 @@ summary.gtropic_data <- function(object, ...) {
   if (length(wn) > 0L) {
     cli::cli_h2("Warnings")
     for (nm in names(wn)) {
-      cli::cli_li("{.field {nm}}: {truncate_display(as.character(wn[[nm]]), 5)}")
+      cli::cli_li(
+        "{.field {nm}}: {truncate_display(as.character(wn[[nm]]), 5)}"
+      )
     }
   }
 
-  invisible(object)
+  invisible(x)
+}
+
+#' Format G-TROPIC objects as text
+#'
+#' The lines the corresponding `print()` method displays, as a character
+#' vector, for example to include in a log or a report.
+#'
+#' @param x A `gtropic_data`, `summary.gtropic_data`, `gtropic_manifest` or
+#'   `gtropic_filters` object.
+#' @param ... Passed to the `print()` method.
+#'
+#' @return A character vector with one element per printed line.
+#'
+#' @examples
+#' format(gtropic_manifest(gtropic_example()))
+#'
+#' @name format.gtropic_data
+#' @family result methods
+#' @export
+format.gtropic_data <- function(x, ...) {
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.summary.gtropic_data <- function(x, ...) {
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.gtropic_manifest <- function(x, ...) {
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
+}
+
+#' @rdname format.gtropic_data
+#' @export
+format.gtropic_filters <- function(x, ...) {
+  cli::cli_fmt(print(x, ...)) # nolint: undesirable_function_linter.
+}
+
+#' Print one bullet per source dataset
+#'
+#' The DOI and version come from the server or from a user-supplied manifest.
+#' They are interpolated as data into a literal template; pasting them into a
+#' `cli` template would evaluate any `{...}` they contain. (`cli_bullets_raw()`
+#' is not used because cli 3.6.6 prints braces in its text doubled.)
+#'
+#' @param datasets Output of `manifest_datasets()`.
+#' @param compact Use the short `"v1.0"` form instead of `"(version 1.0)"`.
+#'
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+cli_dataset_bullets <- function(datasets, compact = FALSE) {
+  for (i in seq_len(nrow(datasets))) {
+    role <- datasets$source_role[i]
+    doi <- datasets$dataset_doi[i]
+    ver <- datasets$dataset_version[i]
+    if (compact) {
+      cli::cli_bullets(c("*" = "{role} dataset: {doi} v{ver}"))
+    } else {
+      cli::cli_bullets(c("*" = "{role} dataset: {doi} (version {ver})"))
+    }
+  }
+  invisible(NULL)
 }
 
 #' Return datasets actually represented in a manifest
@@ -331,10 +435,6 @@ manifest_datasets <- function(manifest) {
 
 #' Describe a table's dimensions for printing
 #'
-#' Arrow objects are not materialised just to print a row count; for a lazy
-#' query we say so rather than triggering the computation the user was trying to
-#' defer.
-#'
 #' @param x A table.
 #' @return A single string.
 #' @keywords internal
@@ -346,11 +446,31 @@ table_dim_label <- function(x) {
   if (inherits(x, "list") && !is.data.frame(x)) {
     return(glue::glue("{length(x)} entries (list)"))
   }
-  if (inherits(x, "arrow_dplyr_query") || inherits(x, "Dataset")) {
-    return("lazy Arrow query (not yet collected)")
-  }
-  if (inherits(x, c("Table", "ArrowTabular"))) {
-    return(glue::glue("{nrow(x)} x {ncol(x)} (Arrow Table)"))
-  }
   glue::glue("{nrow(x)} rows x {ncol(x)} columns")
+}
+
+#' Abort unless `x` is a `gtropic_data` object
+#'
+#' @param x Object to check.
+#' @param arg Argument name, for the error message.
+#' @param call Calling environment for error reporting.
+#' @return `x`, invisibly.
+#' @keywords internal
+#' @noRd
+check_gtropic_data <- function(
+  x,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
+  if (!inherits(x, "gtropic_data")) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be a {.cls gtropic_data} object returned by
+         {.fn gtropic_data}.",
+        x = "Got {.obj_type_friendly {x}}."
+      ),
+      call = call
+    )
+  }
+  invisible(x)
 }

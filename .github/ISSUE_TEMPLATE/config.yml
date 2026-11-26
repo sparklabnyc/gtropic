@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://sparklabnyc.github.io/gtropic/
+    about: Reference pages and articles on querying, filtering, linkage, plotting, versions and caching.
+  - name: G-TROPIC datasets on Harvard Dataverse
+    url: https://dataverse.harvard.edu/dataverse/gtropic
+    about: Dataset descriptions, versions and citation details.
+  - name: Report a security vulnerability
+    url: https://github.com/sparklabnyc/gtropic/security/advisories/new
+    about: Please report security problems privately, not in a public issue.

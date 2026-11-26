@@ -1,0 +1,31 @@
+name: Data issue
+description: A value, unit or storm in the published G-TROPIC data looks wrong or is missing.
+labels: ["upstream"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        gtropic returns the published G-TROPIC values as they are and recomputes nothing, so problems in the values themselves are passed on to the dataset maintainers. Please check `?gtropic_known_limitations` first: some limitations of the source data are already documented there.
+  - type: textarea
+    id: what-is-wrong
+    attributes:
+      label: What looks wrong?
+      description: The table and columns involved, and why you think the values are wrong or missing (for example a comparison with another source).
+    validations:
+      required: true
+  - type: textarea
+    id: records
+    attributes:
+      label: Which records?
+      description: The `ADM2_ID`, `STORM_ID` and dates involved, and the query that returned them.
+      render: r
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Manifest
+      description: The output of `gtropic_manifest(x)` for the result, which gives the dataset DOIs, versions and files.
+      render: text
+    validations:
+      required: true

@@ -16,11 +16,19 @@ track_rows <- function() {
   tibble::tibble(
     STORM_ID = c(rep("A", 5), rep("B", 2), "C"),
     STORM_NAME = c(rep("Alpha", 5), rep("", 2), "Charlie"),
-    ISO_TIME = as.POSIXct(c(
-      "2020-01-01 00:00:00", "2020-01-01 03:00:00", "2020-01-01 06:00:00",
-      "2020-01-01 09:00:00", "2020-01-01 12:00:00", "2020-01-01 00:00:00",
-      "2020-01-01 06:00:00", "2020-01-01 00:00:00"
-    ), tz = "UTC"),
+    ISO_TIME = as.POSIXct(
+      c(
+        "2020-01-01 00:00:00",
+        "2020-01-01 03:00:00",
+        "2020-01-01 06:00:00",
+        "2020-01-01 09:00:00",
+        "2020-01-01 12:00:00",
+        "2020-01-01 00:00:00",
+        "2020-01-01 06:00:00",
+        "2020-01-01 00:00:00"
+      ),
+      tz = "UTC"
+    ),
     LON = c(0, 1, 2, 3, 4, 10, 11, NA),
     LAT = c(0, 1, 2, 3, 4, 10, 11, 0),
     USA_WIND = c(40, 50, 63, 64, 80, 30, 70, 20),
@@ -32,15 +40,29 @@ test_that("track map keys require complete, ordered, constant-unit categories", 
   key <- plot_validate_track_map_key(track_key())
   expect_s3_class(key, "tbl_df")
   expect_equal(key$colour, c("#4DAF4A", "#E41A1C"))
-  expect_equal(plot_validate_track_map_key(track_key(colour_name = "color"))$colour,
-    c("#4DAF4A", "#E41A1C"))
-  expect_error(plot_validate_track_map_key(data.frame(category = "A")), "category")
-  expect_error(plot_validate_track_map_key(transform(track_key(), unit = c("knots", "mph"))),
-    "constant")
-  expect_error(plot_validate_track_map_key(transform(track_key(), threshold = c(63, 80))),
-    "ending in Inf")
-  expect_error(plot_validate_track_map_key(transform(track_key(), threshold = c(63, 63))),
-    "strictly increasing")
+  expect_equal(
+    plot_validate_track_map_key(track_key(colour_name = "color"))$colour,
+    c("#4DAF4A", "#E41A1C")
+  )
+  expect_error(
+    plot_validate_track_map_key(data.frame(category = "A")),
+    "category"
+  )
+  expect_error(
+    plot_validate_track_map_key(transform(
+      track_key(),
+      unit = c("knots", "mph")
+    )),
+    "constant"
+  )
+  expect_error(
+    plot_validate_track_map_key(transform(track_key(), threshold = c(63, 80))),
+    "ending in Inf"
+  )
+  expect_error(
+    plot_validate_track_map_key(transform(track_key(), threshold = c(63, 63))),
+    "strictly increasing"
+  )
   conflicting <- cbind(track_key(), color = c("red", "blue"))
   expect_error(plot_validate_track_map_key(conflicting), "conflicting")
 })
@@ -55,8 +77,10 @@ test_that("wind conversion and categorization use inclusive ceilings", {
   )
   metric_key <- track_key("m/s")
   metric_key$threshold <- c(20, Inf)
-  expect_equal(as.character(plot_categorize_track_wind(c(38.8, 39), metric_key)),
-    c("Tropical storm", "Hurricane"))
+  expect_equal(
+    as.character(plot_categorize_track_wind(c(38.8, 39), metric_key)),
+    c("Tropical storm", "Hurricane")
+  )
 })
 
 test_that("track points sample only requested UTC intervals while paths remain complete", {
@@ -64,11 +88,20 @@ test_that("track points sample only requested UTC intervals while paths remain c
   expect_equal(nrow(plot_sample_track_points(tracks, 3)), 8L)
   expect_equal(nrow(plot_sample_track_points(tracks, 6)), 6L)
   expect_error(plot_sample_track_points(tracks, 4), "3, or 6")
-  expect_error(plot_sample_track_points(transform(tracks, ISO_TIME = seq_len(nrow(tracks))), 3),
-    "POSIXct")
+  expect_error(
+    plot_sample_track_points(
+      transform(tracks, ISO_TIME = seq_len(nrow(tracks))),
+      3
+    ),
+    "POSIXct"
+  )
 
-  p <- plot_add_tracks(ggplot2::ggplot(), tracks,
-    colour_metric = "USA_WIND", track_map_key = track_key(), track_interval = 6
+  p <- plot_add_tracks(
+    ggplot2::ggplot(),
+    tracks,
+    colour_metric = "USA_WIND",
+    track_map_key = track_key(),
+    track_interval = 6
   )
   expect_length(p$layers, 2)
   expect_s3_class(p$layers[[1]]$geom, "GeomPath")
@@ -86,8 +119,11 @@ test_that("track points sample only requested UTC intervals while paths remain c
 test_that("static track legend keys retain points for absent wind categories", {
   tracks <- track_rows()
   tracks$USA_WIND[] <- 40
-  p <- plot_add_tracks(ggplot2::ggplot(), tracks,
-    colour_metric = "USA_WIND", track_map_key = track_key()
+  p <- plot_add_tracks(
+    ggplot2::ggplot(),
+    tracks,
+    colour_metric = "USA_WIND",
+    track_map_key = track_key()
   )
   grob <- ggplot2::ggplotGrob(p)
   guide_box <- grob$grobs[[match("guide-box-bottom", grob$layout$name)]]
@@ -95,9 +131,13 @@ test_that("static track legend keys retain points for absent wind categories", {
   key_grobs <- guide$grobs[grepl("^key", guide$layout$name)]
 
   expect_length(key_grobs, 2L)
-  expect_true(all(vapply(key_grobs, function(key) {
-    any(vapply(key$children, inherits, logical(1), what = "points"))
-  }, logical(1))))
+  expect_true(all(vapply(
+    key_grobs,
+    function(key) {
+      any(vapply(key$children, inherits, logical(1), what = "points"))
+    },
+    logical(1)
+  )))
 })
 
 test_that("track labels use the first valid point and a readable name fallback", {
@@ -105,10 +145,17 @@ test_that("track labels use the first valid point and a readable name fallback",
   labels <- plot_track_label_data(tracks)
   expect_equal(labels$STORM_ID, c("A", "B"))
   expect_equal(labels$.track_label, c("Alpha", "B"))
-  expect_equal(labels$ISO_TIME, as.POSIXct(c("2020-01-01", "2020-01-01"), tz = "UTC"))
+  expect_equal(
+    labels$ISO_TIME,
+    as.POSIXct(c("2020-01-01", "2020-01-01"), tz = "UTC")
+  )
 
-  p <- plot_add_tracks(ggplot2::ggplot(), tracks,
-    colour_metric = "USA_WIND", track_map_key = track_key(), track_labels = TRUE
+  p <- plot_add_tracks(
+    ggplot2::ggplot(),
+    tracks,
+    colour_metric = "USA_WIND",
+    track_map_key = track_key(),
+    track_labels = TRUE
   )
   expect_length(p$layers, 3)
   expect_s3_class(p$layers[[3]]$geom, "GeomText")
@@ -117,8 +164,12 @@ test_that("track labels use the first valid point and a readable name fallback",
 
 test_that("explicit USA_STATUS support remains a discrete colour overlay", {
   tracks <- plot_split_tracks(track_rows())
-  p <- plot_add_tracks(ggplot2::ggplot(), tracks,
-    colour_metric = "USA_STATUS", palette = "mako", direction = -1,
+  p <- plot_add_tracks(
+    ggplot2::ggplot(),
+    tracks,
+    colour_metric = "USA_STATUS",
+    palette = "mako",
+    direction = -1,
     track_interval = 6
   )
   expect_s3_class(p$scales$get_scales("colour"), "ScaleDiscrete")

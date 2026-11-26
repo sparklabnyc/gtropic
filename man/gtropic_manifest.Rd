@@ -3,7 +3,7 @@
 \name{gtropic_manifest}
 \alias{gtropic_manifest}
 \alias{gtropic_filters}
-\alias{gtropic_warnings}
+\alias{gtropic_diagnostics}
 \alias{gtropic_availability}
 \title{Extract metadata from a G-TROPIC result}
 \usage{
@@ -11,7 +11,7 @@ gtropic_manifest(x)
 
 gtropic_filters(x)
 
-gtropic_warnings(x)
+gtropic_diagnostics(x)
 
 gtropic_availability(x)
 }
@@ -23,9 +23,9 @@ gtropic_availability(x)
 \code{gtropic_filters()} returns a named \code{gtropic_filters} list of resolved
 query settings. List elements retain their complete values; printing shows
 a compact preview.
-\code{gtropic_warnings()} returns a named list of recorded diagnostics, which is
-empty when none were retained. \code{gtropic_availability()} returns a named
-list of source availability and coverage metadata.
+\code{gtropic_diagnostics()} returns a named list of recorded diagnostics,
+which is empty when none were retained. \code{gtropic_availability()} returns a
+named list of source availability and coverage metadata.
 }
 \description{
 These accessor functions retrieve provenance, resolved query settings, and
@@ -36,6 +36,18 @@ retrieval, including their versions and checksums. Supplying the manifest to
 a later \code{\link[=gtropic_data]{gtropic_data()}} call requests those same source files, provided they
 remain available.
 
+Every file is checked against its published checksum when it is downloaded
+and again before a cached copy is used; the manifest records each checksum
+and its algorithm (\code{checksum_type}). The checksums are published by the same
+server as the files, and are usually MD5, so they detect truncated or
+corrupted transfers and silent changes to a published file, but they do not
+prove who published it.
+
+To keep or share a manifest, save it as JSON with
+\code{\link[=gtropic_manifest_write]{gtropic_manifest_write()}}. A manifest saved with \code{\link[=saveRDS]{saveRDS()}} works too, but
+\code{\link[=readRDS]{readRDS()}} can run code hidden in the file, so only read \code{.rds} files from
+people you trust.
+
 \code{gtropic_filters()} reports the filters as resolved by the package, including
 selected ADM2 and storm identifiers, genesis-date bounds, years represented
 by the selected storms, the wind radius, and precipitation and flood window
@@ -43,7 +55,7 @@ settings. These values support transparent reporting and quality assurance in
 downstream analyses. Resolved storm identifiers are unique \code{STORM_ID} values,
 the preferred keys for reproducible joins and grouping.
 
-\code{gtropic_warnings()} returns diagnostic details retained with the result.
+\code{gtropic_diagnostics()} returns diagnostic details retained with the result.
 This can include complete values that were abbreviated in a console warning,
 such as ADM2 units whose polygon membership varied over time. It is not a log
 of every warning that may have been emitted during retrieval.
@@ -52,14 +64,17 @@ of every warning that may have been emitted during retrieval.
 coverage, and the requested time range used for availability diagnostics.
 }
 \examples{
-\donttest{
-res <- gtropic_data(WHO_ENTITY = "Philippines", date_range = c(2015, 2016))
-manifest <- gtropic_manifest(res)
-filters <- gtropic_filters(res)
-diagnostics <- gtropic_warnings(res)
-}
+x <- gtropic_example()
+gtropic_manifest(x)
+gtropic_filters(x)
+gtropic_diagnostics(x)
+names(gtropic_availability(x))
 
 }
 \seealso{
-\code{\link[=gtropic_data]{gtropic_data()}}
+Other retrieval functions:
+\code{\link[=gtropic_data]{gtropic_data()}},
+\code{\link[=gtropic_example]{gtropic_example()}},
+\code{\link[=gtropic_manifest_write]{gtropic_manifest_write()}}
 }
+\concept{retrieval functions}

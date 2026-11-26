@@ -1,8 +1,26 @@
 url: https://sparklabnyc.github.io/gtropic/
+# Released documentation at the root and the development version under /dev/
+# once a release exists (Plan 01 INFRA-12, used by Plan 02).
+development:
+  mode: auto
 template:
   bootstrap: 5
   math-rendering: mathjax
   light-switch: yes
+  # The card shown when a link to the site is shared.
+  opengraph:
+    image:
+      src: man/figures/logo.png
+      alt: "The gtropic hexagon logo: the word G-TROPIC over a satellite image of a tropical cyclone."
+news:
+  # Not on CRAN yet: do not look up release dates there.
+  cran_dates: false
+footer:
+  structure:
+    left: [developed_by, funding]
+    right: built_with
+  components:
+    funding: Funded by Calderone Awards for Junior Faculty Development, Columbia EHS P30 Career Development Award.
 authors:
   Lawrence G. Chillrud:
     href: https://lawrence-chillrud.github.io/
@@ -18,11 +36,6 @@ authors:
     href: https://www.publichealth.columbia.edu/
     html: <img src='https://www.publichealth.columbia.edu/sites/default/files/logo-mailman-blue-horizontal.svg?stefxf'
       width=240 alt=''>
-home:
-  title: Retrieve, filter, and plot G-TROPIC global tropical cyclone exposure data
-    at ADM2/daily resolution (1980-present)
-  description: |
-    A retrieval, filtering, and plotting client for the live "G-TROPIC" dataset containing global tropical cyclone exposure data at ADM2/daily resolution from 1980-present, published weekly on Harvard Dataverse.
 reference:
 - title: Retrieval
   desc: |
@@ -34,6 +47,9 @@ reference:
   - print.gtropic_filters
   - summary.gtropic_data
   - print.gtropic_manifest
+  - gtropic_manifest_write
+  - format.gtropic_data
+  - gtropic_example
 - title: Discovery
   desc: |
     Functions to explore the available administrative units, storms, years and column definitions.
@@ -41,7 +57,7 @@ reference:
   - gtropic_adm2
   - gtropic_storms
   - gtropic_excluded_storms
-  - gtropic_exposures
+  - gtropic_metrics
   - gtropic_years
   - gtropic_codebook
 - title: Cache
@@ -59,7 +75,7 @@ reference:
   contents:
   - gtropic_plot
   - plot.gtropic_data
-  - saffir_simpson
+  - gtropic_saffir_simpson
   - theme_gtropic
   - scale_fill_gtropic_c
   - scale_fill_gtropic_d
@@ -67,8 +83,10 @@ reference:
   - gtropic_save
 - title: Configuration
   desc: |
-    Options controlling the server, dataset identifiers, timeouts and the large query download guardrail.
-  contents: gtropic_options
+    Options controlling the server, dataset identifiers, timeouts and the large query download guardrail, and the classes of the errors and warnings gtropic signals.
+  contents:
+  - gtropic_options
+  - gtropic_conditions
 - title: Data notes
   desc: |
     Known limitations in the published G-TROPIC source data.
@@ -83,3 +101,10 @@ articles:
   - linkage
   - plotting
   - versions-and-caching
+- title: More on the website
+  desc: |
+    Articles published only on this site.
+  navbar: More
+  contents:
+  - articles/data-sources
+  - articles/plot-gallery

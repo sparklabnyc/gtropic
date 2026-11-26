@@ -1,0 +1,49 @@
+# Runs the hooks in .pre-commit-config.yaml on every pull request and on
+# pushes to main (Plan 01 INFRA-08), with the hardening from Plan 05 SEC-11:
+# read-only token, actions pinned to commit SHAs, no persisted credentials,
+# superseded PR runs cancelled.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+name: pre-commit.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    # Pinned (not ubuntu-latest) so the binary repository below matches.
+    runs-on: ubuntu-24.04
+    env:
+      # no-commit-to-branch guards local commits only; a push to main checks
+      # out main. spell-check joins once CRAN-13 commits inst/WORDLIST.
+      SKIP: no-commit-to-branch,spell-check
+      # pre-commit runs R with --vanilla, which ignores the repositories that
+      # setup-r configures, so point renv at binary packages directly.
+      RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/__linux__/noble/latest
+      # pre-commit/action caches ~/.cache/pre-commit but not renv's global
+      # package cache, which the R hook libraries otherwise only link to: a
+      # restored cache then fails every R hook with "missing entries in the
+      # cache". Without renv's cache the libraries hold real copies.
+      RENV_CONFIG_CACHE_ENABLED: "FALSE"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.x"
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1

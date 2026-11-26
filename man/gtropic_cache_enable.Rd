@@ -33,17 +33,42 @@ to use the same choice in future sessions; this writes the setting under
 \code{tools::R_user_dir("gtropic", "config")}. The package never edits
 \code{.Rprofile}. Enabling creates the cache directory if needed; disabling does
 not delete cached files. Use \code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}} to delete them.
+
+The first time in a session that a file is cached, a message says where.
+The cache is managed automatically: after each retrieval that adds to it,
+files downloaded more than \code{getOption("gtropic.cache_max_age_days")} (180)
+days ago, files superseded by a newer dataset version retrieved with
+\code{version = ":latest"}, and then the least recently downloaded files beyond
+\code{getOption("gtropic.cache_max_gb")} (10) gigabytes are removed. Files used
+by that retrieval are never removed. Set either option to \code{Inf} to switch
+its rule off; see \link{gtropic_options}.
 }
 \examples{
-\donttest{
-# Bypass the cache for the current session
+\dontshow{
+.old <- options(
+  gtropic.cache_dir = file.path(tempdir(), "gtropic-cache"),
+  gtropic.cache_enabled = getOption("gtropic.cache_enabled")
+)
+}
+# Stop caching for the rest of this session, then start again
 gtropic_cache_disable()
+gtropic_cache_enable()
 
-# Keep that choice for future sessions
+\dontrun{
+# Not run: persist = TRUE writes the choice to your configuration directory
 gtropic_cache_disable(persist = TRUE)
+}
+\dontshow{
+unlink(file.path(tempdir(), "gtropic-cache"), recursive = TRUE)
+options(.old)
 }
 
 }
 \seealso{
-\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}}, \code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
+Other cache functions:
+\code{\link[=gtropic_cache_clear]{gtropic_cache_clear()}},
+\code{\link[=gtropic_cache_dir]{gtropic_cache_dir()}},
+\code{\link[=gtropic_cache_list]{gtropic_cache_list()}},
+\code{\link[=gtropic_cache_prune]{gtropic_cache_prune()}}
 }
+\concept{cache functions}

@@ -7,16 +7,24 @@
 #' @noRd
 normalize_plot_data <- function(data) {
   if (
-    !is.list(data) || is.data.frame(data) || is.null(names(data)) ||
-      anyNA(names(data)) || any(!nzchar(names(data))) ||
+    !is.list(data) ||
+      is.data.frame(data) ||
+      is.null(names(data)) ||
+      anyNA(names(data)) ||
+      any(!nzchar(names(data))) ||
       anyDuplicated(names(data))
   ) {
-    cli::cli_abort("{.arg data} must be a uniquely named list of tables
-                    or a gtropic_data object.")
+    cli::cli_abort(
+      "{.arg data} must be a uniquely named list of tables
+                    or a gtropic_data object."
+    )
   }
   # readRDS() restores sf classes without registering their subset methods.
   if (any(vapply(data, inherits, logical(1), what = "sf"))) {
-    rlang::check_installed("sf", reason = "to normalize spatial plotting tables")
+    rlang::check_installed(
+      "sf",
+      reason = "to normalize spatial plotting tables"
+    )
   }
   out <- lapply(names(data), function(nm) {
     x <- data[[nm]]
@@ -28,15 +36,22 @@ normalize_plot_data <- function(data) {
       x <- dplyr::collect(x)
     }
     if (!is.data.frame(x)) {
-      cli::cli_abort("Table {.val {nm}} must be a data frame
-                      or a collectable Arrow table.")
+      cli::cli_abort(
+        "Table {.val {nm}} must be a data frame
+                      or a collectable Arrow table."
+      )
     }
     tibble::as_tibble(x)
   })
   names(out) <- names(data)
   metadata <- c(
-    "query", "manifest", "filters_resolved", "geometry_resolution",
-    "warnings", "retrieved_at", "gtropic_version"
+    "query",
+    "manifest",
+    "filters_resolved",
+    "geometry_resolution",
+    "warnings",
+    "retrieved_at",
+    "gtropic_version"
   )
   for (nm in metadata) {
     attr(out, nm) <- attr(data, nm, exact = TRUE)
@@ -49,7 +64,9 @@ normalize_plot_data <- function(data) {
 #' @noRd
 plot_query_hint <- function(data, tables, simplified = FALSE) {
   query <- attr(data, "query", exact = TRUE)
-  if (!is.call(query)) query <- quote(gtropic_data())
+  if (!is.call(query)) {
+    query <- quote(gtropic_data())
+  }
   # Preserve the original expression, including a symbolic tables argument.
   old <- query$tables
   extra <- setdiff(tables, "links") # Retrieval always supplies links.
@@ -59,7 +76,9 @@ plot_query_hint <- function(data, tables, simplified = FALSE) {
   } else {
     query$tables <- as.call(c(list(as.name("c"), old), as.list(extra)))
   }
-  if (simplified) query$geometry_resolution <- "simplified"
+  if (simplified) {
+    query$geometry_resolution <- "simplified"
+  }
   paste(deparse(query, width.cutoff = 100L), collapse = "\n")
 }
 
@@ -91,11 +110,19 @@ plot_require <- function(data, requirements, type) {
 #' Resolve table/column requirements for a prepared plot
 #' @keywords internal
 #' @noRd
-plot_requirements <- function(type, metrics, track = FALSE,
-                              count_unit = "storms") {
+plot_requirements <- function(
+  type,
+  metrics,
+  track = FALSE,
+  count_unit = "storms"
+) {
   req <- list()
-  if (type %in% c("exposure", "count")) req$geometry <- "ADM2_ID"
-  if (type != "track") req$adm2 <- c("ADM2_ID", "ADM2_NAME")
+  if (type %in% c("exposure", "count")) {
+    req$geometry <- "ADM2_ID"
+  }
+  if (type != "track") {
+    req$adm2 <- c("ADM2_ID", "ADM2_NAME")
+  }
   for (i in if (type == "track") integer() else seq_len(nrow(metrics))) {
     tab <- metrics$table[i]
     cols <- c("ADM2_ID", metrics$metric[i])
@@ -105,7 +132,9 @@ plot_requirements <- function(type, metrics, track = FALSE,
         cols <- c(cols, "LOCAL_DATE_STORM_CLOSEST")
       }
     }
-    if (tab == "precip") cols <- c(cols, "LOCAL_DATE")
+    if (tab == "precip") {
+      cols <- c(cols, "LOCAL_DATE")
+    }
     if (tab == "flood") {
       cols <- c(cols, "FLOOD_ID", "FLOOD_START_DATE", "FLOOD_END_DATE")
     }
@@ -113,9 +142,14 @@ plot_requirements <- function(type, metrics, track = FALSE,
     if (tab %in% c("precip", "flood")) {
       prefix <- toupper(tab)
       req$links <- unique(c(
-        req$links, "ADM2_ID", "STORM_ID", "STORM_DIST_KM",
-        "LOCAL_DATE_STORM_CLOSEST", paste0(prefix, "_IN_FIELD"),
-        paste0(prefix, "_WINDOW_START"), paste0(prefix, "_WINDOW_END")
+        req$links,
+        "ADM2_ID",
+        "STORM_ID",
+        "STORM_DIST_KM",
+        "LOCAL_DATE_STORM_CLOSEST",
+        paste0(prefix, "_IN_FIELD"),
+        paste0(prefix, "_WINDOW_START"),
+        paste0(prefix, "_WINDOW_END")
       ))
     }
   }
@@ -125,12 +159,25 @@ plot_requirements <- function(type, metrics, track = FALSE,
   req
 }
 
-#' Validate a scalar logical argument
+#' Validate an optional character selector
+#'
+#' @param x Value supplied: `NULL` or a nonempty character vector.
+#' @param name Argument name, for the error message.
+#' @param allow_empty_strings Whether `""` elements are accepted.
+#' @return `x`, invisibly.
 #' @keywords internal
 #' @noRd
-plot_flag <- function(x, name) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    cli::cli_abort("{.arg {name}} must be TRUE or FALSE.")
+plot_check_strings <- function(x, name, allow_empty_strings = FALSE) {
+  if (is.null(x)) {
+    return(invisible(x))
+  }
+  if (
+    !is.character(x) ||
+      !length(x) ||
+      anyNA(x) ||
+      (!allow_empty_strings && any(!nzchar(x)))
+  ) {
+    cli::cli_abort("{.arg {name}} must be a nonempty character vector or NULL.")
   }
   invisible(x)
 }
@@ -138,15 +185,29 @@ plot_flag <- function(x, name) {
 #' Validate optional placement of per-panel metric scale strips
 #' @keywords internal
 #' @noRd
-plot_validate_track_legend_position <- function(position) {
-  if (is.null(position)) return(NULL)
+plot_validate_legend_position <- function(position) {
+  if (is.null(position)) {
+    return(NULL)
+  }
   choices <- c(
-    "top", "bottom", "left", "right", "top left", "top right",
-    "bottom left", "bottom right"
+    "top",
+    "bottom",
+    "left",
+    "right",
+    "top left",
+    "top right",
+    "bottom left",
+    "bottom right"
   )
-  if (!is.character(position) || length(position) != 1L || is.na(position) ||
-    !position %in% choices) {
-    cli::cli_abort("{.arg track_legend_position} must be NULL or one of {.val {choices}}.")
+  if (
+    !is.character(position) ||
+      length(position) != 1L ||
+      is.na(position) ||
+      !position %in% choices
+  ) {
+    cli::cli_abort(
+      "{.arg track_legend_position} must be NULL or one of {.val {choices}}."
+    )
   }
   position
 }
@@ -166,8 +227,10 @@ plot_parse_utc <- function(x, label = "timestamp", require_offset = FALSE) {
   }
   offset_missing <- !grepl("(Z|[+-][0-9]{2}:?[0-9]{2})$", x) | is.na(x)
   if (require_offset && any(offset_missing)) {
-    cli::cli_abort("{.field {label}} must include a UTC offset
-                    in every timestamp.")
+    cli::cli_abort(
+      "{.field {label}} must include a UTC offset
+                    in every timestamp."
+    )
   }
   out <- lubridate::ymd_hms(x, tz = "UTC", quiet = TRUE)
   if (anyNA(out)) {
@@ -184,8 +247,10 @@ validate_plot_facet <- function(data, facet_by) {
     return(invisible(data))
   }
   if (
-    !is.character(facet_by) || length(facet_by) != 1L ||
-      is.na(facet_by) || !facet_by %in% names(data)
+    !is.character(facet_by) ||
+      length(facet_by) != 1L ||
+      is.na(facet_by) ||
+      !facet_by %in% names(data)
   ) {
     cli::cli_abort(c(
       "Unknown {.arg facet_by} column.",

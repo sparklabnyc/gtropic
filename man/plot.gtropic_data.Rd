@@ -19,3 +19,18 @@ The plot object returned by \code{\link[=gtropic_plot]{gtropic_plot()}}.
 \description{
 Thin S3 interface to \code{\link[=gtropic_plot]{gtropic_plot()}}.
 }
+\examples{
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("sf", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+plot(gtropic_example(), metric = "VMAX_SUST_MS", basemap = "none")
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Other plotting functions:
+\code{\link[=gtropic_basemap]{gtropic_basemap()}},
+\code{\link[=gtropic_plot]{gtropic_plot()}},
+\code{\link[=gtropic_saffir_simpson]{gtropic_saffir_simpson()}},
+\code{\link[=gtropic_save]{gtropic_save()}},
+\code{\link[=scale_fill_gtropic_c]{scale_fill_gtropic_c()}},
+\code{\link[=theme_gtropic]{theme_gtropic()}}
+}
+\concept{plotting functions}

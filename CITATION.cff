@@ -1,0 +1,83 @@
+# ------------------------------------------------
+# CITATION.cff file created with {cffr} R package
+# See also: https://docs.ropensci.org/cffr/
+# ------------------------------------------------
+ 
+cff-version: 1.2.0
+message: 'To cite package "gtropic" in publications use:'
+type: software
+license: GPL-3.0-or-later
+title: 'gtropic: Retrieve, Filter, and Plot G-TROPIC Global Tropical Cyclone Exposure
+  Data (1980-Present)'
+version: 0.0.0.9002
+abstract: A retrieval, filtering, and plotting client for the live (updated weekly)
+  G-TROPIC collection of tropical cyclone exposure datasets published on Harvard Dataverse.
+  Exposure datasets include wind, precipitation, and flooding data at second-level
+  administrative unit (ADM2) resolution for every ADM2 and International Best Track
+  Archive for Climate Stewardship (IBTrACS) recorded storm globally, from 1980 to
+  the present. Provides a single cornerstone query function, discovery helpers for
+  exploring the available vocabulary of administrative units and storms, version manifests
+  for reproducible re-retrieval, and an on-disk cache enabled by default. The package
+  performs no scientific recomputation, published exposure columns are authoritative.
+authors:
+- family-names: Chillrud
+  given-names: Lawrence G.
+  orcid: https://orcid.org/0000-0003-0727-0161
+- family-names: Jiang
+  given-names: Lingke
+- family-names: Abid
+  given-names: Majd
+- family-names: Anderson
+  given-names: G. Brooke
+- family-names: Parks
+  given-names: Robbie M.
+  email: robbie.parks@columbia.edu
+  orcid: https://orcid.org/0000-0002-7916-1717
+preferred-citation:
+  type: manual
+  title: 'gtropic: Retrieve, Filter, and Plot G-TROPIC Global Tropical Cyclone Exposure
+    Data (1980-Present)'
+  authors:
+  - family-names: Chillrud
+    given-names: Lawrence G.
+    orcid: https://orcid.org/0000-0003-0727-0161
+  - family-names: Jiang
+    given-names: Lingke
+  - family-names: Abid
+    given-names: Majd
+  - family-names: Anderson
+    given-names: G. Brooke
+  - family-names: Parks
+    given-names: Robbie M.
+    orcid: https://orcid.org/0000-0002-7916-1717
+    email: robbie.parks@columbia.edu
+  year: '2026'
+  notes: R package version 0.0.0.9002
+  url: https://github.com/sparklabnyc/gtropic
+repository-code: https://github.com/sparklabnyc/gtropic
+url: https://sparklabnyc.github.io/gtropic/
+contact:
+- family-names: Parks
+  given-names: Robbie M.
+  email: robbie.parks@columbia.edu
+  orcid: https://orcid.org/0000-0002-7916-1717
+references:
+- type: generic
+  title: 'G-TROPIC: Historical Data (1980-present)'
+  authors:
+  - name: SPARK Lab NYC
+  - family-names: Chillrud
+    given-names: Lawrence
+  - family-names: Jiang
+    given-names: Lingke
+  - family-names: Abid
+    given-names: Majd
+  - family-names: Anderson
+    given-names: G. Brooke
+  - family-names: Parks
+    given-names: Robbie
+  year: '2026'
+  medium: Harvard Dataverse
+  doi: 10.7910/DVN/EAVWC3
+  notes: Dataset, updated weekly
+

@@ -1,0 +1,16 @@
+linters: linters_with_defaults(
+    line_length_linter(100),
+    object_name_linter(styles = c("snake_case", "SNAKE_CASE", "symbols")),
+    object_usage_linter = NULL,
+    # Air (air.toml) owns indentation; the two disagree on a few continuations.
+    indentation_linter = NULL,
+    T_and_F_symbol_linter(),
+    undesirable_function_linter(c(
+      browser = NA, debug = NA, setwd = NA, readRDS = "use the JSON cache helpers",
+      installed.packages = NA, print = "use cli", cat = "use cli"
+    ))
+  )
+exclusions: list("data-raw", "vignettes", "tests/testthat/_snaps",
+    "tests" = list(undesirable_function_linter = Inf),
+    "R/gtropic_example.R" = list(undesirable_function_linter = Inf))
+encoding: "UTF-8"

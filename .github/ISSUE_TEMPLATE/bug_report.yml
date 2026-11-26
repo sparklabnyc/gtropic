@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in gtropic does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. If a value in the published G-TROPIC data looks wrong, please use the **Data issue** template instead. Security problems should be reported privately (see SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected to happen, and what happened instead, including any error message in full.
+    validations:
+      required: true
+  - type: textarea
+    id: reprex
+    attributes:
+      label: Reproducible example
+      description: A minimal example, ideally made with `reprex::reprex()`. Keep the query small (one storm, one year) where you can.
+      render: r
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Manifest
+      description: The output of `gtropic_manifest(x)` for the result involved. It lists the dataset DOIs, versions and files used. Write "not applicable" if there is no result.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: session-info
+    attributes:
+      label: Session info
+      description: The output of `sessionInfo()`.
+      render: text
+    validations:
+      required: true

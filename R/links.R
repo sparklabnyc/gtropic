@@ -27,11 +27,10 @@
 #' in local time, the local calendar date is simply its first 10 characters. No
 #' timezone arithmetic is required, and doing any would be a bug.
 #'
-#' The extraction is expressed with [stringr::str_sub()] so that it is pushed
-#' down into the Arrow pipeline rather than materialising every row in R.
+#' `x` is an already-collected data frame (see `assemble_gtropic_data()`), so
+#' this is plain `substr()`.
 #'
-#' @param x An Arrow Table or data frame containing
-#'   `LOCAL_DATETIME_STORM_CLOSEST`.
+#' @param x A data frame containing `LOCAL_DATETIME_STORM_CLOSEST`.
 #' @param validate Whether to check the string format on a sample.
 #' @param label Path used in error messages.
 #' @param call Calling environment.
@@ -39,11 +38,16 @@
 #' @return `x` with a `LOCAL_DATE_STORM_CLOSEST` `Date` column added.
 #' @keywords internal
 #' @noRd
-derive_local_date <- function(x, validate = TRUE, label = "file",
-                              call = rlang::caller_env()) {
+derive_local_date <- function(
+  x,
+  validate = TRUE,
+  label = "file",
+  call = rlang::caller_env()
+) {
   if (!"LOCAL_DATETIME_STORM_CLOSEST" %in% names(x)) {
     cli::cli_abort(
-      c("{.field LOCAL_DATETIME_STORM_CLOSEST} is missing from
+      c(
+        "{.field LOCAL_DATETIME_STORM_CLOSEST} is missing from
          {.path {label}}.",
         i = "It anchors every precipitation and flood window."
       ),
@@ -51,12 +55,16 @@ derive_local_date <- function(x, validate = TRUE, label = "file",
     )
   }
 
-  if (validate) validate_anchor(x, label = label, call = call)
+  if (validate) {
+    validate_anchor(x, label = label, call = call)
+  }
 
   out <- dplyr::mutate(
     x,
-    LOCAL_DATE_STORM_CLOSEST = stringr::str_sub(
-      .data$LOCAL_DATETIME_STORM_CLOSEST, 1L, 10L
+    LOCAL_DATE_STORM_CLOSEST = substr(
+      .data$LOCAL_DATETIME_STORM_CLOSEST,
+      1L,
+      10L
     )
   )
   normalize_table_types(out, label = label, call = call)
@@ -78,8 +86,12 @@ derive_local_date <- function(x, validate = TRUE, label = "file",
 #' @return Invisibly `TRUE`; aborts on a malformed or missing value.
 #' @keywords internal
 #' @noRd
-validate_anchor <- function(x, n = 1000L, label = "file",
-                            call = rlang::caller_env()) {
+validate_anchor <- function(
+  x,
+  n = 1000L,
+  label = "file",
+  call = rlang::caller_env()
+) {
   sample_vals <- x |>
     dplyr::select("LOCAL_DATETIME_STORM_CLOSEST") |>
     utils::head(n) |>
@@ -92,7 +104,8 @@ validate_anchor <- function(x, n = 1000L, label = "file",
 
   if (anyNA(vals)) {
     cli::cli_abort(
-      c("{.field LOCAL_DATETIME_STORM_CLOSEST} contains missing values in
+      c(
+        "{.field LOCAL_DATETIME_STORM_CLOSEST} contains missing values in
          {.path {label}}.",
         i = "This column anchors every precipitation and flood window and is
              documented as never missing.",
@@ -105,7 +118,8 @@ validate_anchor <- function(x, n = 1000L, label = "file",
   bad <- vals[!grepl("^\\d{4}-\\d{2}-\\d{2}T", vals)]
   if (length(bad) > 0L) {
     cli::cli_abort(
-      c("{.field LOCAL_DATETIME_STORM_CLOSEST} is not in the expected ISO 8601
+      c(
+        "{.field LOCAL_DATETIME_STORM_CLOSEST} is not in the expected ISO 8601
          form in {.path {label}}.",
         x = "For example: {.val {utils::head(bad, 3)}}",
         i = "Expected {.val 2005-08-29T06:10:00-05:00}, with zero-padded
@@ -142,33 +156,37 @@ validate_anchor <- function(x, n = 1000L, label = "file",
 #' @return A tibble as described in the plan's links schema.
 #' @keywords internal
 #' @noRd
-build_links <- function(wind,
-                        zero_pairs = NULL,
-                        adm2_ids,
-                        storm_ids,
-                        wind_radius_km,
-                        link_radius_km,
-                        precip_window = list(
-                           before = 2, after = 1,
-                           radius_km = 500
-                        ),
-                        flood_window = list(
-                          before = 2, after = 1,
-                          radius_km = 500
-                        )) {
-  wind_radius_km <- check_wind_radius_km(
+build_links <- function(
+  wind,
+  zero_pairs = NULL,
+  adm2_ids,
+  storm_ids,
+  wind_radius_km,
+  link_radius_km,
+  precip_window = list(
+    before = 2,
+    after = 1,
+    radius_km = 500
+  ),
+  flood_window = list(
+    before = 2,
+    after = 1,
+    radius_km = 500
+  )
+) {
+  wind_radius_km <- check_radius_km(
     wind_radius_km,
     arg = "wind_radius_km"
   )
-  link_radius_km <- check_wind_radius_km(
+  link_radius_km <- check_radius_km(
     link_radius_km,
     arg = "link_radius_km"
   )
-  precip_window$radius_km <- check_wind_radius_km(
+  precip_window$radius_km <- check_radius_km(
     precip_window$radius_km,
     arg = "precip_window$radius_km"
   )
-  flood_window$radius_km <- check_wind_radius_km(
+  flood_window$radius_km <- check_radius_km(
     flood_window$radius_km,
     arg = "flood_window$radius_km"
   )
@@ -200,7 +218,8 @@ build_links <- function(wind,
   # in both, the nonzero record is the informative one.
   pairs <- pairs |>
     dplyr::arrange(
-      .data$ADM2_ID, .data$STORM_ID,
+      .data$ADM2_ID,
+      .data$STORM_ID,
       dplyr::desc(.data$WIND_EXPOSURE)
     ) |>
     dplyr::distinct(.data$ADM2_ID, .data$STORM_ID, .keep_all = TRUE)
@@ -293,10 +312,12 @@ filter_wind_radius <- function(wind, wind_radius_km) {
 #' @return A positive numeric scalar or `Inf`.
 #' @keywords internal
 #' @noRd
-link_radius_for_tables <- function(tables,
-                                   wind_radius_km,
-                                   precip_radius_km,
-                                   flood_radius_km) {
+link_radius_for_tables <- function(
+  tables,
+  wind_radius_km,
+  precip_radius_km,
+  flood_radius_km
+) {
   radii <- c(
     if ("wind" %in% tables) wind_radius_km,
     if ("precip" %in% tables) precip_radius_km,
@@ -321,13 +342,15 @@ link_radius_for_tables <- function(tables,
 #' @return A list with scoped `adm2_ids` and linked `storm_ids`.
 #' @keywords internal
 #' @noRd
-resolve_hazard_scope <- function(links,
-                                 adm2_ids,
-                                 tables,
-                                 wind_radius_km,
-                                 precip_radius_km,
-                                 flood_radius_km,
-                                 storm_ids = NULL) {
+resolve_hazard_scope <- function(
+  links,
+  adm2_ids,
+  tables,
+  wind_radius_km,
+  precip_radius_km,
+  flood_radius_km,
+  storm_ids = NULL
+) {
   finite_hazards <- c(
     wind = "wind" %in% tables && is.finite(wind_radius_km),
     precip = "precip" %in% tables && is.finite(precip_radius_km),
@@ -373,9 +396,11 @@ resolve_hazard_scope <- function(links,
 #' @noRd
 links_empty <- function() {
   tibble::tibble(
-    STORM_ID = character(0), ADM2_ID = character(0),
+    STORM_ID = character(0),
+    ADM2_ID = character(0),
     LOCAL_DATE_STORM_CLOSEST = as.Date(character(0)),
-    STORM_DIST_KM = numeric(0), WIND_EXPOSURE = logical(0),
+    STORM_DIST_KM = numeric(0),
+    WIND_EXPOSURE = logical(0),
     WIND_IN_FIELD = logical(0),
     PRECIP_IN_FIELD = logical(0),
     PRECIP_WINDOW_START = as.Date(character(0)),
@@ -445,7 +470,8 @@ select_precip <- function(links, precip) {
     by = dplyr::join_by(
       ADM2_ID,
       dplyr::between(
-        .gtropic_date, PRECIP_WINDOW_START,
+        .gtropic_date,
+        PRECIP_WINDOW_START,
         PRECIP_WINDOW_END
       )
     )
@@ -482,17 +508,21 @@ select_flood <- function(links, flood, match = c("start", "overlap")) {
     )
 
   windows <- dplyr::select(
-    field, "ADM2_ID", "FLOOD_WINDOW_START",
+    field,
+    "ADM2_ID",
+    "FLOOD_WINDOW_START",
     "FLOOD_WINDOW_END"
   )
 
   out <- if (identical(match, "start")) {
     dplyr::semi_join(
-      flood, windows,
+      flood,
+      windows,
       by = dplyr::join_by(
         ADM2_ID,
         dplyr::between(
-          .gtropic_start, FLOOD_WINDOW_START,
+          .gtropic_start,
+          FLOOD_WINDOW_START,
           FLOOD_WINDOW_END
         )
       )
@@ -501,7 +531,8 @@ select_flood <- function(links, flood, match = c("start", "overlap")) {
     # Interval overlap: the flood had started by the window's end and had not
     # finished before the window began.
     dplyr::semi_join(
-      flood, windows,
+      flood,
+      windows,
       by = dplyr::join_by(
         ADM2_ID,
         .gtropic_start <= FLOOD_WINDOW_END,

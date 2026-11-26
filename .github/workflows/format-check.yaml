@@ -1,0 +1,33 @@
+# Workflow derived from https://github.com/posit-dev/setup-air/tree/main/examples
+# (format-check), with the hardening from Plan 05 SEC-11: read-only token,
+# actions pinned to commit SHAs, no persisted credentials, superseded PR runs
+# cancelled. Fails when `air format .` would change a file; run it locally
+# and commit the result (settings in air.toml, Plan 01 INFRA-07).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+name: format-check.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-check:
+    name: format-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install
+        uses: posit-dev/setup-air@482cb5912394878ab5a63b75db0f9d19cc6df5ba # v1.0.3
+
+      - name: Check
+        run: air format . --check

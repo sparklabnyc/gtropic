@@ -66,13 +66,15 @@ suggest_matches <- function(x, candidates, n = 3L) {
 #' @return The canonical spellings of the matched values.
 #' @keywords internal
 #' @noRd
-match_values <- function(values,
-                         candidates,
-                         arg,
-                         exact = FALSE,
-                         helper = "gtropic_adm2()",
-                         what = "ADM2 unit",
-                         call = rlang::caller_env()) {
+match_values <- function(
+  values,
+  candidates,
+  arg,
+  exact = FALSE,
+  helper = "gtropic_adm2()",
+  what = "ADM2 unit",
+  call = rlang::caller_env()
+) {
   candidates <- unique(as.character(candidates[!is.na(candidates)]))
 
   if (exact) {
@@ -94,22 +96,31 @@ match_values <- function(values,
   }
 
   missed <- values[!hit]
-  bullets <- vapply(missed, function(m) {
-    sugg <- suggest_matches(m, candidates)
-    if (length(sugg) == 0L) {
-      glue::glue('"{m}" - no close match found')
-    } else {
-      glue::glue('"{m}" - did you mean {paste0(\'"\', sugg, \'"\', collapse = ", ")}?')
-    }
-  }, character(1))
+  # Built from user input and published names, so escaped before it is placed
+  # in the error's cli template.
+  bullets <- vapply(
+    missed,
+    function(m) {
+      sugg <- suggest_matches(m, candidates)
+      if (length(sugg) == 0L) {
+        glue::glue('"{m}" - no close match found')
+      } else {
+        glue::glue(
+          '"{m}" - did you mean {paste0(\'"\', sugg, \'"\', collapse = ", ")}?'
+        )
+      }
+    },
+    character(1)
+  )
   names(bullets) <- rep("x", length(bullets))
 
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "{length(missed)} value{?s} in {.arg {arg}} did not match any {what}.",
-      bullets,
+      cli_escape(bullets),
       i = "See {.code {helper}} for the full list of valid values."
     ),
+    class = "gtropic_error_no_match",
     call = call
   )
 }
@@ -126,7 +137,7 @@ match_values <- function(values,
 #' @keywords internal
 #' @noRd
 abort_empty_intersection <- function(args, call = rlang::caller_env()) {
-  cli::cli_abort(
+  gtropic_abort(
     c(
       "No ADM2 units satisfy all of the geographic filters supplied.",
       x = "Filters in play: {.arg {args}}.",
@@ -134,6 +145,7 @@ abort_empty_intersection <- function(args, call = rlang::caller_env()) {
            {.emph across} arguments, so these conditions must hold together.",
       i = "Use {.code gtropic_adm2()} to explore valid combinations."
     ),
+    class = "gtropic_error_no_match",
     call = call
   )
 }

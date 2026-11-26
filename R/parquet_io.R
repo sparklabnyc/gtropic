@@ -5,33 +5,57 @@
 # supports local paths and S3/GCS URIs only; there is no generic HTTP
 # filesystem. The working pattern is therefore:
 #
-#   raw <- dv_get_file(id)                       # raw vector, nothing on disk
-#   tbl <- read_parquet_raw(raw, cols)           # Arrow Table
-#   out <- tbl |> filter(...) |> collect()       # materialise only what we need
+# nolint start: commented_code_linter.
+#   path <- dv_get_file(id, dest = <file>)       # streamed to disk
+#   tbl <- read_parquet_file(path, cols, keep)   # projected, filtered Table
+#   out <- tibble::as_tibble(tbl)                # only the rows we need
+# nolint end
 #
-# Column projection saves memory and R-side conversion time. It does NOT save
-# bandwidth: Dataverse serves whole files regardless.
+# Only the requested columns are decoded, and rows are filtered on the Arrow
+# side, one row group at a time, before anything is converted to R. A query
+# for one storm in one country therefore materialises its own rows, not the
+# global year-file. None of this saves bandwidth: Dataverse serves whole
+# files regardless.
 # ---------------------------------------------------------------------------
 
-#' Read parquet bytes into an Arrow Table
+#' Read a parquet file into an Arrow Table
 #'
-#' @param raw Raw vector of parquet bytes.
+#' The file is read rather than memory-mapped: a download that is not cached
+#' is deleted as soon as it has been read, and Windows cannot delete a file
+#' that is still mapped.
+#'
+#' Rows are filtered with Table-level kernels, row group by row group in file
+#' order, so the result has the same rows in the same order as filtering the
+#' whole table in R would give (invariant G6). A multi-threaded Acero query
+#' would not guarantee the order.
+#'
+#' @param path Parquet file.
 #' @param col_select Character vector of columns to project, or `NULL` for all.
 #'   Columns absent from the file are dropped with a warning rather than an
 #'   error, so a schema addition upstream never breaks a query.
+#' @param keep Named list of row filters, `list(<column> = <values>)`, applied
+#'   as `column %in% values`. `NULL` entries, and columns absent from the
+#'   file, are skipped silently. Use only for identifier columns whose type is
+#'   the same in every year-file (`STORM_ID`, `ADM2_ID`).
 #' @param label Path used in error messages.
 #' @param call Calling environment.
 #'
 #' @return An `arrow::Table`.
 #' @keywords internal
 #' @noRd
-read_parquet_raw <- function(raw, col_select = NULL, label = "file",
-                             call = rlang::caller_env()) {
+read_parquet_file <- function(
+  path,
+  col_select = NULL,
+  keep = NULL,
+  label = "file",
+  call = rlang::caller_env()
+) {
   tbl <- tryCatch(
-    arrow::read_parquet(raw, as_data_frame = FALSE),
+    read_parquet_table(path, col_select = col_select, keep = keep),
     error = function(e) {
       cli::cli_abort(
-        c("Could not read {.path {label}} as parquet.",
+        c(
+          "Could not read {.path {label}} as parquet.",
           x = "{conditionMessage(e)}",
           i = "The download may be corrupt. If a cache is enabled, clearing it
                with {.code gtropic_cache_clear()} will force a fresh copy."
@@ -42,71 +66,155 @@ read_parquet_raw <- function(raw, col_select = NULL, label = "file",
   )
 
   if (!is.null(col_select)) {
-    present <- intersect(col_select, names(tbl))
     missing <- setdiff(col_select, names(tbl))
     if (length(missing) > 0L) {
+      n <- length(missing)
       cli::cli_warn(
-        c("Column{?s} {.field {missing}} not found in {.path {label}}.",
-          i = "Continuing without {?it/them}; the published schema may have
-               changed."
+        c(
+          "{cli::qty(n)}Column{?s} {.field {missing}} not found in {.path {label}}.",
+          i = "{cli::qty(n)}Continuing without {?it/them}; the published
+               schema may have changed."
         )
       )
     }
+    present <- intersect(col_select, names(tbl))
     if (length(present) > 0L) tbl <- tbl[, present, drop = FALSE]
   }
 
   tbl
 }
 
-#' Read JSON bytes into a nested list
+#' Read the projected, filtered columns of a parquet file
 #'
-#' @param raw Raw vector.
+#' @inheritParams read_parquet_file
+#' @return An `arrow::Table` holding the projection (in file order) plus the
+#'   filter columns; `read_parquet_file()` puts the projection in order.
+#' @keywords internal
+#' @noRd
+read_parquet_table <- function(path, col_select = NULL, keep = NULL) {
+  file <- arrow::ReadableFile$create(path)
+  on.exit(file$close(), add = TRUE)
+  reader <- arrow::ParquetFileReader$create(file)
+  columns <- names(reader$GetSchema())
+
+  present <- intersect(col_select, columns)
+  keep <- compact(keep[intersect(names(keep), columns)])
+  # Decode the projection plus the filter columns, and nothing else.
+  read_cols <- if (length(present) > 0L) {
+    union(present, names(keep))
+  } else {
+    columns
+  }
+  indices <- match(read_cols, columns) - 1L
+
+  if (length(keep) == 0L || reader$num_row_groups == 0L) {
+    return(reader$ReadTable(indices))
+  }
+  # One row group at a time, so the whole file is never decoded at once.
+  parts <- lapply(seq_len(reader$num_row_groups) - 1L, function(i) {
+    arrow_keep_rows(reader$ReadRowGroup(i, indices), keep)
+  })
+  do.call(arrow::concat_tables, parts)
+}
+
+#' Keep the rows of an Arrow Table whose identifiers are in a set
+#'
+#' `is_in` with `skip_nulls = FALSE` has the semantics of R's `%in%`: a
+#' missing value matches only when `values` contains `NA`.
+#'
+#' @param tbl An `arrow::Table`.
+#' @param keep Named list of `column = values`, every column present in `tbl`.
+#'
+#' @return The filtered `arrow::Table`, rows in their original order.
+#' @keywords internal
+#' @noRd
+arrow_keep_rows <- function(tbl, keep) {
+  tbl$Filter(arrow_keep_mask(tbl, keep))
+}
+
+#' Which rows of an Arrow Table do the row filters keep?
+#'
+#' @inheritParams arrow_keep_rows
+#' @return A boolean Arrow array, `TRUE` where every filter matches.
+#' @keywords internal
+#' @noRd
+arrow_keep_mask <- function(tbl, keep) {
+  mask <- NULL
+  for (column in names(keep)) {
+    values <- unique(keep[[column]])
+    value_set <- tryCatch(
+      arrow::Array$create(values, type = tbl$schema[[column]]$type),
+      # e.g. a dictionary column: let the kernel cast the plain values.
+      error = function(e) arrow::Array$create(values)
+    )
+    hit <- arrow::call_function(
+      "is_in",
+      tbl[[column]],
+      options = list(value_set = value_set, skip_nulls = FALSE)
+    )
+    mask <- if (is.null(mask)) hit else arrow::call_function("and", mask, hit)
+  }
+  mask
+}
+
+#' Read a JSON file into a nested list
+#'
+#' @param path JSON file.
 #' @param label Path used in error messages.
 #' @param call Calling environment.
 #'
 #' @return A nested list.
 #' @keywords internal
 #' @noRd
-read_json_raw <- function(raw, label = "file", call = rlang::caller_env()) {
+read_json_file <- function(path, label = "file", call = rlang::caller_env()) {
   tryCatch(
-    jsonlite::fromJSON(rawToChar(raw), simplifyVector = FALSE),
+    jsonlite::read_json(path, simplifyVector = FALSE),
     error = function(e) {
       cli::cli_abort(
-        c("Could not parse {.path {label}} as JSON.", x = "{conditionMessage(e)}"),
+        c(
+          "Could not parse {.path {label}} as JSON.",
+          x = "{conditionMessage(e)}"
+        ),
         call = call
       )
     }
   )
 }
 
-#' Read GeoParquet bytes into an sf object
+#' Read a GeoParquet file into an sf object
 #'
-#' `sf` and `sfarrow` are Suggests, not Imports: only the `polygon` filter and
-#' the `geometry` table need them. Users who do not need geometry can omit it
-#' from `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
+#' `sf` is a Suggests, not an Import: only the `polygon` filter and the
+#' `geometry` table need it. Users who do not need geometry can omit it from
+#' `tables`, avoiding a hard dependency on a heavy geospatial toolchain.
 #'
-#' @param raw Raw vector of GeoParquet bytes.
+#' The file is read with Arrow and its well-known-binary (WKB) geometry
+#' converted by `sf`, as `sfarrow::st_read_parquet()` did, but `keep` filters
+#' the rows first, so only the requested units' geometries are ever built.
+#' Row names are the rows' positions in the file, as the whole-file read
+#' followed by subsetting gave.
+#'
+#' @param path GeoParquet file.
+#' @param keep Row filters, as for `read_parquet_file()`.
 #' @param label Path used in messages.
 #' @param call Calling environment.
 #'
 #' @return An `sf` object in EPSG:4326.
 #' @keywords internal
 #' @noRd
-read_geoparquet_raw <- function(raw, label = "file",
-                                call = rlang::caller_env()) {
+read_geoparquet_file <- function(
+  path,
+  keep = NULL,
+  label = "file",
+  call = rlang::caller_env()
+) {
   check_installed_geo(call = call)
 
-  # sfarrow reads from a path, so the bytes touch disk briefly. This is a
-  # tempfile, never the cache and never the installation directory.
-  tf <- tempfile(fileext = ".parquet")
-  on.exit(unlink(tf), add = TRUE)
-  writeBin(raw, tf)
-
   geometry <- tryCatch(
-    sfarrow::st_read_parquet(tf),
+    read_geoparquet_sf(path, keep = keep),
     error = function(e) {
       cli::cli_abort(
-        c("Could not read {.path {label}} as GeoParquet.",
+        c(
+          "Could not read {.path {label}} as GeoParquet.",
           x = "{conditionMessage(e)}"
         ),
         call = call
@@ -114,9 +222,9 @@ read_geoparquet_raw <- function(raw, label = "file",
     }
   )
 
-  # The published ADM2 coordinates are WGS 84. Some sfarrow/Arrow version
-  # combinations do not restore the GeoParquet CRS metadata, so enforce the
-  # reader's EPSG:4326 contract at this single I/O boundary.
+  # The published ADM2 coordinates are WGS 84. A file whose GeoParquet
+  # metadata carries no usable CRS is read as such, so enforce the reader's
+  # EPSG:4326 contract at this single I/O boundary.
   crs <- sf::st_crs(geometry)
   if (is.na(crs)) {
     geometry <- sf::st_set_crs(geometry, 4326)
@@ -124,6 +232,84 @@ read_geoparquet_raw <- function(raw, label = "file",
     geometry <- sf::st_transform(geometry, 4326)
   }
   geometry
+}
+
+#' Read the rows of a GeoParquet file into an sf data frame
+#'
+#' @inheritParams read_geoparquet_file
+#' @return An `sf` data frame, columns in file order, CRS from the metadata.
+#' @keywords internal
+#' @noRd
+read_geoparquet_sf <- function(path, keep = NULL) {
+  file <- arrow::ReadableFile$create(path)
+  on.exit(file$close(), add = TRUE)
+  reader <- arrow::ParquetFileReader$create(file)
+  schema <- reader$GetSchema()
+
+  geo <- geoparquet_metadata(schema$metadata$geo)
+  geom_cols <- intersect(names(schema), names(geo$columns))
+  if (length(geom_cols) == 0L) {
+    stop("The file has none of the geometry columns its metadata names.")
+  }
+  primary <- geo$primary_column
+  if (!primary %in% geom_cols) {
+    warning("Primary geometry column not found, using the next available.")
+    primary <- geom_cols[1L]
+  }
+
+  keep <- compact(keep[intersect(names(keep), names(schema))])
+  if (length(keep) == 0L || reader$num_row_groups == 0L) {
+    tbl <- reader$ReadTable()
+    rows <- seq_len(tbl$num_rows)
+  } else {
+    # One row group at a time, recording each kept row's position in the file.
+    parts <- list()
+    rows <- list()
+    offset <- 0L
+    for (i in seq_len(reader$num_row_groups) - 1L) {
+      group <- reader$ReadRowGroup(i)
+      mask <- as.vector(arrow_keep_mask(group, keep))
+      parts[[length(parts) + 1L]] <- group$Filter(mask)
+      rows[[length(rows) + 1L]] <- offset + which(mask)
+      offset <- offset + group$num_rows
+    }
+    tbl <- do.call(arrow::concat_tables, parts)
+    rows <- unlist(rows, use.names = FALSE)
+  }
+
+  out <- as.data.frame(tbl)
+  for (column in geom_cols) {
+    out[[column]] <- sf::st_as_sfc(
+      out[[column]],
+      crs = sf::st_crs(geo$columns[[column]]$crs)
+    )
+  }
+  out <- sf::st_sf(out, sf_column_name = primary)
+  row.names(out) <- rows
+  out
+}
+
+#' Parse and check the `geo` metadata of a GeoParquet file
+#'
+#' @param json The `geo` entry of the file's key-value metadata.
+#' @return The parsed metadata.
+#' @keywords internal
+#' @noRd
+geoparquet_metadata <- function(json) {
+  if (is.null(json)) {
+    stop("No GeoParquet `geo` metadata found.")
+  }
+  geo <- jsonlite::fromJSON(json)
+  if (!is.list(geo) || !all(c("primary_column", "columns") %in% names(geo))) {
+    stop("The GeoParquet `geo` metadata lacks `primary_column` or `columns`.")
+  }
+  for (column in names(geo$columns)) {
+    encoding <- geo$columns[[column]]$encoding
+    if (!identical(encoding, "WKB")) {
+      stop("Only well-known binary (WKB) geometry is supported.")
+    }
+  }
+  geo
 }
 
 #' Normalize date-only columns from published tables
@@ -139,8 +325,11 @@ read_geoparquet_raw <- function(raw, label = "file",
 #' @return `x` with recognized date-only columns converted to `Date`.
 #' @keywords internal
 #' @noRd
-normalize_table_types <- function(x, label = "table",
-                                  call = rlang::caller_env()) {
+normalize_table_types <- function(
+  x,
+  label = "table",
+  call = rlang::caller_env()
+) {
   date_cols <- intersect(
     c(
       "STORM_GENESIS_DATE_UTC",
@@ -159,7 +348,9 @@ normalize_table_types <- function(x, label = "table",
   for (column in date_cols) {
     x[[column]] <- parse_published_date(
       x[[column]],
-      column = column, label = label, call = call
+      column = column,
+      label = label,
+      call = call
     )
   }
   x
@@ -175,8 +366,12 @@ normalize_table_types <- function(x, label = "table",
 #' @return A `Date` vector.
 #' @keywords internal
 #' @noRd
-parse_published_date <- function(x, column, label = "table",
-                                 call = rlang::caller_env()) {
+parse_published_date <- function(
+  x,
+  column,
+  label = "table",
+  call = rlang::caller_env()
+) {
   if (inherits(x, "Date")) {
     return(x)
   }
@@ -209,6 +404,48 @@ parse_published_date <- function(x, column, label = "table",
   parsed
 }
 
+#' Which optional geospatial packages are not installed?
+#'
+#' @return Character vector of missing package names (empty when all are
+#'   installed).
+#' @keywords internal
+#' @noRd
+geo_packages_missing <- function() {
+  pkgs <- "sf"
+  pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+}
+
+#' Default tables for a query that did not name any
+#'
+#' Every table, except `"geometry"` when the packages it needs are not
+#' installed: a first query should work with only the hard dependencies. Says
+#' so once per session, unless `quiet`.
+#'
+#' @param quiet Suppress the message.
+#' @return Character vector of table names.
+#' @keywords internal
+#' @noRd
+default_tables <- function(quiet = FALSE) {
+  missing <- geo_packages_missing()
+  if (length(missing) == 0L) {
+    return(VALID_TABLES)
+  }
+  if (!isTRUE(quiet)) {
+    cli::cli_inform(
+      c(
+        "i" = "Leaving out the {.val geometry} table: it needs the
+               {.pkg {missing}} package{?s}.",
+        " " = "Install {cli::qty(length(missing))}{?it/them} to include ADM2
+               boundaries by default, or name {.val geometry} in {.arg tables}
+               to require {?it/them}."
+      ),
+      .frequency = "once",
+      .frequency_id = "gtropic_default_tables_geometry"
+    )
+  }
+  setdiff(VALID_TABLES, "geometry")
+}
+
 #' Require the optional geospatial packages
 #'
 #' @param what Description of the feature requiring them.
@@ -217,18 +454,19 @@ parse_published_date <- function(x, column, label = "table",
 #' @return Invisibly `TRUE`; aborts when the packages are absent.
 #' @keywords internal
 #' @noRd
-check_installed_geo <- function(what = "this feature",
-                                call = rlang::caller_env()) {
-  missing <- c("sf", "sfarrow")[
-    !vapply(c("sf", "sfarrow"), requireNamespace, logical(1), quietly = TRUE)
-  ]
+check_installed_geo <- function(
+  what = "this feature",
+  call = rlang::caller_env()
+) {
+  missing <- geo_packages_missing()
   if (length(missing) == 0L) {
     return(invisible(TRUE))
   }
 
   cli::cli_abort(
-    c("{what} requires the {.pkg {missing}} package{?s}.",
-      i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.',
+    c(
+      "{what} requires the {.pkg {missing}} package{?s}.",
+      i = 'Install with {.code install.packages(c({paste0(\'"\', missing, \'"\', collapse = ", ")}))}.', # nolint: line_length_linter.
       i = "Omit {.val geometry} from {.arg tables} if you do not need geospatial
            tooling."
     ),
@@ -236,24 +474,13 @@ check_installed_geo <- function(what = "this feature",
   )
 }
 
-#' Materialise an Arrow Table according to the `as` argument
+#' Normalise a collected table for the result
 #'
-#' @param x An Arrow Table or data frame.
-#' @param as `"tibble"` or `"arrow"`.
+#' @param x A data frame.
 #'
-#' @return A tibble, or the Arrow object unchanged.
+#' @return A tibble.
 #' @keywords internal
 #' @noRd
-finalize_table <- function(x, as = c("tibble", "arrow")) {
-  as <- match.arg(as)
-  if (is.data.frame(x)) {
-    x <- normalize_table_types(x)
-  }
-  if (identical(as, "arrow")) {
-    return(x)
-  }
-  if (inherits(x, c("Table", "ArrowTabular", "arrow_dplyr_query", "Dataset"))) {
-    return(tibble::as_tibble(dplyr::collect(x)))
-  }
-  tibble::as_tibble(x)
+finalize_table <- function(x) {
+  tibble::as_tibble(normalize_table_types(x))
 }
