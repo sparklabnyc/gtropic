@@ -87,10 +87,7 @@ test_that("the default exposure map draws flood as a yes/no panel", {
   expect_true(default$binary)
   expect_true(default$threshold_active)
   expect_identical(default$legend, "Flood reported")
-  expect_identical(
-    plot_metric_display_label(default),
-    "Flood reported (area share > 0)"
-  )
+  expect_identical(plot_metric_display_label(default), "Flood reported")
   expect_identical(
     plot_binary_labels(default),
     c("No flood reported", "Flood reported")
@@ -110,6 +107,16 @@ test_that("the default exposure map draws flood as a yes/no panel", {
   expect_identical(
     plot_metric_display_label(population),
     "Flood reported (population share > 0)"
+  )
+  # A threshold other than the default stays in the label.
+  custom <- resolve_plot_metrics(
+    data,
+    "exposure",
+    threshold = list(PROP_AREA_IN_FLOOD_REPORT = 0.5)
+  )
+  expect_identical(
+    plot_metric_display_label(custom[custom$table == "flood", ]),
+    "Flood reported (area share > 0.5)"
   )
 })
 

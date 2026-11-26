@@ -78,10 +78,20 @@ plot_binary_labels <- function(spec) {
   }
 }
 
-#' Panel label of a yes/no flood-report panel, with its threshold
+#' Panel label of a yes/no flood-report panel
+#'
+#' The default panel (area share > 0) is simply "Flood reported"; any other
+#' share or threshold is named in the label.
 #' @keywords internal
 #' @noRd
 plot_flood_binary_label <- function(spec) {
+  if (
+    identical(as.character(spec$metric), "PROP_AREA_IN_FLOOD_REPORT") &&
+      identical(as.character(spec$operator), ">") &&
+      isTRUE(spec$threshold == 0)
+  ) {
+    return("Flood reported")
+  }
   share <- FLOOD_REPORT_SHARE_LABELS[as.character(spec$metric)]
   if (is.na(share)) {
     share <- as.character(spec$metric)
