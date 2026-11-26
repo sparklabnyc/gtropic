@@ -53,6 +53,15 @@
   Testers can delete their old cache directory (`gtropic_cache_dir()`) and
   the old `cache.rds` under `tools::R_user_dir("gtropic", "config")`.
 
+* The `flood` table returns three published columns under new names:
+  `PROP_FLOODED_AREA` is `PROP_AREA_IN_FLOOD_REPORT`, `PROP_FLOODED_POP` is
+  `PROP_POP_IN_FLOOD_REPORT` and `FLOODED_POP_CENTROID` is
+  `POP_CENTROID_IN_FLOOD_REPORT`, in the data, `gtropic_metrics()` and
+  `gtropic_plot(metric = )`. Each flood row is one place named in a news
+  report about flooding, so these values are the share of a unit inside that
+  place, not its flooded area or population. The files on Harvard Dataverse
+  and the codebook keep the published names (`?gtropic_known_limitations`).
+
 ## New features
 
 * `citation("gtropic")` cites the package and the G-TROPIC historical

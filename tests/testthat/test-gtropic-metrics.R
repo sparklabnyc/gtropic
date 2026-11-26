@@ -25,19 +25,19 @@ test_that("gtropic_metrics lists exposure metadata by hazard", {
     )
   )
   expect_identical(out$precip$metric, "PRECIP_MM")
-  expect_true("FLOODED_POP_CENTROID" %in% out$flood$metric)
+  expect_true("POP_CENTROID_IN_FLOOD_REPORT" %in% out$flood$metric)
 })
 
 test_that("gtropic_metrics excludes non-exposure and non-plot metrics", {
   out <- gtropic_metrics()
   metrics <- unlist(lapply(out, `[[`, "metric"), use.names = FALSE)
-  centroid <- out$flood[out$flood$metric == "FLOODED_POP_CENTROID", ]
+  centroid <- out$flood[out$flood$metric == "POP_CENTROID_IN_FLOOD_REPORT", ]
 
   expect_false(any(metrics %in% c("STORM_DIST_KM", "USA_WIND", "USA_STATUS")))
   expect_false(centroid$plot_supported)
   expect_identical(centroid$aggregate, "any")
   expect_true(all(
     unlist(lapply(out, `[[`, "plot_supported")) |
-      metrics == "FLOODED_POP_CENTROID"
+      metrics == "POP_CENTROID_IN_FLOOD_REPORT"
   ))
 })

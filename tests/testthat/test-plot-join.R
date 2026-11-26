@@ -176,7 +176,7 @@ test_that("wind thresholds and counts preserve raw pairs and local dates", {
 
 test_that("flood start and overlap rules retain events and matching windows", {
   x <- plot_fixture()
-  spec <- resolve_plot_metrics(x, "exposure", "PROP_FLOODED_POP")
+  spec <- resolve_plot_metrics(x, "exposure", "PROP_POP_IN_FLOOD_REPORT")
   start <- plot_join_metric(x, spec, "start")
   overlap <- plot_join_metric(x, spec, "overlap")
   expect_false("PF1" %in% start$FLOOD_ID)
@@ -198,7 +198,7 @@ test_that("flood days union events after clipping every storm window", {
   start <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     track = FALSE
   )
@@ -210,7 +210,7 @@ test_that("flood days union events after clipping every storm window", {
   overlap <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     track = FALSE
   )
@@ -218,18 +218,23 @@ test_that("flood days union events after clipping every storm window", {
   facets <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     facet_by = "STORM_ID",
     track = FALSE
   )
   expect_equal(facets$value[facets$ADM2_ID == "PLOT.1"], c(4, 4, 3))
-  storms <- prepare_plot_data(x, "count", "PROP_FLOODED_POP", track = FALSE)
+  storms <- prepare_plot_data(
+    x,
+    "count",
+    "PROP_POP_IN_FLOOD_REPORT",
+    track = FALSE
+  )
   expect_equal(storms$value[storms$ADM2_ID == "PLOT.1"], 3)
   sums <- prepare_plot_data(
     x,
     "exposure",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     aggregate = "sum",
     track = FALSE
   )
@@ -238,7 +243,7 @@ test_that("flood days union events after clipping every storm window", {
   plain <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     track = FALSE
   )
@@ -268,7 +273,7 @@ test_that("flood interval unions handle nested and disjoint windows", {
   out <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     track = FALSE
   )
@@ -277,7 +282,7 @@ test_that("flood interval unions handle nested and disjoint windows", {
   out <- prepare_plot_data(
     x,
     "count",
-    "PROP_FLOODED_POP",
+    "PROP_POP_IN_FLOOD_REPORT",
     count_unit = "days",
     track = FALSE
   )

@@ -112,9 +112,9 @@ local({
       "2020-08-06",
       "2020-08-08"
     ),
-    PROP_FLOODED_AREA = c(0.1, 0.2, 0, 0.4, NA_real_),
-    PROP_FLOODED_POP = c(0.05, 0.1, 0, 0.3, NA_real_),
-    FLOODED_POP_CENTROID = c(TRUE, TRUE, FALSE, TRUE, NA)
+    PROP_AREA_IN_FLOOD_REPORT = c(0.1, 0.2, 0, 0.4, NA_real_),
+    PROP_POP_IN_FLOOD_REPORT = c(0.05, 0.1, 0, 0.3, NA_real_),
+    POP_CENTROID_IN_FLOOD_REPORT = c(TRUE, TRUE, FALSE, TRUE, NA)
   )
   tracks <- tibble::tibble(
     STORM_ID = rep(c("PLOT_A", "PLOT_C"), each = 4),

@@ -49,7 +49,7 @@ maps plot exposure-day or exposure-storm counts that meet exposure-specific
 \item{metric}{A supported published metric name, or a character vector of metric
 names to plot. The \code{metric}s are plotted in the order they are given.
 For \code{type = "exposure"}, \code{NULL} selects every available core metric in this
-order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_FLOODED_AREA"}.
+order: \code{"VMAX_SUST_MS"}, \code{"PRECIP_MM"}, and \code{"PROP_AREA_IN_FLOOD_REPORT"}.
 For \code{type = "count"}, it selects the first available count default;
 \code{type = "track"} selects \code{"USA_WIND"}. Track maps require exactly one of
 \code{"USA_WIND"} or \code{"USA_STATUS"}. See \code{\link[=gtropic_metrics]{gtropic_metrics()}} for all available

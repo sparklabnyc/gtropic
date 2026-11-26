@@ -19,11 +19,11 @@ test_that("map overlays retain per-panel storm membership for default metrics", 
         c(
           "VMAX_SUST_MS",
           "PRECIP_MM",
-          "PROP_FLOODED_AREA",
+          "PROP_AREA_IN_FLOOD_REPORT",
           "PRECIP_MM",
-          "PROP_FLOODED_AREA"
+          "PROP_AREA_IN_FLOOD_REPORT"
         ),
-        levels = c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+        levels = c("VMAX_SUST_MS", "PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT")
       )
     )
   )

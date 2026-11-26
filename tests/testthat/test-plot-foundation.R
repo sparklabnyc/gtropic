@@ -14,9 +14,9 @@ test_that("plotting fixtures have the published schemas and edge cases", {
       "FLOOD_ID",
       "FLOOD_START_DATE",
       "FLOOD_END_DATE",
-      "PROP_FLOODED_AREA",
-      "PROP_FLOODED_POP",
-      "FLOODED_POP_CENTROID"
+      "PROP_AREA_IN_FLOOD_REPORT",
+      "PROP_POP_IN_FLOOD_REPORT",
+      "POP_CENTROID_IN_FLOOD_REPORT"
     )
   )
   expect_true(any(abs(diff(x$tracks$LON)) > 180))
@@ -66,14 +66,14 @@ test_that("metrics carry defaults, codebook units and explicit overrides", {
   x <- plot_fixture()
   expect_equal(
     resolve_plot_metrics(x, "exposure")$metric,
-    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT")
   )
   expect_equal(
     attr(
       prepare_plot_data(x, "exposure", track = FALSE),
       "plot_info"
     )$metrics$metric,
-    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+    c("VMAX_SUST_MS", "PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT")
   )
   expect_equal(resolve_plot_metrics(x, "count")$metric, "VMAX_SUST_MS")
   expect_equal(resolve_plot_metrics(x, "track")$metric, "USA_WIND")
@@ -89,7 +89,7 @@ test_that("metrics carry defaults, codebook units and explicit overrides", {
     c(
       "VMAX_SUST_MS",
       "PRECIP_MM",
-      "PROP_FLOODED_POP",
+      "PROP_POP_IN_FLOOD_REPORT",
       "STORM_DIST_KM"
     )
   )

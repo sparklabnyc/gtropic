@@ -49,7 +49,7 @@ katrina <- gtropic_data(STORM_ID = katrina_id, date_range = 2005)
 
 The default is an exposure map with a panel for each core metric: maximum
 sustained wind (`VMAX_SUST_MS`), total precipitation (`PRECIP_MM`) and
-largest flooded share (`PROP_FLOODED_AREA`).
+largest flood-report share (`PROP_AREA_IN_FLOOD_REPORT`).
 
 ```{r katrina-exposure, fig.alt = "Three map panels of the eastern United States, Cuba and the Bahamas showing, for each administrative unit near Hurricane Katrina (2005)'s track, maximum sustained wind, cumulative precipitation and maximum flooded area, with the track drawn on each panel and coloured by Saffir-Simpson category."}
 gtropic_plot(katrina)

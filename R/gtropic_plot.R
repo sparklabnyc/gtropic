@@ -14,7 +14,7 @@
 #' @param metric A supported published metric name, or a character vector of metric
 #'   names to plot. The `metric`s are plotted in the order they are given.
 #'   For `type = "exposure"`, `NULL` selects every available core metric in this
-#'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_FLOODED_AREA"`.
+#'   order: `"VMAX_SUST_MS"`, `"PRECIP_MM"`, and `"PROP_AREA_IN_FLOOD_REPORT"`.
 #'   For `type = "count"`, it selects the first available count default;
 #'   `type = "track"` selects `"USA_WIND"`. Track maps require exactly one of
 #'   `"USA_WIND"` or `"USA_STATUS"`. See [gtropic_metrics()] for all available

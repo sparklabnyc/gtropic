@@ -19,8 +19,12 @@ published exposure value.
 }
 \details{
 \code{plot_supported} identifies metrics currently supported by \code{\link[=gtropic_plot]{gtropic_plot()}}.
-\code{FLOODED_POP_CENTROID} is included because it documents a published flood
-exposure, although it is not currently available for plotting.
+\code{POP_CENTROID_IN_FLOOD_REPORT} is included because it documents a published
+flood exposure, although it is not currently available for plotting.
+
+The flood metrics describe places named in news reports about flooding, not
+mapped flood extent, and gtropic returns them under names that differ from
+the published ones; see \link{gtropic_known_limitations}.
 }
 \examples{
 metrics <- gtropic_metrics()

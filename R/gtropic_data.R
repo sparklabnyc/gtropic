@@ -27,6 +27,23 @@
 #' the published column it filters, as that column appears in the returned
 #' tables and the codebook.
 #'
+#' ## Flood columns
+#'
+#' Each `flood` row pairs one place named in a news report about flooding
+#' (from Groundsource) with one ADM2 unit. Three published columns are renamed
+#' to say what they measure, so they differ from the files on Harvard
+#' Dataverse and from the codebook:
+#'
+#' - `PROP_AREA_IN_FLOOD_REPORT` (published as `PROP_FLOODED_AREA`): the share
+#'   of the unit's area inside the reported place.
+#' - `PROP_POP_IN_FLOOD_REPORT` (published as `PROP_FLOODED_POP`): the share of
+#'   the unit's population inside the reported place.
+#' - `POP_CENTROID_IN_FLOOD_REPORT` (published as `FLOODED_POP_CENTROID`):
+#'   whether the unit's population-weighted centroid lies inside the reported
+#'   place.
+#'
+#' These are not flooded area or population: see [gtropic_known_limitations].
+#'
 #' ## Dates
 #'
 #' `date_range` and `date_list` select storms by `STORM_GENESIS_DATE_UTC`, the

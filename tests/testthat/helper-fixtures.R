@@ -169,6 +169,10 @@ parquet_fixture_tables <- function() {
     "PHL.1.1" , "F0003"   , "2002-12-27"      , "2003-01-04"    , 310.7           ,
     "MEX.1.1" , "F0004"   , "2003-08-19"      , "2003-08-22"    ,  45.0
   )
+  # The published names, which gtropic renames on read.
+  flood$PROP_FLOODED_AREA <- c(0.12, 0.99, 0.05, 0.4)
+  flood$PROP_FLOODED_POP <- c(0.1, 0.95, 0.02, 0.35)
+  flood$FLOODED_POP_CENTROID <- c(FALSE, TRUE, FALSE, TRUE)
   flood_year <- as.integer(substr(flood$FLOOD_START_DATE, 1, 4))
   for (y in 2001:2003) {
     add(flood[flood_year == y, ], "03_flood", paste0(y, ".parquet"))

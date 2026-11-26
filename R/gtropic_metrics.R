@@ -6,8 +6,12 @@
 #' published exposure value.
 #'
 #' `plot_supported` identifies metrics currently supported by [gtropic_plot()].
-#' `FLOODED_POP_CENTROID` is included because it documents a published flood
-#' exposure, although it is not currently available for plotting.
+#' `POP_CENTROID_IN_FLOOD_REPORT` is included because it documents a published
+#' flood exposure, although it is not currently available for plotting.
+#'
+#' The flood metrics describe places named in news reports about flooding, not
+#' mapped flood extent, and gtropic returns them under names that differ from
+#' the published ones; see [gtropic_known_limitations].
 #'
 #' @return A named list with `wind`, `precip`, and `flood` components. Each
 #'   component is a tibble with columns `metric`, `label`, `unit`, `aggregate`,
@@ -39,8 +43,8 @@ gtropic_metrics <- function() {
 
   out$flood <- tibble::add_row(
     out$flood,
-    metric = "FLOODED_POP_CENTROID",
-    label = "Flooded population centroid",
+    metric = "POP_CENTROID_IN_FLOOD_REPORT",
+    label = "Population centroid in flood report",
     unit = "logical",
     aggregate = "any",
     plot_supported = FALSE

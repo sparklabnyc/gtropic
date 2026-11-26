@@ -767,6 +767,7 @@ fetch_hazards <- function(args, ctx, scope, date_spec) {
       keep = list(ADM2_ID = adm2_ids)
     )
     if (!is.null(flood)) {
+      flood <- rename_flood_columns(flood)
       flood <- flood[flood$ADM2_ID %in% adm2_ids, , drop = FALSE]
       flood <- select_flood(links, flood, match = args$flood_match)
     }

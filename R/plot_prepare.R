@@ -15,8 +15,8 @@ plot_metric_registry <- function(codebook = NULL) {
       "WIND_RADII_SUST_DUR_MINUTES",
       "STORM_DIST_KM",
       "PRECIP_MM",
-      "PROP_FLOODED_POP",
-      "PROP_FLOODED_AREA",
+      "PROP_POP_IN_FLOOD_REPORT",
+      "PROP_AREA_IN_FLOOD_REPORT",
       "USA_WIND",
       "USA_STATUS"
     ),
@@ -31,8 +31,8 @@ plot_metric_registry <- function(codebook = NULL) {
       "Wind radii duration (minutes)",
       "Storm distance (km)",
       "Precipitation (mm)",
-      "Flooded population (proportion, 0-1)",
-      "Flooded area (proportion, 0-1)",
+      "Population in flood report (proportion, 0-1)",
+      "Area in flood report (proportion, 0-1)",
       "Track maximum sustained wind",
       "Storm status"
     ),
@@ -127,16 +127,16 @@ resolve_plot_metrics <- function(
   )]
   if (is.null(metric)) {
     if (type == "exposure") {
-      # Exposure maps make the core wind, rainfall, and flooded-area measures
+      # Exposure maps make the core wind, rainfall, and flood-report measures
       # visible together whenever their source tables are available.
-      preferred <- c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+      preferred <- c("VMAX_SUST_MS", "PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT")
       metric <- intersect(preferred, available)
       if (!length(metric)) metric <- preferred[1L]
     } else {
       preferred <- if (type == "track") {
         "USA_WIND"
       } else {
-        c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_POP")
+        c("VMAX_SUST_MS", "PRECIP_MM", "PROP_POP_IN_FLOOD_REPORT")
       }
       metric <- intersect(preferred, available)[1L]
       if (is.na(metric)) metric <- preferred[1L]

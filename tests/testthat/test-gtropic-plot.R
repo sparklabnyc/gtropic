@@ -23,7 +23,7 @@ test_that("the simplified entrypoint exposes supported output modes", {
 
 test_that("metric order controls facets, scales, and caption blocks", {
   testthat::skip_if_not_installed("ggnewscale")
-  metrics <- c("VMAX_SUST_MS", "PRECIP_MM", "PROP_FLOODED_AREA")
+  metrics <- c("VMAX_SUST_MS", "PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT")
   p <- gtropic_plot(
     plot_fixture(),
     metric = metrics,
@@ -37,7 +37,7 @@ test_that("metric order controls facets, scales, and caption blocks", {
     c(
       VMAX_SUST_MS = "Maximum sustained wind (m/s)",
       PRECIP_MM = "Cumulative precipitation (mm)",
-      PROP_FLOODED_AREA = "Maximum flooded area (proportion, 0-1)"
+      PROP_AREA_IN_FLOOD_REPORT = "Maximum area in flood report (proportion, 0-1)"
     )
   )
   positions <- vapply(
@@ -116,7 +116,7 @@ test_that("single-storm exposure defaults identify the plotted storm", {
     c(
       "VMAX_SUST_MS",
       "PRECIP_MM",
-      "PROP_FLOODED_AREA"
+      "PROP_AREA_IN_FLOOD_REPORT"
     )
   )
   expect_equal(p$labels$title, "Alpha: Exposure metrics")
@@ -211,7 +211,7 @@ test_that("caption provenance and hazard settings come from the supplied data", 
   attr(x, "gtropic_version") <- "0.0.0.9000"
   p <- gtropic_plot(
     x,
-    metric = c("PRECIP_MM", "PROP_FLOODED_AREA"),
+    metric = c("PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT"),
     basemap = "none",
     track = FALSE,
     crs = 4326

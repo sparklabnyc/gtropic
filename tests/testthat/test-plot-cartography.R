@@ -67,7 +67,7 @@ test_that("metric strips use readable labels", {
   data <- prepare_plot_data(
     plot_fixture(),
     "exposure",
-    c("PRECIP_MM", "PROP_FLOODED_AREA"),
+    c("PRECIP_MM", "PROP_AREA_IN_FLOOD_REPORT"),
     track = FALSE
   )
   p <- build_exposure_plot(data, plot_cartography(data, basemap = "none"))
