@@ -67,10 +67,10 @@ plot_join_metric <- function(data, spec, flood_match = "start") {
   rows <- dplyr::select(rows, -dplyr::any_of(c(".plot_start", ".plot_end")))
   rows$metric <- rep(spec$metric, nrow(rows))
   rows$value <- as.numeric(rows[[spec$metric]])
-  if (spec$table == "flood") {
-    # An in-field pair whose window lies inside the Groundsource record but
-    # matched no flood row had no flood report; outside the record, nothing
-    # is known. Only yes/no flood panels read this.
+  if (spec$table == "flood" && isTRUE(spec$binary)) {
+    # A yes/no flood panel: an in-field pair whose window lies inside the
+    # Groundsource record but matched no flood row had no flood report;
+    # outside the record, nothing is known.
     rows$.no_flood_report <- is.na(rows$.plot_row_id) &
       flood_window_recorded(rows$FLOOD_WINDOW_START, rows$FLOOD_WINDOW_END)
   }

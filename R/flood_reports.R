@@ -56,8 +56,8 @@ flood_window_recorded <- function(start, end) {
 #' @keywords internal
 #' @noRd
 FLOOD_REPORT_SHARE_LABELS <- c(
-  PROP_AREA_IN_FLOOD_REPORT = "area in flood report",
-  PROP_POP_IN_FLOOD_REPORT = "population in flood report"
+  PROP_AREA_IN_FLOOD_REPORT = "area share",
+  PROP_POP_IN_FLOOD_REPORT = "population share"
 )
 
 #' Whether a resolved metric is drawn as a yes/no flood-report panel

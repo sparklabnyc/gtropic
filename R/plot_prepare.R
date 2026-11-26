@@ -896,6 +896,10 @@ plot_hazard_settings <- function(raw_parts) {
       next
     }
     observed <- !is.na(rows$.plot_row_id) & is.finite(rows$value)
+    if (".no_flood_report" %in% names(rows)) {
+      # A yes/no flood panel also draws in-record pairs without a report.
+      observed <- observed | rows$.no_flood_report %in% TRUE
+    }
     if (!any(observed)) {
       next
     }

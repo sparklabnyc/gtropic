@@ -89,7 +89,7 @@ test_that("the default exposure map draws flood as a yes/no panel", {
   expect_identical(default$legend, "Flood reported")
   expect_identical(
     plot_metric_display_label(default),
-    "Flood reported (area in flood report > 0)"
+    "Flood reported (area share > 0)"
   )
   expect_identical(
     plot_binary_labels(default),
@@ -109,7 +109,7 @@ test_that("the default exposure map draws flood as a yes/no panel", {
   )
   expect_identical(
     plot_metric_display_label(population),
-    "Flood reported (population in flood report > 0)"
+    "Flood reported (population share > 0)"
   )
 })
 
@@ -250,4 +250,22 @@ test_that("maps with flood panels carry the flood note once", {
     track = FALSE
   )
   expect_identical(count_lines(wind_only), 0L)
+})
+
+test_that("yes/no flood captions describe every pair they draw", {
+  data <- flood_binary_fixture()
+  data$links$STORM_DIST_KM <- c(10, 450, 20)
+  binary <- resolve_plot_metrics(data, "exposure")
+  share <- resolve_plot_metrics(data, "exposure", "PROP_AREA_IN_FLOOD_REPORT")
+  # Unit B (no report, 450 km) is drawn only on the yes/no panel; unit C is
+  # outside the record on both.
+  expect_identical(
+    plot_hazard_settings(list(plot_join_metric(data, binary)))$flood$radius_km,
+    450
+  )
+  expect_identical(
+    plot_hazard_settings(list(plot_join_metric(data, share)))$flood$radius_km,
+    10
+  )
+  expect_false(".no_flood_report" %in% names(plot_join_metric(data, share)))
 })
