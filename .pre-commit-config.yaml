@@ -89,3 +89,9 @@ repos:
         entry: Rplots.pdf must not be committed
         language: fail
         files: '(^|/)Rplots\.pdf$'
+
+# The pre-commit.ci app, when installed on the repository, reads this block;
+# pre-commit itself ignores it. spell-check is skipped there, as in
+# .github/workflows/pre-commit.yaml, until CRAN-13 commits inst/WORDLIST.
+ci:
+  skip: [spell-check]
