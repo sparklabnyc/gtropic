@@ -2,7 +2,8 @@
 #   pip install pre-commit && pre-commit install
 # The same hooks run on every pull request (.github/workflows/pre-commit.yaml).
 # They check and fix; the expensive gates (R CMD check, tests, coverage) stay
-# in CI. Update the pins with `pre-commit autoupdate`.
+# in CI. Update the pins with `pre-commit autoupdate`. CI caches the hook
+# environments under a key made from this file's contents.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

@@ -28,6 +28,11 @@ jobs:
       # pre-commit runs R with --vanilla, which ignores the repositories that
       # setup-r configures, so point renv at binary packages directly.
       RENV_CONFIG_REPOS_OVERRIDE: https://packagemanager.posit.co/cran/__linux__/noble/latest
+      # pre-commit/action caches ~/.cache/pre-commit but not renv's global
+      # package cache, which the R hook libraries otherwise only link to: a
+      # restored cache then fails every R hook with "missing entries in the
+      # cache". Without renv's cache the libraries hold real copies.
+      RENV_CONFIG_CACHE_ENABLED: "FALSE"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
